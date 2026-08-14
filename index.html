@@ -79,14 +79,13 @@
       'use strict';
 
       // ============================================================
-      // 🔑 Groq API Key (Halen geçerli)
+      // 🔑 Groq API Key
       // ============================================================
       const GROQ_KEY = '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';
       // ============================================================
 
-      // ✅ YENİ MODEL: Groq'un halen desteklediği güçlü bir model
       const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-      const MODEL = 'llama-3.3-70b-versatile'; // Değiştirilen satır
+      const MODEL = 'llama-3.3-70b-versatile';
 
       const chatArea = document.getElementById('chatArea');
       const promptInput = document.getElementById('promptInput');
@@ -147,9 +146,15 @@
       }
 
       async function callModel(messages, maxTokens) {
+        // ✅ ZORUNLU DÜZELTME: 'messages' dizisindeki her öğenin 'role' ve 'content' alanlarını kontrol et
+        const formattedMessages = messages.map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }));
+
         const payload = {
           model: MODEL,
-          messages: messages,
+          messages: formattedMessages,
           max_tokens: maxTokens || 1024,
           temperature: 0.7,
           top_p: 0.9,
