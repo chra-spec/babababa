@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Llama 3.3 70B · Groq</title>
+  <title>Llama 3.3 · Groq</title>
   <style>
+    /* --- STİLLER (ÖNEMLİ DEĞİL) --- */
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0b0b14;color:#e5e5e5;height:100vh;display:flex;justify-content:center;align-items:center;padding:10px}
     .app{max-width:1000px;width:100%;height:96vh;background:#151525;border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,0.8);display:flex;flex-direction:column;overflow:hidden;border:1px solid #2a2a42}
@@ -47,234 +48,256 @@
 </head>
 <body>
 
-  <div class="app">
-    <header class="header">
-      <h1>🧠 Llama 3.3 70B · Groq</h1>
-      <span class="status" id="status">● Hazır</span>
-    </header>
+<div class="app">
+  <header class="header">
+    <h1>🧠 Llama 3.3 · Groq</h1>
+    <span class="status" id="status">● Hazır</span>
+  </header>
 
-    <div class="chat" id="chatArea">
-      <div class="msg ai">
-        <div class="label">🧑‍💻 Asistan</div>
-        <div class="content">Merhaba! Kodlama asistanıyım. Ne yapmak istersin?</div>
-      </div>
-    </div>
-
-    <div class="input-area">
-      <div class="input-row">
-        <textarea id="promptInput" rows="2" placeholder="Kod yaz veya soru sor..."></textarea>
-        <button class="btn btn-primary" id="sendBtn">➤ Gönder</button>
-        <button class="btn btn-danger" id="clearBtn">✕ Temizle</button>
-      </div>
-      <div class="input-options">
-        <label>Max Token: <input type="number" id="maxTokens" value="1024" min="64" max="4096" /></label>
-        <label><input type="checkbox" id="autoContinue" checked /> Otomatik Devam</label>
-        <span class="token-counter" id="tokenCounter">📝 0 token</span>
-      </div>
+  <div class="chat" id="chatArea">
+    <div class="msg ai">
+      <div class="label">🧑‍💻 Asistan</div>
+      <div class="content">Merhaba! Kodlama asistanıyım. Ne yapmak istersin?</div>
     </div>
   </div>
 
-  <script>
-    (function() {
-      'use strict';
+  <div class="input-area">
+    <div class="input-row">
+      <textarea id="promptInput" rows="2" placeholder="Kod yaz veya soru sor..."></textarea>
+      <button class="btn btn-primary" id="sendBtn">➤ Gönder</button>
+      <button class="btn btn-danger" id="clearBtn">✕ Temizle</button>
+    </div>
+    <div class="input-options">
+      <label>Max Token: <input type="number" id="maxTokens" value="1024" min="64" max="4096" /></label>
+      <label><input type="checkbox" id="autoContinue" checked /> Otomatik Devam</label>
+      <span class="token-counter" id="tokenCounter">📝 0 token</span>
+    </div>
+  </div>
+</div>
 
-      // ============================================================
-      // 🔑 Groq API Key
-      // ============================================================
-      const GROQ_KEY = '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';
-      // ============================================================
+<script>
+  (function() {
+    'use strict';
 
-      const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-      const MODEL = 'llama-3.3-70b-versatile';
+    // ============================================================
+    // 🔑 Groq API Key
+    // ============================================================
+    const GROQ_KEY = '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';
+    // ============================================================
 
-      const chatArea = document.getElementById('chatArea');
-      const promptInput = document.getElementById('promptInput');
-      const sendBtn = document.getElementById('sendBtn');
-      const clearBtn = document.getElementById('clearBtn');
-      const statusEl = document.getElementById('status');
-      const maxTokensInput = document.getElementById('maxTokens');
-      const autoContinue = document.getElementById('autoContinue');
-      const tokenCounter = document.getElementById('tokenCounter');
+    const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+    const MODEL = 'llama-3.3-70b-versatile';
 
-      let isProcessing = false;
-      let conversation = [];
+    // --- DOM ELEMANLARI ---
+    const chatArea = document.getElementById('chatArea');
+    const promptInput = document.getElementById('promptInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const statusEl = document.getElementById('status');
+    const maxTokensInput = document.getElementById('maxTokens');
+    const autoContinue = document.getElementById('autoContinue');
+    const tokenCounter = document.getElementById('tokenCounter');
 
-      function setStatus(text, type = '') {
-        statusEl.textContent = text;
-        statusEl.className = 'status' + (type ? ' ' + type : '');
-      }
+    // --- DURUM ---
+    let isProcessing = false;
+    let conversation = [];
 
-      function estimateTokens(t) { return Math.ceil((t || '').length / 4); }
+    // --- YARDIMCI FONKSİYONLAR ---
+    function setStatus(text, type = '') {
+      statusEl.textContent = text;
+      statusEl.className = 'status' + (type ? ' ' + type : '');
+    }
 
-      function updateCounter(text) {
-        tokenCounter.textContent = '📝 ' + estimateTokens(text) + ' token';
-      }
+    function estimateTokens(t) { return Math.ceil((t || '').length / 4); }
 
-      function addMessage(role, content) {
-        const div = document.createElement('div');
-        div.className = 'msg ' + role;
-        const label = document.createElement('div');
-        label.className = 'label';
-        label.textContent = role === 'user' ? '👤 Sen' : '🧑‍💻 Asistan';
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'content';
-        contentDiv.textContent = content;
-        div.appendChild(label);
-        div.appendChild(contentDiv);
-        chatArea.appendChild(div);
-        conversation.push({ role, content });
-        setTimeout(() => div.scrollIntoView({ behavior: 'smooth', block: 'end' }), 80);
-        const total = conversation.map(m => m.content).join(' ');
-        updateCounter(total);
-        return div;
-      }
+    function updateCounter(text) {
+      tokenCounter.textContent = '📝 ' + estimateTokens(text) + ' token';
+    }
 
-      function addLoading() {
-        const div = document.createElement('div');
-        div.className = 'msg ai';
-        div.id = 'loadingMsg';
-        div.innerHTML =
-          `<div class="label">🧑‍💻 Asistan</div><div class="content"><span class="spinner"></span> Düşünüyor...</div>`;
-        chatArea.appendChild(div);
-        div.scrollIntoView({ behavior: 'smooth', block: 'end' });
-        return div;
-      }
+    // --- MESAJ EKLEME (ROLE GÜVENCESİ) ---
+    function addMessage(role, content) {
+      // Sadece geçerli role değerlerine izin ver
+      const validRoles = ['user', 'assistant', 'system'];
+      const safeRole = validRoles.includes(role) ? role : 'user';
 
-      function removeLoading() {
-        const el = document.getElementById('loadingMsg');
-        if (el) el.remove();
-      }
+      const div = document.createElement('div');
+      div.className = 'msg ' + safeRole;
+      const label = document.createElement('div');
+      label.className = 'label';
+      label.textContent = safeRole === 'user' ? '👤 Sen' : '🧑‍💻 Asistan';
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'content';
+      contentDiv.textContent = content;
+      div.appendChild(label);
+      div.appendChild(contentDiv);
+      chatArea.appendChild(div);
 
-      async function callModel(messages, maxTokens) {
-        // ✅ ZORUNLU DÜZELTME: 'messages' dizisindeki her öğenin 'role' ve 'content' alanlarını kontrol et
-        const formattedMessages = messages.map(msg => ({
-          role: msg.role,
-          content: msg.content
-        }));
+      // Konuşma geçmişine ekle (role güvenli)
+      conversation.push({ role: safeRole, content: content });
+      setTimeout(() => div.scrollIntoView({ behavior: 'smooth', block: 'end' }), 80);
 
-        const payload = {
-          model: MODEL,
-          messages: formattedMessages,
-          max_tokens: maxTokens || 1024,
-          temperature: 0.7,
-          top_p: 0.9,
-        };
+      const total = conversation.map(m => m.content).join(' ');
+      updateCounter(total);
+      return div;
+    }
 
-        const resp = await fetch(API_URL, {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer ' + GROQ_KEY,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
+    function addLoading() {
+      const div = document.createElement('div');
+      div.className = 'msg ai';
+      div.id = 'loadingMsg';
+      div.innerHTML = `<div class="label">🧑‍💻 Asistan</div><div class="content"><span class="spinner"></span> Düşünüyor...</div>`;
+      chatArea.appendChild(div);
+      div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      return div;
+    }
+
+    function removeLoading() {
+      const el = document.getElementById('loadingMsg');
+      if (el) el.remove();
+    }
+
+    // --- API ÇAĞRISI (ZORLA DOĞRULAMA) ---
+    async function callModel(messages, maxTokens) {
+      // 1. Tüm mesajları temizle: sadece 'role' ve 'content' al
+      const cleanedMessages = messages.map(msg => {
+        // Geçersiz role varsa 'user' yap
+        let role = msg.role;
+        if (!['user', 'assistant', 'system'].includes(role)) {
+          role = 'user';
+        }
+        return { role: role, content: String(msg.content || '') };
+      });
+
+      // 2. İlk mesaj system değilse ekle (opsiyonel)
+      if (cleanedMessages.length === 0 || cleanedMessages[0].role !== 'system') {
+        cleanedMessages.unshift({
+          role: 'system',
+          content: 'Sen yardımcı bir asistansın. Türkçe cevap ver.'
         });
-
-        const text = await resp.text();
-
-        if (!resp.ok) {
-          throw new Error('API Hatası ' + resp.status + ': ' + text);
-        }
-
-        let data;
-        try {
-          data = JSON.parse(text);
-        } catch (e) {
-          throw new Error('JSON Hatası: ' + text.slice(0, 200));
-        }
-
-        if (data.error) throw new Error(data.error.message || 'API hatası');
-        return data.choices?.[0]?.message?.content || 'Yanıt alınamadı';
       }
 
-      async function sendMessage() {
-        if (isProcessing) return;
+      const payload = {
+        model: MODEL,
+        messages: cleanedMessages,
+        max_tokens: maxTokens || 1024,
+        temperature: 0.7,
+        top_p: 0.9,
+      };
 
-        const userText = promptInput.value.trim();
-        if (!userText) {
-          setStatus('⚠️ Mesaj girin', 'error');
-          setTimeout(() => setStatus('● Hazır', ''), 1500);
-          return;
-        }
+      const resp = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + GROQ_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
 
-        addMessage('user', userText);
-        promptInput.value = '';
-        promptInput.style.height = 'auto';
+      const text = await resp.text();
+      if (!resp.ok) {
+        throw new Error('API Hatası ' + resp.status + ': ' + text);
+      }
 
-        isProcessing = true;
-        sendBtn.disabled = true;
-        setStatus('⏳ Asistan yanıtlıyor...', 'loading');
+      let data;
+      try { data = JSON.parse(text); } catch (e) {
+        throw new Error('JSON Hatası: ' + text.slice(0, 200));
+      }
+      if (data.error) throw new Error(data.error.message || 'API hatası');
+      return data.choices?.[0]?.message?.content || 'Yanıt alınamadı';
+    }
 
-        const maxTok = parseInt(maxTokensInput.value) || 1024;
-        const history = conversation.slice(-10);
-        const msgs = history.map(m => ({ role: m.role, content: m.content }));
+    // --- MESAJ GÖNDER ---
+    async function sendMessage() {
+      if (isProcessing) return;
 
-        try {
-          addLoading();
-          const response = await callModel(msgs, maxTok);
-          removeLoading();
+      const userText = promptInput.value.trim();
+      if (!userText) {
+        setStatus('⚠️ Mesaj girin', 'error');
+        setTimeout(() => setStatus('● Hazır', ''), 1500);
+        return;
+      }
 
-          if (response) {
-            addMessage('ai', response);
-            setStatus('✅ Tamam', '');
+      // Kullanıcı mesajını ekle (güvenli)
+      addMessage('user', userText);
+      promptInput.value = '';
+      promptInput.style.height = 'auto';
 
-            const est = estimateTokens(response);
-            if (autoContinue.checked && est >= maxTok * 0.85) {
-              setStatus('🔄 Otomatik devam...', 'loading');
-              setTimeout(() => {
-                promptInput.value = 'Devam et, kaldığın yerden tamamla.';
-                sendMessage();
-              }, 600);
-            }
-          } else {
-            addMessage('ai', '⚠️ Yanıt boş geldi.');
-            setStatus('⚠️ Boş yanıt', 'error');
+      isProcessing = true;
+      sendBtn.disabled = true;
+      setStatus('⏳ Asistan yanıtlıyor...', 'loading');
+
+      const maxTok = parseInt(maxTokensInput.value) || 1024;
+      // Son 20 mesajı al (token sınırı için)
+      const history = conversation.slice(-20);
+
+      try {
+        addLoading();
+        const response = await callModel(history, maxTok);
+        removeLoading();
+
+        if (response) {
+          addMessage('assistant', response);
+          setStatus('✅ Tamam', '');
+          const est = estimateTokens(response);
+          if (autoContinue.checked && est >= maxTok * 0.85) {
+            setStatus('🔄 Otomatik devam...', 'loading');
+            setTimeout(() => {
+              promptInput.value = 'Devam et, kaldığın yerden tamamla.';
+              sendMessage();
+            }, 600);
           }
-        } catch (err) {
-          removeLoading();
-          setStatus('❌ ' + err.message, 'error');
-          addMessage('ai', '❌ Hata: ' + err.message);
-        } finally {
-          isProcessing = false;
-          sendBtn.disabled = false;
-          if (!isProcessing) setStatus('● Hazır', '');
-          promptInput.focus();
+        } else {
+          addMessage('assistant', '⚠️ Yanıt boş geldi.');
+          setStatus('⚠️ Boş yanıt', 'error');
         }
-      }
-
-      function clearChat() {
-        if (conversation.length === 0) return;
-        if (!confirm('Sohbet geçmişi silinsin mi?')) return;
-        chatArea.innerHTML = '';
-        conversation = [];
-        addMessage('ai', '🧹 Sohbet temizlendi. Yeniden başlayalım!');
-        setStatus('● Hazır', '');
-        updateCounter('');
+      } catch (err) {
+        removeLoading();
+        setStatus('❌ ' + err.message, 'error');
+        addMessage('assistant', '❌ Hata: ' + err.message);
+      } finally {
+        isProcessing = false;
+        sendBtn.disabled = false;
+        if (!isProcessing) setStatus('● Hazır', '');
         promptInput.focus();
       }
+    }
 
-      sendBtn.addEventListener('click', sendMessage);
-      promptInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          sendMessage();
-        }
-      });
-      promptInput.addEventListener('input', () => {
-        promptInput.style.height = 'auto';
-        promptInput.style.height = promptInput.scrollHeight + 'px';
-        updateCounter(promptInput.value);
-      });
-      clearBtn.addEventListener('click', clearChat);
-
-      if (!GROQ_KEY || GROQ_KEY === 'gsk_xxxxxxxxxxxx') {
-        setStatus('❌ Groq Key gerekli!', 'error');
-      }
-
+    // --- SOHBETİ TEMİZLE ---
+    function clearChat() {
+      if (conversation.length === 0) return;
+      if (!confirm('Sohbet geçmişi silinsin mi?')) return;
+      chatArea.innerHTML = '';
+      conversation = [];
+      addMessage('assistant', '🧹 Sohbet temizlendi. Yeniden başlayalım!');
+      setStatus('● Hazır', '');
       updateCounter('');
       promptInput.focus();
-      console.log('🚀 Llama 3.3 70B (Groq) hazır.');
-    })();
-  </script>
+    }
+
+    // --- OLAY DİNLEYİCİLERİ ---
+    sendBtn.addEventListener('click', sendMessage);
+    promptInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+    promptInput.addEventListener('input', () => {
+      promptInput.style.height = 'auto';
+      promptInput.style.height = promptInput.scrollHeight + 'px';
+      updateCounter(promptInput.value);
+    });
+    clearBtn.addEventListener('click', clearChat);
+
+    // --- BAŞLANGIÇ ---
+    if (!GROQ_KEY || GROQ_KEY === 'gsk_xxxxxxxxxxxx') {
+      setStatus('❌ Groq Key gerekli!', 'error');
+    }
+    updateCounter('');
+    promptInput.focus();
+    console.log('🚀 Llama 3.3 70B (Groq) hazır.');
+  })();
+</script>
 
 </body>
 </html>
