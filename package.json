@@ -12,7 +12,9 @@
     "socket.io",
     "snake-game",
     "chat",
-    "realtime"
+    "realtime",
+    "emoji-reactions",
+    "sticker"
   ],
   "author": "Kaan",
   "license": "MIT",
