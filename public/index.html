@@ -1095,7 +1095,7 @@
         let replyToMessage = null;
 
         // ============ YILAN OYUNU ============
-// ============ GELİŞMİŞ YILAN OYUNU ============
+// ============ GELİŞMİŞ YILAN OYUNU (DÜZELTİLMİŞ) ============
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const gridSize = 20;
@@ -1110,52 +1110,19 @@ let bestScore = parseInt(localStorage.getItem('snakeBestScore')) || 0;
 let gameRunning = false;
 let gamePaused = false;
 let gameLoop = null;
-let gameSpeed = 120;
+let gameSpeed = 150;
 let hasStartedMoving = false;
-let startDelay = null;
 let particles = [];
 let foodPulse = 0;
-let snakeTrail = [];
+
+// Yumuşak hareket için interpolasyon değişkenleri
+let lastTime = 0;
+let accumulator = 0;
+let stepDelay = 150;
+let currentStep = 0;
+let totalSteps = 5;
 
 document.getElementById('bestScore').textContent = bestScore;
-
-// Parçacık efekti
-function spawnParticles(x, y, color) {
-    for (let i = 0; i < 8; i++) {
-        particles.push({
-            x: x * gridSize + gridSize/2,
-            y: y * gridSize + gridSize/2,
-            vx: (Math.random() - 0.5) * 4,
-            vy: (Math.random() - 0.5) * 4,
-            life: 20 + Math.random() * 10,
-            maxLife: 30,
-            color: color,
-            size: 2 + Math.random() * 3
-        });
-    }
-}
-
-function updateParticles() {
-    particles.forEach(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life--;
-        p.size *= 0.95;
-    });
-    particles = particles.filter(p => p.life > 0);
-}
-
-function drawParticles() {
-    particles.forEach(p => {
-        const alpha = p.life / p.maxLife;
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
-    });
-    ctx.globalAlpha = 1;
-}
 
 function generateFood() {
     do {
@@ -1166,151 +1133,133 @@ function generateFood() {
     } while (snake.some(s => s.x === food.x && s.y === food.y));
 }
 
+function spawnParticles(x, y, color) {
+    for (let i = 0; i < 6; i++) {
+        particles.push({
+            x: x * gridSize + gridSize/2,
+            y: y * gridSize + gridSize/2,
+            vx: (Math.random() - 0.5) * 3,
+            vy: (Math.random() - 0.5) * 3,
+            life: 15,
+            maxLife: 15,
+            color: color,
+            size: 2 + Math.random() * 2
+        });
+    }
+}
+
+function updateParticles() {
+    particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life--;
+    });
+    particles = particles.filter(p => p.life > 0);
+}
+
+function drawParticles() {
+    particles.forEach(p => {
+        ctx.globalAlpha = p.life / p.maxLife;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+}
+
 function drawGame() {
-    // Koyu arkaplan
-    ctx.fillStyle = '#0a0a14';
+    // Temiz arkaplan
+    ctx.fillStyle = '#0d0d1a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Izgara çizgileri (hafif)
-    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
-    ctx.lineWidth = 0.5;
-    for (let i = 0; i < tileCount; i++) {
-        ctx.beginPath();
-        ctx.moveTo(i * gridSize, 0);
-        ctx.lineTo(i * gridSize, canvas.height);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(0, i * gridSize);
-        ctx.lineTo(canvas.width, i * gridSize);
-        ctx.stroke();
-    }
-
-    // Yılan gövdesi (gradient)
+    // Yılan
     snake.forEach((seg, i) => {
-        const ratio = i / snake.length;
-        const r = Math.round(102 + (85 - 102) * ratio);
-        const g = Math.round(126 + (200 - 126) * ratio);
-        const b = Math.round(234 + (150 - 234) * ratio);
-        
-        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-        
-        // Yuvarlatılmış kareler
         const x = seg.x * gridSize;
         const y = seg.y * gridSize;
         const size = gridSize - 2;
-        const radius = i === 0 ? 6 : 4;
         
-        ctx.beginPath();
-        ctx.roundRect(x, y, size, size, radius);
-        ctx.fill();
-        
-        // Baş kısmı parlama
         if (i === 0) {
+            // Baş
+            ctx.fillStyle = '#667eea';
             ctx.shadowColor = '#667eea';
-            ctx.shadowBlur = 8;
+            ctx.shadowBlur = 6;
+            ctx.beginPath();
+            ctx.arc(x + gridSize/2, y + gridSize/2, size/2, 0, Math.PI * 2);
             ctx.fill();
             ctx.shadowBlur = 0;
-        }
-        
-        // Gövde parlaması
-        if (i > 0 && i % 3 === 0) {
-            ctx.fillStyle = 'rgba(255,255,255,0.1)';
-            ctx.fillRect(x + 4, y + 4, size - 8, size - 8);
+            
+            // Gözler
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            if (direction.x === 1) {
+                ctx.arc(x + 14, y + 6, 2.5, 0, Math.PI * 2);
+                ctx.arc(x + 14, y + 14, 2.5, 0, Math.PI * 2);
+            } else if (direction.x === -1) {
+                ctx.arc(x + 5, y + 6, 2.5, 0, Math.PI * 2);
+                ctx.arc(x + 5, y + 14, 2.5, 0, Math.PI * 2);
+            } else if (direction.y === 1) {
+                ctx.arc(x + 6, y + 14, 2.5, 0, Math.PI * 2);
+                ctx.arc(x + 14, y + 14, 2.5, 0, Math.PI * 2);
+            } else {
+                ctx.arc(x + 6, y + 5, 2.5, 0, Math.PI * 2);
+                ctx.arc(x + 14, y + 5, 2.5, 0, Math.PI * 2);
+            }
+            ctx.fill();
+            
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            if (direction.x === 1) {
+                ctx.arc(x + 15, y + 6, 1.2, 0, Math.PI * 2);
+                ctx.arc(x + 15, y + 14, 1.2, 0, Math.PI * 2);
+            } else if (direction.x === -1) {
+                ctx.arc(x + 4, y + 6, 1.2, 0, Math.PI * 2);
+                ctx.arc(x + 4, y + 14, 1.2, 0, Math.PI * 2);
+            } else if (direction.y === 1) {
+                ctx.arc(x + 6, y + 15, 1.2, 0, Math.PI * 2);
+                ctx.arc(x + 14, y + 15, 1.2, 0, Math.PI * 2);
+            } else {
+                ctx.arc(x + 6, y + 4, 1.2, 0, Math.PI * 2);
+                ctx.arc(x + 14, y + 4, 1.2, 0, Math.PI * 2);
+            }
+            ctx.fill();
+        } else {
+            // Gövde
+            const alpha = 1 - (i / snake.length) * 0.6;
+            ctx.fillStyle = `rgba(85, 104, 211, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(x + gridSize/2, y + gridSize/2, size/2 - 1, 0, Math.PI * 2);
+            ctx.fill();
         }
     });
 
-    // Yılan gözleri
-    if (snake.length > 0 && hasStartedMoving) {
-        const head = snake[0];
-        const hx = head.x * gridSize;
-        const hy = head.y * gridSize;
-        
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        if (direction.x === 1) {
-            ctx.arc(hx + 14, hy + 6, 3, 0, Math.PI * 2);
-            ctx.arc(hx + 14, hy + 14, 3, 0, Math.PI * 2);
-        } else if (direction.x === -1) {
-            ctx.arc(hx + 6, hy + 6, 3, 0, Math.PI * 2);
-            ctx.arc(hx + 6, hy + 14, 3, 0, Math.PI * 2);
-        } else if (direction.y === 1) {
-            ctx.arc(hx + 6, hy + 14, 3, 0, Math.PI * 2);
-            ctx.arc(hx + 14, hy + 14, 3, 0, Math.PI * 2);
-        } else {
-            ctx.arc(hx + 6, hy + 6, 3, 0, Math.PI * 2);
-            ctx.arc(hx + 14, hy + 6, 3, 0, Math.PI * 2);
-        }
-        ctx.fill();
-        
-        // Göz bebekleri
-        ctx.fillStyle = '#000';
-        ctx.beginPath();
-        if (direction.x === 1) {
-            ctx.arc(hx + 15, hy + 6, 1.5, 0, Math.PI * 2);
-            ctx.arc(hx + 15, hy + 14, 1.5, 0, Math.PI * 2);
-        } else if (direction.x === -1) {
-            ctx.arc(hx + 5, hy + 6, 1.5, 0, Math.PI * 2);
-            ctx.arc(hx + 5, hy + 14, 1.5, 0, Math.PI * 2);
-        } else if (direction.y === 1) {
-            ctx.arc(hx + 6, hy + 15, 1.5, 0, Math.PI * 2);
-            ctx.arc(hx + 14, hy + 15, 1.5, 0, Math.PI * 2);
-        } else {
-            ctx.arc(hx + 6, hy + 5, 1.5, 0, Math.PI * 2);
-            ctx.arc(hx + 14, hy + 5, 1.5, 0, Math.PI * 2);
-        }
-        ctx.fill();
-    }
-
     // Elma
-    foodPulse += 0.08;
-    const pulseSize = Math.sin(foodPulse) * 2;
+    foodPulse += 0.05;
+    const pulseSize = Math.sin(foodPulse) * 1.5;
     
     ctx.shadowColor = '#e74c3c';
-    ctx.shadowBlur = 15;
+    ctx.shadowBlur = 10;
     ctx.fillStyle = '#e74c3c';
     ctx.beginPath();
     ctx.arc(
         food.x * gridSize + gridSize/2,
         food.y * gridSize + gridSize/2,
-        gridSize/2 - 2 + pulseSize,
+        gridSize/2 - 3 + pulseSize,
         0, Math.PI * 2
     );
     ctx.fill();
     ctx.shadowBlur = 0;
     
-    // Elma sapı
+    // Sap
     ctx.strokeStyle = '#27ae60';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(food.x * gridSize + gridSize/2, food.y * gridSize + 2);
-    ctx.lineTo(food.x * gridSize + gridSize/2 + 3, food.y * gridSize - 4);
+    ctx.moveTo(food.x * gridSize + gridSize/2, food.y * gridSize + 3);
+    ctx.lineTo(food.x * gridSize + gridSize/2 + 2, food.y * gridSize - 3);
     ctx.stroke();
-    
-    // Elma yaprağı
-    ctx.fillStyle = '#2ecc71';
-    ctx.beginPath();
-    ctx.ellipse(food.x * gridSize + gridSize/2 + 5, food.y * gridSize - 3, 4, 2, 0.5, 0, Math.PI * 2);
-    ctx.fill();
 
     // Parçacıklar
     drawParticles();
-}
-
-// roundRect polyfill
-if (!CanvasRenderingContext2D.prototype.roundRect) {
-    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
-        if (typeof r === 'number') r = { tl: r, tr: r, br: r, bl: r };
-        this.moveTo(x + r.tl, y);
-        this.lineTo(x + w - r.tr, y);
-        this.quadraticCurveTo(x + w, y, x + w, y + r.tr);
-        this.lineTo(x + w, y + h - r.br);
-        this.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
-        this.lineTo(x + r.bl, y + h);
-        this.quadraticCurveTo(x, y + h, x, y + h - r.bl);
-        this.lineTo(x, y + r.tl);
-        this.quadraticCurveTo(x, y, x + r.tl, y);
-        this.closePath();
-    };
 }
 
 function updateGame() {
@@ -1321,14 +1270,12 @@ function updateGame() {
 
     const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
     
-    // Duvara çarpma
     if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
         spawnParticles(snake[0].x, snake[0].y, '#e74c3c');
         endGame();
         return;
     }
 
-    // Kendine çarpma
     if (snake.some((seg, index) => index > 0 && seg.x === head.x && seg.y === head.y)) {
         spawnParticles(head.x, head.y, '#e74c3c');
         endGame();
@@ -1337,16 +1284,13 @@ function updateGame() {
 
     snake.unshift(head);
 
-    // Elma yeme
     if (head.x === food.x && head.y === food.y) {
         score += 10;
         document.getElementById('score').textContent = score;
         spawnParticles(food.x, food.y, '#e74c3c');
         generateFood();
-        if (gameSpeed > 50) {
-            gameSpeed = Math.max(50, gameSpeed - 2);
-            clearInterval(gameLoop);
-            gameLoop = setInterval(updateGame, gameSpeed);
+        if (gameSpeed > 60) {
+            gameSpeed = Math.max(60, gameSpeed - 3);
         }
     } else {
         snake.pop();
@@ -1364,7 +1308,7 @@ function startGame() {
     direction = { x: 0, y: 0 };
     nextDirection = { x: 0, y: 0 };
     score = 0;
-    gameSpeed = 120;
+    gameSpeed = 150;
     hasStartedMoving = false;
     gamePaused = false;
     particles = [];
@@ -1376,24 +1320,12 @@ function startGame() {
     if (gameLoop) clearInterval(gameLoop);
     gameRunning = true;
     
-    if (startDelay) clearTimeout(startDelay);
-    startDelay = setTimeout(() => {
-        if (!hasStartedMoving && gameRunning) {
-            nextDirection = { x: 1, y: 0 };
-            direction = { x: 1, y: 0 };
-            hasStartedMoving = true;
-            gameLoop = setInterval(updateGame, gameSpeed);
-        }
-    }, 3000);
+    // Otomatik başlatma YOK - sadece yön verilince başlar
 }
 
 function pauseGame() {
     if (!gameRunning || !hasStartedMoving) return;
     gamePaused = !gamePaused;
-    if (!gamePaused) {
-        clearInterval(gameLoop);
-        gameLoop = setInterval(updateGame, gameSpeed);
-    }
 }
 
 function restartGame() {
@@ -1403,7 +1335,6 @@ function restartGame() {
 function endGame() {
     gameRunning = false;
     clearInterval(gameLoop);
-    if (startDelay) clearTimeout(startDelay);
     
     if (score > bestScore) {
         bestScore = score;
@@ -1412,6 +1343,15 @@ function endGame() {
     }
     document.getElementById('finalScore').textContent = score;
     document.getElementById('gameOverOverlay').classList.remove('hidden');
+}
+
+function startMoving(newDir) {
+    if (hasStartedMoving) return;
+    direction = { ...newDir };
+    nextDirection = { ...newDir };
+    hasStartedMoving = true;
+    if (gameLoop) clearInterval(gameLoop);
+    gameLoop = setInterval(updateGame, gameSpeed);
 }
 
 function changeDirection(newDir) {
@@ -1427,63 +1367,26 @@ function changeDirection(newDir) {
     nextDirection = nd;
 }
 
-// Klavye dinleyici
+// Klavye dinleyici - BASİT VE NET
 document.addEventListener('keydown', (e) => {
     if (!gameRunning) return;
     
-    switch(e.key) {
-        case 'ArrowUp': case 'w': case 'W':
-            e.preventDefault();
-            if (!hasStartedMoving) {
-                nextDirection = {x:0, y:-1};
-                direction = {x:0, y:-1};
-                hasStartedMoving = true;
-                clearTimeout(startDelay);
-                gameLoop = setInterval(updateGame, gameSpeed);
-            } else {
-                changeDirection('up');
-            }
-            break;
-        case 'ArrowDown': case 's': case 'S':
-            e.preventDefault();
-            if (!hasStartedMoving) {
-                nextDirection = {x:0, y:1};
-                direction = {x:0, y:1};
-                hasStartedMoving = true;
-                clearTimeout(startDelay);
-                gameLoop = setInterval(updateGame, gameSpeed);
-            } else {
-                changeDirection('down');
-            }
-            break;
-        case 'ArrowLeft': case 'a': case 'A':
-            e.preventDefault();
-            if (!hasStartedMoving) {
-                nextDirection = {x:-1, y:0};
-                direction = {x:-1, y:0};
-                hasStartedMoving = true;
-                clearTimeout(startDelay);
-                gameLoop = setInterval(updateGame, gameSpeed);
-            } else {
-                changeDirection('left');
-            }
-            break;
-        case 'ArrowRight': case 'd': case 'D':
-            e.preventDefault();
-            if (!hasStartedMoving) {
-                nextDirection = {x:1, y:0};
-                direction = {x:1, y:0};
-                hasStartedMoving = true;
-                clearTimeout(startDelay);
-                gameLoop = setInterval(updateGame, gameSpeed);
-            } else {
-                changeDirection('right');
-            }
-            break;
-        case ' ':
-            e.preventDefault();
-            pauseGame();
-            break;
+    const keyMap = {
+        'ArrowUp': {x:0, y:-1}, 'w': {x:0, y:-1}, 'W': {x:0, y:-1},
+        'ArrowDown': {x:0, y:1}, 's': {x:0, y:1}, 'S': {x:0, y:1},
+        'ArrowLeft': {x:-1, y:0}, 'a': {x:-1, y:0}, 'A': {x:-1, y:0},
+        'ArrowRight': {x:1, y:0}, 'd': {x:1, y:0}, 'D': {x:1, y:0}
+    };
+    
+    const newDir = keyMap[e.key];
+    if (!newDir) return;
+    e.preventDefault();
+    
+    if (!hasStartedMoving) {
+        startMoving(newDir);
+    } else {
+        if (direction.x + newDir.x === 0 && direction.y + newDir.y === 0) return;
+        nextDirection = newDir;
     }
 });
 
@@ -1501,23 +1404,16 @@ canvas.addEventListener('touchmove', (e) => {
     const dx = e.touches[0].clientX - touchStartX;
     const dy = e.touches[0].clientY - touchStartY;
     
-    if (Math.abs(dx) > 20 || Math.abs(dy) > 20) {
-        if (!hasStartedMoving && gameRunning) {
-            if (Math.abs(dx) > Math.abs(dy)) {
-                direction = dx > 0 ? {x:1, y:0} : {x:-1, y:0};
-            } else {
-                direction = dy > 0 ? {x:0, y:1} : {x:0, y:-1};
-            }
-            nextDirection = { ...direction };
-            hasStartedMoving = true;
-            clearTimeout(startDelay);
-            gameLoop = setInterval(updateGame, gameSpeed);
+    if (Math.abs(dx) > 15 || Math.abs(dy) > 15) {
+        const newDir = Math.abs(dx) > Math.abs(dy)
+            ? (dx > 0 ? {x:1, y:0} : {x:-1, y:0})
+            : (dy > 0 ? {x:0, y:1} : {x:0, y:-1});
+        
+        if (!hasStartedMoving) {
+            startMoving(newDir);
         } else {
-            if (Math.abs(dx) > Math.abs(dy)) {
-                changeDirection(dx > 0 ? 'right' : 'left');
-            } else {
-                changeDirection(dy > 0 ? 'down' : 'up');
-            }
+            if (direction.x + newDir.x === 0 && direction.y + newDir.y === 0) return;
+            nextDirection = newDir;
         }
         touchStartX = null;
         touchStartY = null;
