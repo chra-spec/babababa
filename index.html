@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Qwen3.8-27B · Kod Asistanı</title>
+    <title>Qwen3.8-27B</title>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0b0b14;color:#e5e5e5;height:100vh;display:flex;justify-content:center;align-items:center;padding:10px}
@@ -54,7 +54,7 @@
         <div class="chat" id="chatArea">
             <div class="msg ai">
                 <div class="label">🧑‍💻 Qwen 3.8</div>
-                <div class="content">Merhaba! Kodlama asistanıyım.<br>Ne yapmak istersin?</div>
+                <div class="content">Merhaba! Kodlama asistanıyım.</div>
             </div>
         </div>
         <div class="input-area">
@@ -76,12 +76,13 @@
             'use strict';
 
             // ============================================================
-            // 🔑 Hugging Face Token
+            // 🔑 Hugging Face Token (burda kalabilir)
             // ============================================================
             const HF_TOKEN = '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';
             // ============================================================
 
-            const API_URL = 'https://api-inference.huggingface.co/models/Qwen/Qwen3.8-27B';
+            // ✅ ARTIK proxy'ye istek atıyoruz!
+            const API_URL = '/api/qwen';  // Render'daki backend'e
 
             const chatArea = document.getElementById('chatArea');
             const promptInput = document.getElementById('promptInput');
@@ -142,23 +143,15 @@
             }
 
             async function callQwen(messages, maxTokens) {
-                const prompt = messages.map(m => m.role + ': ' + m.content).join('\n');
-
                 const payload = {
-                    inputs: prompt,
-                    parameters: {
-                        max_new_tokens: maxTokens || 1024,
-                        temperature: 0.7,
-                        top_p: 0.9,
-                        do_sample: true,
-                        return_full_text: false
-                    }
+                    messages: messages,
+                    max_tokens: maxTokens || 1024,
+                    token: HF_TOKEN
                 };
 
                 const resp = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
-                        'Authorization': 'Bearer ' + HF_TOKEN,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(payload)
@@ -166,16 +159,12 @@
 
                 if (!resp.ok) {
                     let err = await resp.text();
-                    throw new Error('API Hatası ' + resp.status + ': ' + err);
+                    throw new Error('Proxy Hatası ' + resp.status + ': ' + err);
                 }
 
                 const data = await resp.json();
                 if (data.error) throw new Error(data.error);
-                if (Array.isArray(data) && data[0] && data[0].generated_text) {
-                    return data[0].generated_text.trim();
-                }
-                if (data.generated_text) return data.generated_text.trim();
-                return JSON.stringify(data);
+                return data.response || JSON.stringify(data);
             }
 
             async function sendMessage() {
@@ -245,31 +234,23 @@
             }
 
             sendBtn.addEventListener('click', sendMessage);
-
             promptInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     sendMessage();
                 }
             });
-
             promptInput.addEventListener('input', () => {
                 promptInput.style.height = 'auto';
                 promptInput.style.height = promptInput.scrollHeight + 'px';
                 updateCounter(promptInput.value);
             });
-
             clearBtn.addEventListener('click', clearChat);
-
-            if (!HF_TOKEN || HF_TOKEN.length < 10) {
-                setStatus('❌ Token hatalı!', 'error');
-            }
 
             updateCounter('');
             promptInput.focus();
             console.log('🚀 Qwen3.8-27B hazır.');
         })();
     </script>
-
 </body>
 </html>
