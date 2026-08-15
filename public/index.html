@@ -2662,7 +2662,6 @@ async function initCall() {
 
                         peerConnection = new RTCPeerConnection(rtcConfig);
                         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-                        
 peerConnection.ontrack = (event) => {
     const stream = event.streams[0];
     const remoteAudio = document.getElementById('callRemoteAudio');
@@ -2683,12 +2682,26 @@ peerConnection.ontrack = (event) => {
                             if (event.candidate) socket.emit('webrtc-ice-candidate', { targetUserName: data.callerName, candidate: event.candidate });
                         };
 
-                        peerConnection.onconnectionstatechange = () => {
-                            if (peerConnection && peerConnection.connectionState === 'connected') {
-                                document.getElementById('callStatus').textContent = 'Bağlandı';
-                                startCallTimer();
-                            }
-                        };
+peerConnection.onconnectionstatechange = () => {
+    console.log('🔗 Aranan taraf durum:', peerConnection.connectionState);
+    if (peerConnection && peerConnection.connectionState === 'connected') {
+        document.getElementById('callStatus').textContent = 'Bağlandı';
+        startCallTimer();
+        
+        // Remote stream'i al
+        const receivers = peerConnection.getReceivers();
+        receivers.forEach(receiver => {
+            if (receiver.track && receiver.track.kind === 'audio') {
+                const stream = new MediaStream([receiver.track]);
+                const remoteAudio = document.getElementById('callRemoteAudio');
+                if (remoteAudio) {
+                    remoteAudio.srcObject = stream;
+                    remoteAudio.play().catch(e => console.error('Ses hatası:', e));
+                }
+            }
+        });
+    }
+};
 
                         await peerConnection.setRemoteDescription(data.offer);
                         const answer = await peerConnection.createAnswer();
@@ -2703,17 +2716,30 @@ peerConnection.ontrack = (event) => {
                 }
             });
 
-            socket.on('webrtc-answer', async (data) => {
-                if (peerConnection) {
-                    try {
-                        await peerConnection.setRemoteDescription(data.answer);
-                        document.getElementById('callStatus').textContent = 'Bağlandı';
-                        startCallTimer();
-                    } catch (e) {
-                        console.error('Answer hatası:', e);
+socket.on('webrtc-answer', async (data) => {
+    if (peerConnection) {
+        try {
+            await peerConnection.setRemoteDescription(data.answer);
+            document.getElementById('callStatus').textContent = 'Bağlandı';
+            startCallTimer();
+            
+            // Remote stream'i al ve sesi bağla
+            const receivers = peerConnection.getReceivers();
+            receivers.forEach(receiver => {
+                if (receiver.track && receiver.track.kind === 'audio') {
+                    const stream = new MediaStream([receiver.track]);
+                    const remoteAudio = document.getElementById('callRemoteAudio');
+                    if (remoteAudio) {
+                        remoteAudio.srcObject = stream;
+                        remoteAudio.play().catch(e => console.error('Ses hatası:', e));
                     }
                 }
             });
+        } catch (e) {
+            console.error('Answer hatası:', e);
+        }
+    }
+});
 
             socket.on('webrtc-ice-candidate', async (data) => {
                 if (peerConnection) {
