@@ -1097,6 +1097,7 @@
     top: 0;
     left: 0;
     z-index: 1;
+    transform: scaleX(-1); /* AYNA MODU - uzak görüntü */
 }
 
 .call-local-video {
@@ -1248,7 +1249,7 @@
         <div id="stickerStep1">
             <div class="form-group">
                 <label>Fotoğraf veya Video Seç</label>
-                <input type="file" id="stickerFileInput" accept="image/*,video/*" style="display:none;" onchange="handleStickerFile(this.files[0])">
+                <input type="file" id="stickerFileInput" accept="video/*,image/*" style="display:none;" onchange="handleStickerFile(this.files[0])">
                 <button class="photo-btn" onclick="document.getElementById('stickerFileInput').click()">📁 Dosya Seç</button>
             </div>
         </div>
@@ -1771,7 +1772,11 @@ function sendMessage() {
     const input = document.getElementById('messageInput');
     const text = input.value.trim();
     if (!text || !socket) return;
-    const payload = { type: 'text', text };
+    
+    // O anki seçili fontu al
+    const currentFont = getComputedStyle(document.documentElement).getPropertyValue('--message-font').trim();
+    
+    const payload = { type: 'text', text, font: currentFont };
     if (replyToMessage) {
         payload.replyTo = replyToMessage.id;
         payload.replyToUserName = replyToMessage.userName;
@@ -1795,9 +1800,10 @@ function displayMessage(msg) {
     if (msg.replyTo) {
         content += `<div class="message-reply-preview" onclick="scrollToMessage('${msg.replyTo}')">↩️ ${escapeHtml(msg.replyToUserName)}: ${escapeHtml(msg.replyToText || '')}</div>`;
     }
-    if (msg.type === 'text') {
-        content += `<div class="message-text">${escapeHtml(msg.text)}</div>`;
-    } else if (msg.type === 'image') {
+if (msg.type === 'text') {
+    const msgFont = msg.font || 'var(--message-font)';
+    content += `<div class="message-text" style="font-family: ${msgFont};">${escapeHtml(msg.text)}</div>`;
+} else if (msg.type === 'image') {
         content += `<div class="message-text">${msg.text ? escapeHtml(msg.text) : ''}</div>
         <img src="${msg.fileData}" class="message-image" alt="Fotoğraf" onclick="openFullscreenImage('${msg.fileData}')">`;
     } else if (msg.type === 'video') {
@@ -2134,6 +2140,11 @@ function closeStickerModal() {
 
 function handleStickerFile(file) {
     if (!file) return;
+   // Video boyutu kontrolü
+    if (file.type.startsWith('video') && file.size > 2 * 1024 * 1024) {
+        alert('Video 2MB\'dan küçük olmalı. Daha kısa bir video seçin.');
+        return;
+    }
     stickerFile = file;
     
     if (file.type.startsWith('image')) {
@@ -2580,6 +2591,8 @@ peerConnection.onicegatheringstatechange = () => {
             document.getElementById('callAvatar').style.display = 'none';
             document.getElementById('callTimer').style.display = 'none';
             document.getElementById('callMuteBtn').classList.remove('active');
+            document.getElementById('callVideoBtn').style.display = 'none';
+            document.getElementById('callVideoBtn').classList.remove('active');
             isInCall = false;
         }
 
@@ -2682,10 +2695,12 @@ socket.on('incoming-call', async (data) => {
             document.getElementById('callTimer').style.display = 'none';
             
             if (data.type === 'video') {
+                document.getElementById('callVideoBtn').style.display = 'block';
                 document.getElementById('callLocalVideo').style.display = 'block';
                 document.getElementById('callLocalVideo').srcObject = localStream;
                 document.getElementById('callAvatar').style.display = 'none';
             } else {
+                document.getElementById('callVideoBtn').style.display = 'none';
                 document.getElementById('callAvatar').style.display = 'block';
                 document.getElementById('callAvatar').src = data.callerPhoto || '';
             }
