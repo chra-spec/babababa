@@ -192,57 +192,58 @@ io.on('connection', (socket) => {
   });
 
   // ============ WEBRTC ARAMA ============
-  socket.on('start-call', (data) => {
+socket.on('webrtc-offer', (data) => {
     try {
-      const { targetUserName, offer, type, callerName } = data;
-      console.log(`📞 Çağrı: ${callerName} -> ${targetUserName} (${type})`);
+        const { targetUserName, offer, candidates, type, callerName } = data;
+        console.log(`📞 Teklif: ${callerName} -> ${targetUserName} (${type}) [${candidates ? candidates.length : 0} aday]`);
 
-      let targetSocketId = null;
-      rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
-        if (user.userName === targetUserName) {
-          targetSocketId = socketId;
-        }
-      });
-
-      if (targetSocketId) {
-        io.to(targetSocketId).emit('incoming-call', {
-          offer: offer,
-          callerName: callerName,
-          callerPhoto: currentUser?.userPhoto || '',
-          type: type
+        let targetSocketId = null;
+        rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
+            if (user.userName === targetUserName) {
+                targetSocketId = socketId;
+            }
         });
-        console.log(`✅ Çağrı iletildi: ${callerName} -> ${targetUserName}`);
-      } else {
-        socket.emit('call-error', { message: 'Kullanıcı bulunamadı' });
-        console.log(`❌ Hedef bulunamadı: ${targetUserName}`);
-      }
-    } catch (error) {
-      console.error('❌ Çağrı başlatma hatası:', error);
-    }
-  });
 
-  socket.on('webrtc-answer', (data) => {
+        if (targetSocketId) {
+            io.to(targetSocketId).emit('incoming-call', {
+                offer: offer,
+                candidates: candidates || [],
+                callerName: callerName,
+                callerPhoto: currentUser?.userPhoto || '',
+                type: type
+            });
+            console.log(`✅ Teklif iletildi: ${callerName} -> ${targetUserName}`);
+        } else {
+            socket.emit('call-error', { message: 'Kullanıcı bulunamadı' });
+        }
+    } catch (error) {
+        console.error('❌ Teklif hatası:', error);
+    }
+});
+
+socket.on('webrtc-answer', (data) => {
     try {
-      const { targetUserName, answer } = data;
+        const { targetUserName, answer, candidates } = data;
 
-      let targetSocketId = null;
-      rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
-        if (user.userName === targetUserName) {
-          targetSocketId = socketId;
-        }
-      });
-
-      if (targetSocketId) {
-        io.to(targetSocketId).emit('webrtc-answer', {
-          answer: answer,
-          answererName: currentUser?.userName
+        let targetSocketId = null;
+        rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
+            if (user.userName === targetUserName) {
+                targetSocketId = socketId;
+            }
         });
-        console.log(`✅ Cevap iletildi: ${currentUser?.userName} -> ${targetUserName}`);
-      }
+
+        if (targetSocketId) {
+            io.to(targetSocketId).emit('webrtc-answer', {
+                answer: answer,
+                candidates: candidates || [],
+                answererName: currentUser?.userName
+            });
+            console.log(`✅ Cevap iletildi: ${currentUser?.userName} -> ${targetUserName} [${candidates ? candidates.length : 0} aday]`);
+        }
     } catch (error) {
-      console.error('❌ Cevap iletme hatası:', error);
+        console.error('❌ Cevap hatası:', error);
     }
-  });
+});
 
   socket.on('webrtc-ice-candidate', (data) => {
     try {
