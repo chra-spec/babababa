@@ -1231,25 +1231,50 @@
         </div>
     </div>
 
-    <!-- STICKER OLUŞTURMA MODAL -->
-    <div class="modal sticker-modal" id="stickerModal">
-        <div class="modal-content">
-            <h2>🐰 Çıkartma Oluştur</h2>
+<!-- STICKER OLUŞTURMA MODAL -->
+<div class="modal sticker-modal" id="stickerModal">
+    <div class="modal-content" style="max-width: 500px;">
+        <h2>🐰 Çıkartma Oluştur</h2>
+        
+        <!-- ADIM 1: Dosya Seç -->
+        <div id="stickerStep1">
             <div class="form-group">
                 <label>Fotoğraf veya Video Seç</label>
-                <input type="file" id="stickerFileInput" accept="image/*,video/*" style="display:none;" onchange="previewSticker(this.files[0])">
+                <input type="file" id="stickerFileInput" accept="image/*,video/*" style="display:none;" onchange="handleStickerFile(this.files[0])">
                 <button class="photo-btn" onclick="document.getElementById('stickerFileInput').click()">📁 Dosya Seç</button>
             </div>
-            <div id="stickerPreviewContainer" style="display:none;">
-                <div class="form-group">
-                    <label>Önizleme</label>
-                    <div id="stickerPreviewArea"></div>
-                </div>
-                <button class="btn-full" onclick="saveSticker()">Kaydet</button>
-            </div>
-            <button class="btn-full" style="margin-top:8px; background:#e74c3c;" onclick="closeStickerModal()">İptal</button>
         </div>
+        
+        <!-- ADIM 2: Video Kesit Seçme -->
+        <div id="stickerStep2" style="display:none;">
+            <div class="form-group">
+                <label>3 Saniyelik Kesit Seç</label>
+                <video id="stickerVideoPreview" style="width:100%; max-height:200px; border-radius:10px; background:#000;" controls></video>
+                <div id="videoFrames" style="display:flex; gap:4px; overflow-x:auto; padding:10px 0; margin-top:5px;"></div>
+                <div style="display:flex; gap:10px; align-items:center; margin-top:8px;">
+                    <label style="font-size:12px; color:#ccc;">Başlangıç: <span id="trimStartLabel">0.0s</span></label>
+                    <input type="range" id="trimStartRange" min="0" max="0" step="0.1" value="0" style="flex:1;" oninput="updateTrimStart(this.value)">
+                </div>
+                <div style="display:flex; gap:10px; align-items:center; margin-top:5px;">
+                    <label style="font-size:12px; color:#ccc;">Bitiş: <span id="trimEndLabel">3.0s</span></label>
+                    <input type="range" id="trimEndRange" min="0" max="0" step="0.1" value="3" style="flex:1;" oninput="updateTrimEnd(this.value)">
+                </div>
+                <button class="btn-full" onclick="generateStickerFromVideo()" style="margin-top:10px;">✅ Kesiti Onayla</button>
+            </div>
+        </div>
+        
+        <!-- ADIM 3: Önizleme + Kaydet -->
+        <div id="stickerStep3" style="display:none;">
+            <div class="form-group">
+                <label>Önizleme</label>
+                <div id="stickerPreviewArea" style="text-align:center;"></div>
+            </div>
+            <button class="btn-full" onclick="saveSticker()">💾 Kaydet</button>
+        </div>
+        
+        <button class="btn-full" style="margin-top:8px; background:#e74c3c;" onclick="closeStickerModal()">İptal</button>
     </div>
+</div>
 
     <!-- PROFİL GÖRÜNTÜLEME MODAL -->
     <div class="modal profile-view-modal" id="profileViewModal">
@@ -1314,6 +1339,7 @@
     let activeContextMessageId = null;
     let activeContextMessageElement = null;
     let replyToMessage = null;
+    let onlineUsers = [];
 
     // ============ YILAN OYUNU ============
     const canvas = document.getElementById('gameCanvas');
@@ -1708,6 +1734,7 @@ function connectSocket() {
     socket.on('message-deleted', (data) => { removeMessageFromDOM(data.messageId); });
     socket.on('message-reaction', (data) => { updateMessageReaction(data.messageId, data.emoji, data.userName); });
     socket.on('user-list-update', (users) => {
+       onlineUsers = users; // Kullanıcı listesini sakla
         document.getElementById('onlineCount').textContent = users.length;
         document.getElementById('chatOnlineCount').textContent = `Çevrimiçi: ${users.length}`;
     });
@@ -1996,9 +2023,15 @@ function stopRecording() {
 }
 
 // ============ STICKER ============
+// ============ STICKER ============
 let stickerFile = null;
 let stickerPreviewData = null;
 let stickerPreviewType = null;
+let stickerVideoElement = null;
+let stickerVideoDuration = 0;
+let trimStart = 0;
+let trimEnd = 3;
+let stickerFrames = [];
 
 function toggleStickerPanel() {
     const panel = document.getElementById('stickerPanel');
@@ -2023,34 +2056,192 @@ function loadStickers() {
 function openStickerModal() {
     document.getElementById('stickerPanel').classList.remove('active');
     document.getElementById('stickerModal').classList.add('active');
+    
+    // Adımları sıfırla
+    document.getElementById('stickerStep1').style.display = 'block';
+    document.getElementById('stickerStep2').style.display = 'none';
+    document.getElementById('stickerStep3').style.display = 'none';
+    
     stickerFile = null;
     stickerPreviewData = null;
     stickerPreviewType = null;
-    document.getElementById('stickerPreviewContainer').style.display = 'none';
+    stickerVideoElement = null;
+    stickerVideoDuration = 0;
+    trimStart = 0;
+    trimEnd = 3;
+    stickerFrames = [];
     document.getElementById('stickerPreviewArea').innerHTML = '';
 }
 
 function closeStickerModal() {
     document.getElementById('stickerModal').classList.remove('active');
     stickerFile = null;
+    if (stickerVideoElement) {
+        stickerVideoElement.pause();
+        stickerVideoElement = null;
+    }
 }
 
-function previewSticker(file) {
+function handleStickerFile(file) {
     if (!file) return;
     stickerFile = file;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        stickerPreviewData = e.target.result;
-        stickerPreviewType = file.type.startsWith('video') ? 'video' : 'image';
-        const area = document.getElementById('stickerPreviewArea');
-        if (stickerPreviewType === 'video') {
-            area.innerHTML = `<video src="${stickerPreviewData}" class="sticker-preview-video" autoplay muted loop playsinline></video>`;
-        } else {
-            area.innerHTML = `<img src="${stickerPreviewData}" class="sticker-preview" alt="Sticker">`;
-        }
-        document.getElementById('stickerPreviewContainer').style.display = 'block';
+    
+    if (file.type.startsWith('image')) {
+        // Fotoğraf - direkt önizlemeye geç
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            stickerPreviewData = e.target.result;
+            stickerPreviewType = 'image';
+            document.getElementById('stickerStep1').style.display = 'none';
+            document.getElementById('stickerStep2').style.display = 'none';
+            document.getElementById('stickerStep3').style.display = 'block';
+            document.getElementById('stickerPreviewArea').innerHTML = `<img src="${stickerPreviewData}" class="sticker-preview" alt="Sticker">`;
+        };
+        reader.readAsDataURL(file);
+    } else if (file.type.startsWith('video')) {
+        // Video - kesit seçme adımına geç
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const videoUrl = e.target.result;
+            stickerVideoElement = document.createElement('video');
+            stickerVideoElement.src = videoUrl;
+            stickerVideoElement.muted = true;
+            stickerVideoElement.playsInline = true;
+            
+            stickerVideoElement.onloadedmetadata = () => {
+                stickerVideoDuration = stickerVideoElement.duration;
+                trimEnd = Math.min(3, stickerVideoDuration);
+                trimStart = 0;
+                
+                document.getElementById('stickerStep1').style.display = 'none';
+                document.getElementById('stickerStep2').style.display = 'block';
+                document.getElementById('stickerStep3').style.display = 'none';
+                
+                const videoPreview = document.getElementById('stickerVideoPreview');
+                videoPreview.src = videoUrl;
+                
+                // Range ayarları
+                const startRange = document.getElementById('trimStartRange');
+                const endRange = document.getElementById('trimEndRange');
+                startRange.max = Math.max(0, stickerVideoDuration - 0.5);
+                endRange.max = stickerVideoDuration;
+                startRange.value = 0;
+                endRange.value = trimEnd;
+                
+                document.getElementById('trimStartLabel').textContent = '0.0s';
+                document.getElementById('trimEndLabel').textContent = trimEnd.toFixed(1) + 's';
+                
+                generateVideoFrames(videoUrl);
+            };
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function generateVideoFrames(videoUrl) {
+    const framesContainer = document.getElementById('videoFrames');
+    framesContainer.innerHTML = '';
+    stickerFrames = [];
+    
+    const video = document.createElement('video');
+    video.src = videoUrl;
+    video.muted = true;
+    video.playsInline = true;
+    
+    video.onloadedmetadata = () => {
+        const duration = video.duration;
+        const frameCount = Math.min(20, Math.floor(duration / 0.5));
+        const canvas = document.createElement('canvas');
+        canvas.width = 80;
+        canvas.height = 60;
+        const fctx = canvas.getContext('2d');
+        
+        let currentTime = 0;
+        const interval = duration / frameCount;
+        
+        video.onseeked = () => {
+            fctx.drawImage(video, 0, 0, 80, 60);
+            const frameImg = document.createElement('img');
+            frameImg.src = canvas.toDataURL('image/jpeg', 0.7);
+            frameImg.style.width = '70px';
+            frameImg.style.height = '52px';
+            frameImg.style.borderRadius = '5px';
+            frameImg.style.cursor = 'pointer';
+            frameImg.style.flexShrink = '0';
+            frameImg.onclick = () => {
+                trimStart = currentTime;
+                document.getElementById('trimStartRange').value = trimStart;
+                document.getElementById('trimStartLabel').textContent = trimStart.toFixed(1) + 's';
+            };
+            framesContainer.appendChild(frameImg);
+            stickerFrames.push(currentTime);
+            
+            currentTime += interval;
+            if (currentTime < duration) {
+                video.currentTime = currentTime;
+            } else {
+                video.src = '';
+            }
+        };
+        
+        video.currentTime = 0;
     };
-    reader.readAsDataURL(file);
+}
+
+function updateTrimStart(value) {
+    trimStart = parseFloat(value);
+    document.getElementById('trimStartLabel').textContent = trimStart.toFixed(1) + 's';
+    
+    // Bitiş her zaman başlangıçtan en az 1 saniye sonra olmalı
+    if (trimEnd < trimStart + 1) {
+        trimEnd = Math.min(trimStart + 1, stickerVideoDuration);
+        document.getElementById('trimEndRange').value = trimEnd;
+        document.getElementById('trimEndLabel').textContent = trimEnd.toFixed(1) + 's';
+    }
+}
+
+function updateTrimEnd(value) {
+    trimEnd = parseFloat(value);
+    document.getElementById('trimEndLabel').textContent = trimEnd.toFixed(1) + 's';
+    
+    // Başlangıç her zaman bitişten en az 1 saniye önce olmalı
+    if (trimStart > trimEnd - 1) {
+        trimStart = Math.max(0, trimEnd - 1);
+        document.getElementById('trimStartRange').value = trimStart;
+        document.getElementById('trimStartLabel').textContent = trimStart.toFixed(1) + 's';
+    }
+}
+
+function generateStickerFromVideo() {
+    if (!stickerVideoElement) return;
+    
+    const duration = trimEnd - trimStart;
+    if (duration < 0.5 || duration > 3.5) {
+        alert('Kesit 0.5 - 3 saniye arasında olmalı!');
+        return;
+    }
+    
+    document.getElementById('stickerStep2').style.display = 'none';
+    document.getElementById('stickerStep3').style.display = 'block';
+    document.getElementById('stickerPreviewArea').innerHTML = '<div style="color:#ccc; padding:20px;">Kesit oluşturuluyor...</div>';
+    
+    // Canvas ile video kesitini kaydet
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    stickerVideoElement.currentTime = trimStart;
+    stickerVideoElement.onseeked = () => {
+        canvas.width = 200;
+        canvas.height = 200;
+        ctx.drawImage(stickerVideoElement, 0, 0, 200, 200);
+        
+        // Video sticker olarak değil, fotoğraf sticker olarak kaydet
+        // (Gerçek video sticker için WebM encode gerekir, basitlik için ilk kareyi alıyoruz)
+        stickerPreviewData = canvas.toDataURL('image/png');
+        stickerPreviewType = 'image';
+        
+        document.getElementById('stickerPreviewArea').innerHTML = `<img src="${stickerPreviewData}" class="sticker-preview" alt="Sticker">`;
+    };
 }
 
 function saveSticker() {
@@ -2218,37 +2409,60 @@ function closeFullscreen() {
             ]
         };
 
-        function getOtherUsers() {
-            const users = [];
-            document.querySelectorAll('.user-item').forEach(el => {
-                const name = el.querySelector('.user-name')?.textContent?.replace('SAHİP', '').trim();
-                if (name && name !== currentUser?.name) users.push(name);
-            });
-            return users;
-        }
+function getOtherUsers() {
+    if (!currentUser) return [];
+    return onlineUsers
+        .filter(u => u.userName !== currentUser.name)
+        .map(u => u.userName);
+}
 
-        async function startVideoCall() {
-            const users = getOtherUsers();
-            if (users.length === 0) {
-                alert('Aranacak başka kullanıcı yok!');
-                return;
-            }
-            callTarget = users[0];
-            callType = 'video';
-            await initCall();
-        }
+async function startVideoCall() {
+    const users = getOtherUsers();
+    if (users.length === 0) {
+        alert('Aranacak başka kullanıcı yok!');
+        return;
+    }
+    
+    // Kullanıcı seçme - eğer 1 kişi varsa direkt onu ara
+    if (users.length === 1) {
+        callTarget = users[0];
+        callType = 'video';
+        await initCall();
+        return;
+    }
+    
+    // Birden fazla kişi varsa basit bir seçim listesi göster
+    const choice = prompt('Kimi aramak istiyorsun?\n' + users.map((u, i) => `${i + 1}. ${u}`).join('\n'));
+    const index = parseInt(choice) - 1;
+    if (index >= 0 && index < users.length) {
+        callTarget = users[index];
+        callType = 'video';
+        await initCall();
+    }
+}
 
-        async function startAudioCall() {
-            const users = getOtherUsers();
-            if (users.length === 0) {
-                alert('Aranacak başka kullanıcı yok!');
-                return;
-            }
-            callTarget = users[0];
-            callType = 'audio';
-            await initCall();
-        }
-
+async function startAudioCall() {
+    const users = getOtherUsers();
+    if (users.length === 0) {
+        alert('Aranacak başka kullanıcı yok!');
+        return;
+    }
+    
+    if (users.length === 1) {
+        callTarget = users[0];
+        callType = 'audio';
+        await initCall();
+        return;
+    }
+    
+    const choice = prompt('Kimi aramak istiyorsun?\n' + users.map((u, i) => `${i + 1}. ${u}`).join('\n'));
+    const index = parseInt(choice) - 1;
+    if (index >= 0 && index < users.length) {
+        callTarget = users[index];
+        callType = 'audio';
+        await initCall();
+    }
+}
         async function initCall() {
             try {
                 const constraints = callType === 'video'
