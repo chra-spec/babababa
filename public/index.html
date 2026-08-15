@@ -1061,11 +1061,15 @@
             margin-bottom: 30px;
         }
 
-        .call-controls {
-            display: flex;
-            gap: 20px;
-            margin-top: auto;
-        }
+.call-controls {
+    display: flex;
+    gap: 20px;
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+}
 
         .call-control-btn {
             width: 60px;
@@ -1084,25 +1088,29 @@
         .call-control-btn.mute.active { background: #667eea; }
         .call-control-btn.end { background: #e74c3c; color: #fff; width: 70px; height: 70px; }
 
-        .call-remote-video {
-            width: 100%;
-            max-width: 400px;
-            max-height: 50vh;
-            border-radius: 15px;
-            object-fit: cover;
-            margin-bottom: 20px;
-        }
+.call-remote-video {
+    width: 100%;
+    height: calc(100vh - 150px);
+    border-radius: 0;
+    object-fit: cover;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1;
+}
 
-        .call-local-video {
-            position: absolute;
-            top: 60px;
-            right: 20px;
-            width: 120px;
-            height: 160px;
-            border-radius: 10px;
-            object-fit: cover;
-            border: 2px solid #444;
-        }
+.call-local-video {
+    position: fixed;
+    top: 60px;
+    right: 20px;
+    width: 100px;
+    height: 140px;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 2px solid #667eea;
+    z-index: 10;
+    transform: scaleX(-1); /* AYNA MODU */
+}
 
         .scrollbar-thin::-webkit-scrollbar {
             width: 4px;
@@ -1797,7 +1805,7 @@ function displayMessage(msg) {
         <video src="${msg.fileData}" class="message-video" controls controlsList="nodownload" onclick="openFullscreenVideo('${msg.fileData}')"></video>`;
     } else if (msg.type === 'sticker') {
 if (msg.stickerType === 'video') {
-    content += `<video src="${msg.fileData}" class="message-sticker" autoplay muted loop playsinline style="transform: rotate(90deg);"></video>`;
+    content += `<video src="${msg.fileData}" class="message-sticker" autoplay muted loop playsinline style="transform: rotate(90deg);" onloadedmetadata="setupStickerVideo(this)"></video>`;
 } else {
             content += `<img src="${msg.fileData}" class="message-sticker" alt="Sticker">`;
         }
@@ -1884,6 +1892,14 @@ function escapeHtml(t) {
     const d = document.createElement('div');
     d.textContent = t;
     return d.innerHTML;
+}
+
+function setupStickerVideo(video) {
+    video.addEventListener('timeupdate', function() {
+        if (this.currentTime >= 3) {
+            this.currentTime = 0;
+        }
+    });
 }
 
 // ============ CONTEXT MENÜ ============
@@ -2154,6 +2170,7 @@ stickerVideoElement.onloadedmetadata = () => {
     videoPreview.playsInline = true;
     videoPreview.currentTime = 0;
     videoPreview.play();
+    setupStickerVideo(videoPreview);
 };
         };
         reader.readAsDataURL(file);
@@ -2168,13 +2185,11 @@ function confirmVideoSticker() {
     document.getElementById('stickerPreviewArea').innerHTML = '<div style="color:#ccc; padding:20px;">Çıkartma hazırlanıyor...</div>';
     
     setTimeout(() => {
-        // Videonun kendisini kaydet (ilk 3 saniye otomatik)
         stickerPreviewData = stickerVideoElement.src;
         stickerPreviewType = 'video';
         
         document.getElementById('stickerPreviewArea').innerHTML = `
             <video src="${stickerPreviewData}" style="width:120px; height:120px; border-radius:50%; object-fit:cover; border:2px solid #667eea;" autoplay muted loop playsinline></video>
-            <button class="btn-full" onclick="saveSticker()" style="margin-top:10px;">💾 Kaydet</button>
         `;
     }, 500);
 }
@@ -2522,7 +2537,7 @@ const offerTimeout = setTimeout(() => {
         console.log('⏰ Aday toplama zaman aşımı, mevcut adaylarla gönderiliyor');
         sendOfferWithCandidates();
     }
-}, 3000);
+}, 1500);
 
 // Yüksek kalite ses codec ayarı
 setTimeout(() => {
@@ -2572,9 +2587,14 @@ function toggleCallMute() {
     if (!localStream) return;
     const audioTracks = localStream.getAudioTracks();
     if (audioTracks.length > 0) {
-        const enabled = audioTracks[0].enabled;
-        audioTracks.forEach(track => track.enabled = !enabled);
-        document.getElementById('callMuteBtn').classList.toggle('active');
+        const isCurrentlyMuted = !audioTracks[0].enabled;
+        audioTracks.forEach(track => track.enabled = isCurrentlyMuted);
+        const btn = document.getElementById('callMuteBtn');
+        if (isCurrentlyMuted) {
+            btn.classList.remove('active');
+        } else {
+            btn.classList.add('active');
+        }
     }
 }
 
@@ -2582,9 +2602,14 @@ function toggleCallVideo() {
     if (!localStream) return;
     const videoTracks = localStream.getVideoTracks();
     if (videoTracks.length > 0) {
-        const enabled = videoTracks[0].enabled;
-        videoTracks.forEach(track => track.enabled = !enabled);
-        document.getElementById('callVideoBtn').classList.toggle('active');
+        const isCurrentlyOff = !videoTracks[0].enabled;
+        videoTracks.forEach(track => track.enabled = isCurrentlyOff);
+        const btn = document.getElementById('callVideoBtn');
+        if (isCurrentlyOff) {
+            btn.classList.remove('active');
+        } else {
+            btn.classList.add('active');
+        }
     }
 }
 
@@ -2734,7 +2759,7 @@ const answerTimeout = setTimeout(() => {
         console.log('⏰ Cevap adayları zaman aşımı, mevcut adaylarla gönderiliyor');
         sendAnswerWithCandidates();
     }
-}, 3000);
+}, 1500);
 
 peerConnection.onicegatheringstatechange = () => {
     if (peerConnection.iceGatheringState === 'complete') {
