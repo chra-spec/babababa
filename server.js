@@ -14,7 +14,7 @@ const io = socketIo(server, {
     methods: ["GET", "POST"]
   },
   transports: ['websocket', 'polling'],
-  maxHttpBufferSize: 50 * 1024 * 1024 // 50MB (fotoğraf, ses, video, çıkartma için yeterli)
+  maxHttpBufferSize: 50 * 1024 * 1024
 });
 
 app.use(cors());
@@ -22,7 +22,6 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Sabit oda kodu
 const ROOM_CODE = 'efkaza7634';
 const rooms = new Map();
 
@@ -50,6 +49,7 @@ io.on('connection', (socket) => {
   let currentUser = null;
   let currentRoomCode = null;
 
+  // ============ SOBETE KATIL ============
   socket.on('join-chat', (data) => {
     try {
       const { roomCode, userName, userPhoto } = data;
@@ -81,7 +81,6 @@ io.on('connection', (socket) => {
       currentRoomCode = ROOM_CODE;
       socket.join(ROOM_CODE);
 
-      // Geçmiş mesajları gönder (son 50)
       const previousMessages = room.messages.slice(-50);
       previousMessages.forEach(msg => socket.emit('message', msg));
 
@@ -95,7 +94,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Yeni mesaj (text, image, video, sticker, audio)
+  // ============ MESAJ GÖNDER ============
   socket.on('message', (data) => {
     try {
       if (!currentRoomCode || !currentUser) return;
@@ -121,7 +120,6 @@ io.on('connection', (socket) => {
       };
 
       room.messages.push(message);
-      // 500 mesajla sınırla
       if (room.messages.length > 500) {
         room.messages = room.messages.slice(-500);
       }
@@ -132,7 +130,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Mesaj silme
+  // ============ MESAJ SİL ============
   socket.on('delete-message', (data) => {
     try {
       if (!currentRoomCode || !currentUser) return;
@@ -142,7 +140,6 @@ io.on('connection', (socket) => {
       const messageIndex = room.messages.findIndex(m => m.id === data.messageId);
       if (messageIndex === -1) return;
 
-      // Sadece kendi mesajını silebilir (veya oda sahibi değil, herkes kendi mesajını)
       const message = room.messages[messageIndex];
       if (message.userName !== currentUser.userName) {
         socket.emit('error', { message: 'Sadece kendi mesajını silebilirsin' });
@@ -157,7 +154,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Mesaja ifade bırakma
+  // ============ MESAJA İFADE BIRAK ============
   socket.on('react-message', (data) => {
     try {
       if (!currentRoomCode || !currentUser) return;
@@ -170,12 +167,9 @@ io.on('connection', (socket) => {
       const { emoji } = data;
       if (!['🖕', '🤨', '😜', '🤍'].includes(emoji)) return;
 
-      // Aynı kullanıcı aynı emojiyi tekrar bırakmasın
       const existingReaction = message.reactions.find(r => r.emoji === emoji);
       if (existingReaction) {
-        if (existingReaction.users.includes(currentUser.userName)) {
-          return; // zaten bırakmış
-        }
+        if (existingReaction.users.includes(currentUser.userName)) return;
         existingReaction.users.push(currentUser.userName);
         existingReaction.count = existingReaction.users.length;
       } else {
@@ -197,7 +191,124 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Bağlantı koptuğunda
+  // ============ WEBRTC ARAMA ============
+  socket.on('start-call', (data) => {
+    try {
+      const { targetUserName, offer, type, callerName } = data;
+      console.log(`📞 Çağrı: ${callerName} -> ${targetUserName} (${type})`);
+
+      let targetSocketId = null;
+      rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
+        if (user.userName === targetUserName) {
+          targetSocketId = socketId;
+        }
+      });
+
+      if (targetSocketId) {
+        io.to(targetSocketId).emit('incoming-call', {
+          offer: offer,
+          callerName: callerName,
+          callerPhoto: currentUser?.userPhoto || '',
+          type: type
+        });
+        console.log(`✅ Çağrı iletildi: ${callerName} -> ${targetUserName}`);
+      } else {
+        socket.emit('call-error', { message: 'Kullanıcı bulunamadı' });
+        console.log(`❌ Hedef bulunamadı: ${targetUserName}`);
+      }
+    } catch (error) {
+      console.error('❌ Çağrı başlatma hatası:', error);
+    }
+  });
+
+  socket.on('webrtc-answer', (data) => {
+    try {
+      const { targetUserName, answer } = data;
+
+      let targetSocketId = null;
+      rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
+        if (user.userName === targetUserName) {
+          targetSocketId = socketId;
+        }
+      });
+
+      if (targetSocketId) {
+        io.to(targetSocketId).emit('webrtc-answer', {
+          answer: answer,
+          answererName: currentUser?.userName
+        });
+        console.log(`✅ Cevap iletildi: ${currentUser?.userName} -> ${targetUserName}`);
+      }
+    } catch (error) {
+      console.error('❌ Cevap iletme hatası:', error);
+    }
+  });
+
+  socket.on('webrtc-ice-candidate', (data) => {
+    try {
+      const { targetUserName, candidate } = data;
+
+      let targetSocketId = null;
+      rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
+        if (user.userName === targetUserName) {
+          targetSocketId = socketId;
+        }
+      });
+
+      if (targetSocketId) {
+        io.to(targetSocketId).emit('webrtc-ice-candidate', {
+          candidate: candidate,
+          senderName: currentUser?.userName
+        });
+      }
+    } catch (error) {
+      console.error('❌ ICE candidate hatası:', error);
+    }
+  });
+
+  socket.on('reject-call', (data) => {
+    try {
+      const { targetUserName } = data;
+
+      let targetSocketId = null;
+      rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
+        if (user.userName === targetUserName) {
+          targetSocketId = socketId;
+        }
+      });
+
+      if (targetSocketId) {
+        io.to(targetSocketId).emit('call-rejected', {
+          rejectedBy: currentUser?.userName
+        });
+      }
+    } catch (error) {
+      console.error('❌ Çağrı reddetme hatası:', error);
+    }
+  });
+
+  socket.on('end-call', (data) => {
+    try {
+      const { targetUserName } = data;
+
+      let targetSocketId = null;
+      rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
+        if (user.userName === targetUserName) {
+          targetSocketId = socketId;
+        }
+      });
+
+      if (targetSocketId) {
+        io.to(targetSocketId).emit('call-ended', {
+          endedBy: currentUser?.userName
+        });
+      }
+    } catch (error) {
+      console.error('❌ Çağrı sonlandırma hatası:', error);
+    }
+  });
+
+  // ============ BAĞLANTI KOPTU ============
   socket.on('disconnect', () => {
     console.log('🔌 Ayrıldı:', socket.id);
     if (currentUser && currentRoomCode) {
@@ -213,7 +324,7 @@ io.on('connection', (socket) => {
               rooms.delete(currentRoomCode);
               console.log('🗑️ Boş oda silindi');
             }
-          }, 600000); // 10 dakika sonra boş odayı temizle
+          }, 600000);
         }
       }
     }
@@ -242,5 +353,5 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`🎮 Yılan oyunu + Gizli sohbet aktif`);
   console.log(`🔑 Oda kodu: ${ROOM_CODE}`);
   console.log(`📁 Maksimum dosya boyutu: 50MB`);
-  console.log(`😀 Emoji ifadeler: 🖕 🤨 😜 🤍`);
+  console.log(`📞 WebRTC arama aktif (TURN ile uzak mesafe)`);
 });
