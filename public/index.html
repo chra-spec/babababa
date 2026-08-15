@@ -1246,14 +1246,12 @@
         </div>
         
         <!-- ADIM 2: Video Kesit Seçme -->
+<!-- ADIM 2: Video Önizleme -->
 <div id="stickerStep2" style="display:none;">
     <div class="form-group">
-        <label>3 Saniyelik Kesit Seç</label>
-        <div style="width:100%; height:200px; border-radius:10px; background:#000; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:10px;">
-            <video id="stickerVideoPreview" style="width:100%; height:100%; object-fit:cover;" muted playsinline loop></video>
-        </div>
-        <div id="videoFrames" style="display:flex; gap:5px; overflow-x:auto; padding:5px 0; margin-top:5px; -webkit-overflow-scrolling:touch;"></div>
-        <button class="btn-full" onclick="generateStickerFromVideo()" style="margin-top:10px;">✅ Kesiti Onayla</button>
+        <label>Önizleme (İlk 3 Saniye)</label>
+        <video id="stickerVideoPreview" style="width:100%; height:200px; border-radius:10px; background:#000; object-fit:cover;" muted playsinline loop></video>
+        <button class="btn-full" onclick="confirmVideoSticker()" style="margin-top:10px;">✅ Kesiti Onayla</button>
     </div>
 </div>
         
@@ -2106,9 +2104,6 @@ function openStickerModal() {
     stickerPreviewType = null;
     stickerVideoElement = null;
     stickerVideoDuration = 0;
-    trimStart = 0;
-    trimEnd = 3;
-    stickerFrames = [];
     document.getElementById('stickerPreviewArea').innerHTML = '';
 }
 
@@ -2147,171 +2142,65 @@ function handleStickerFile(file) {
             stickerVideoElement.muted = true;
             stickerVideoElement.playsInline = true;
             
-            stickerVideoElement.onloadedmetadata = () => {
-                stickerVideoDuration = stickerVideoElement.duration;
-                trimEnd = Math.min(3, stickerVideoDuration);
-                trimStart = 0;
-                
-                document.getElementById('stickerStep1').style.display = 'none';
-                document.getElementById('stickerStep2').style.display = 'block';
-                document.getElementById('stickerStep3').style.display = 'none';
-                
-                const videoPreview = document.getElementById('stickerVideoPreview');
-videoPreview.src = videoUrl;
-videoPreview.loop = true;
-videoPreview.muted = true;
-videoPreview.playsInline = true;
-                
-                // Range ayarları
-                const startRange = document.getElementById('trimStartRange');
-                const endRange = document.getElementById('trimEndRange');
-                startRange.max = Math.max(0, stickerVideoDuration - 0.5);
-                endRange.max = stickerVideoDuration;
-                startRange.value = 0;
-                endRange.value = trimEnd;
-                
-                document.getElementById('trimStartLabel').textContent = '0.0s';
-                document.getElementById('trimEndLabel').textContent = trimEnd.toFixed(1) + 's';
-                
-                generateVideoFrames(videoUrl);
-            };
+stickerVideoElement.onloadedmetadata = () => {
+    document.getElementById('stickerStep1').style.display = 'none';
+    document.getElementById('stickerStep2').style.display = 'block';
+    document.getElementById('stickerStep3').style.display = 'none';
+    
+    const videoPreview = document.getElementById('stickerVideoPreview');
+    videoPreview.src = videoUrl;
+    videoPreview.loop = true;
+    videoPreview.muted = true;
+    videoPreview.playsInline = true;
+    videoPreview.currentTime = 0;
+    videoPreview.play();
+};
         };
         reader.readAsDataURL(file);
     }
 }
 
-function generateVideoFrames(videoUrl) {
-    const framesContainer = document.getElementById('videoFrames');
-    framesContainer.innerHTML = '';
-    stickerFrames = [];
-    
-    const video = document.createElement('video');
-    video.src = videoUrl;
-    video.muted = true;
-    video.playsInline = true;
-    
-    video.onloadedmetadata = () => {
-        const duration = video.duration;
-        const frameCount = Math.min(30, Math.floor(duration / 0.3));
-        
-        // Video yönünü kontrol et
-        const isPortrait = video.videoHeight > video.videoWidth;
-        
-        const canvas = document.createElement('canvas');
-        if (isPortrait) {
-            canvas.width = 60;
-            canvas.height = 90;
-        } else {
-            canvas.width = 90;
-            canvas.height = 60;
-        }
-        
-        const fctx = canvas.getContext('2d');
-        let currentTime = 0;
-        const interval = duration / frameCount;
-        
-        video.onseeked = () => {
-            const scale = Math.min(canvas.width / video.videoWidth, canvas.height / video.videoHeight);
-            const w = video.videoWidth * scale;
-            const h = video.videoHeight * scale;
-            const x = (canvas.width - w) / 2;
-            const y = (canvas.height - h) / 2;
-            
-            fctx.fillStyle = '#000';
-            fctx.fillRect(0, 0, canvas.width, canvas.height);
-            fctx.drawImage(video, x, y, w, h);
-            
-            const frameImg = document.createElement('div');
-            frameImg.style.cssText = `
-                min-width: ${isPortrait ? '55px' : '75px'};
-                height: ${isPortrait ? '80px' : '50px'};
-                border-radius: 6px;
-                cursor: pointer;
-                flex-shrink: 0;
-                background-image: url(${canvas.toDataURL('image/jpeg', 0.6)});
-                background-size: cover;
-                background-position: center;
-                border: 2px solid transparent;
-                transition: border 0.2s;
-            `;
-            frameImg.onclick = () => {
-                document.querySelectorAll('#videoFrames > div').forEach(el => {
-                    el.style.border = '2px solid transparent';
-                });
-                frameImg.style.border = '2px solid #667eea';
-                
-                trimStart = currentTime;
-                trimEnd = Math.min(currentTime + 3, duration);
-                
-                const previewVideo = document.getElementById('stickerVideoPreview');
-                previewVideo.currentTime = trimStart;
-                previewVideo.play();
-            };
-            
-            framesContainer.appendChild(frameImg);
-            stickerFrames.push(currentTime);
-            
-            currentTime += interval;
-            if (currentTime < duration) {
-                video.currentTime = currentTime;
-            } else {
-                video.src = '';
-            }
-        };
-        
-        video.currentTime = 0;
-    };
-}
-
-function updateTrimStart(value) {
-    trimStart = parseFloat(value);
-    document.getElementById('trimStartLabel').textContent = trimStart.toFixed(1) + 's';
-    
-    // Bitiş her zaman başlangıçtan en az 1 saniye sonra olmalı
-    if (trimEnd < trimStart + 1) {
-        trimEnd = Math.min(trimStart + 1, stickerVideoDuration);
-        document.getElementById('trimEndRange').value = trimEnd;
-        document.getElementById('trimEndLabel').textContent = trimEnd.toFixed(1) + 's';
-    }
-}
-
-function updateTrimEnd(value) {
-    trimEnd = parseFloat(value);
-    document.getElementById('trimEndLabel').textContent = trimEnd.toFixed(1) + 's';
-    
-    // Başlangıç her zaman bitişten en az 1 saniye önce olmalı
-    if (trimStart > trimEnd - 1) {
-        trimStart = Math.max(0, trimEnd - 1);
-        document.getElementById('trimStartRange').value = trimStart;
-        document.getElementById('trimStartLabel').textContent = trimStart.toFixed(1) + 's';
-    }
-}
-
-function generateStickerFromVideo() {
+function confirmVideoSticker() {
     if (!stickerVideoElement) return;
     
     document.getElementById('stickerStep2').style.display = 'none';
     document.getElementById('stickerStep3').style.display = 'block';
-    document.getElementById('stickerPreviewArea').innerHTML = '<div style="color:#ccc; padding:20px;">Kesit oluşturuluyor...</div>';
+    document.getElementById('stickerPreviewArea').innerHTML = '<div style="color:#ccc; padding:20px;">Çıkartma hazırlanıyor...</div>';
     
     setTimeout(() => {
-        // Videonun kendisini kaydet (fotoğraf değil!)
+        // Videonun kendisini kaydet (ilk 3 saniye otomatik)
         stickerPreviewData = stickerVideoElement.src;
         stickerPreviewType = 'video';
         
         document.getElementById('stickerPreviewArea').innerHTML = `
-            <video src="${stickerPreviewData}" style="width:120px; height:120px; border-radius:50%; object-fit:cover; border:2px solid #667eea; transform: rotate(90deg);" autoplay muted loop playsinline></video>
+            <video src="${stickerPreviewData}" style="width:120px; height:120px; border-radius:50%; object-fit:cover; border:2px solid #667eea;" autoplay muted loop playsinline></video>
+            <button class="btn-full" onclick="saveSticker()" style="margin-top:10px;">💾 Kaydet</button>
         `;
     }, 500);
 }
 
+
 function saveSticker() {
-    if (!stickerPreviewData) { alert('Önce dosya seç'); return; }
-    const stickers = JSON.parse(localStorage.getItem('stickers') || '[]');
-    stickers.push({ id: Date.now().toString(), type: stickerPreviewType, data: stickerPreviewData });
-    localStorage.setItem('stickers', JSON.stringify(stickers));
-    closeStickerModal();
-    toggleStickerPanel();
+    if (!stickerPreviewData) { 
+        alert('Önce dosya seç'); 
+        return; 
+    }
+    
+    try {
+        const stickers = JSON.parse(localStorage.getItem('stickers') || '[]');
+        stickers.push({ 
+            id: Date.now().toString(), 
+            type: stickerPreviewType, 
+            data: stickerPreviewData 
+        });
+        localStorage.setItem('stickers', JSON.stringify(stickers));
+        
+        closeStickerModal();
+        toggleStickerPanel();
+    } catch (error) {
+        console.error('Kaydetme hatası:', error);
+        alert('Çıkartma kaydedilemedi! Video çok büyük olabilir.');
+    }
 }
 
 function sendSticker(sticker) {
