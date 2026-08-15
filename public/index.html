@@ -646,15 +646,15 @@
             flex-wrap: wrap;
         }
 
-        .reaction-badge {
-            background: rgba(255,255,255,0.15);
-            border-radius: 10px;
-            padding: 1px 6px;
-            font-size: 11px;
-            display: flex;
-            align-items: center;
-            gap: 2px;
-        }
+.reaction-badge {
+    background: rgba(255,255,255,0.15);
+    border-radius: 14px;
+    padding: 4px 12px;
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
 
         .message-reply-preview {
             border-left: 2px solid #667eea;
@@ -721,11 +721,11 @@
 
         .reaction-picker.active { display: flex; }
 
-        .reaction-emoji {
-            font-size: 20px;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
+.reaction-emoji {
+    font-size: 32px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
 
         .reaction-emoji:hover { transform: scale(1.3); }
 
@@ -1246,22 +1246,16 @@
         </div>
         
         <!-- ADIM 2: Video Kesit Seçme -->
-        <div id="stickerStep2" style="display:none;">
-            <div class="form-group">
-                <label>3 Saniyelik Kesit Seç</label>
-                <video id="stickerVideoPreview" style="width:100%; max-height:200px; border-radius:10px; background:#000;" controls></video>
-                <div id="videoFrames" style="display:flex; gap:4px; overflow-x:auto; padding:10px 0; margin-top:5px;"></div>
-                <div style="display:flex; gap:10px; align-items:center; margin-top:8px;">
-                    <label style="font-size:12px; color:#ccc;">Başlangıç: <span id="trimStartLabel">0.0s</span></label>
-                    <input type="range" id="trimStartRange" min="0" max="0" step="0.1" value="0" style="flex:1;" oninput="updateTrimStart(this.value)">
-                </div>
-                <div style="display:flex; gap:10px; align-items:center; margin-top:5px;">
-                    <label style="font-size:12px; color:#ccc;">Bitiş: <span id="trimEndLabel">3.0s</span></label>
-                    <input type="range" id="trimEndRange" min="0" max="0" step="0.1" value="3" style="flex:1;" oninput="updateTrimEnd(this.value)">
-                </div>
-                <button class="btn-full" onclick="generateStickerFromVideo()" style="margin-top:10px;">✅ Kesiti Onayla</button>
-            </div>
+<div id="stickerStep2" style="display:none;">
+    <div class="form-group">
+        <label>3 Saniyelik Kesit Seç</label>
+        <div style="width:100%; height:200px; border-radius:10px; background:#000; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:10px;">
+            <video id="stickerVideoPreview" style="width:100%; height:100%; object-fit:cover;" muted playsinline loop></video>
         </div>
+        <div id="videoFrames" style="display:flex; gap:5px; overflow-x:auto; padding:5px 0; margin-top:5px; -webkit-overflow-scrolling:touch;"></div>
+        <button class="btn-full" onclick="generateStickerFromVideo()" style="margin-top:10px;">✅ Kesiti Onayla</button>
+    </div>
+</div>
         
         <!-- ADIM 3: Önizleme + Kaydet -->
         <div id="stickerStep3" style="display:none;">
@@ -1316,6 +1310,7 @@
 
     <!-- ÇAĞRI OVERLAY -->
     <div class="call-overlay" id="callOverlay">
+        <audio id="callRemoteAudio" autoplay playsinline style="display:none;"></audio>
         <video id="callLocalVideo" class="call-local-video" autoplay muted playsinline style="display:none;"></video>
         <video id="callRemoteVideo" class="call-remote-video" autoplay playsinline style="display:none;"></video>
         <img src="" class="call-avatar" id="callAvatar" alt="Avatar" style="display:none;">
@@ -2118,7 +2113,10 @@ function handleStickerFile(file) {
                 document.getElementById('stickerStep3').style.display = 'none';
                 
                 const videoPreview = document.getElementById('stickerVideoPreview');
-                videoPreview.src = videoUrl;
+videoPreview.src = videoUrl;
+videoPreview.loop = true;
+videoPreview.muted = true;
+videoPreview.playsInline = true;
                 
                 // Range ayarları
                 const startRange = document.getElementById('trimStartRange');
@@ -2150,29 +2148,62 @@ function generateVideoFrames(videoUrl) {
     
     video.onloadedmetadata = () => {
         const duration = video.duration;
-        const frameCount = Math.min(20, Math.floor(duration / 0.5));
-        const canvas = document.createElement('canvas');
-        canvas.width = 80;
-        canvas.height = 60;
-        const fctx = canvas.getContext('2d');
+        const frameCount = Math.min(30, Math.floor(duration / 0.3));
         
+        // Video yönünü kontrol et
+        const isPortrait = video.videoHeight > video.videoWidth;
+        
+        const canvas = document.createElement('canvas');
+        if (isPortrait) {
+            canvas.width = 60;
+            canvas.height = 90;
+        } else {
+            canvas.width = 90;
+            canvas.height = 60;
+        }
+        
+        const fctx = canvas.getContext('2d');
         let currentTime = 0;
         const interval = duration / frameCount;
         
         video.onseeked = () => {
-            fctx.drawImage(video, 0, 0, 80, 60);
-            const frameImg = document.createElement('img');
-            frameImg.src = canvas.toDataURL('image/jpeg', 0.7);
-            frameImg.style.width = '70px';
-            frameImg.style.height = '52px';
-            frameImg.style.borderRadius = '5px';
-            frameImg.style.cursor = 'pointer';
-            frameImg.style.flexShrink = '0';
+            const scale = Math.min(canvas.width / video.videoWidth, canvas.height / video.videoHeight);
+            const w = video.videoWidth * scale;
+            const h = video.videoHeight * scale;
+            const x = (canvas.width - w) / 2;
+            const y = (canvas.height - h) / 2;
+            
+            fctx.fillStyle = '#000';
+            fctx.fillRect(0, 0, canvas.width, canvas.height);
+            fctx.drawImage(video, x, y, w, h);
+            
+            const frameImg = document.createElement('div');
+            frameImg.style.cssText = `
+                min-width: ${isPortrait ? '55px' : '75px'};
+                height: ${isPortrait ? '80px' : '50px'};
+                border-radius: 6px;
+                cursor: pointer;
+                flex-shrink: 0;
+                background-image: url(${canvas.toDataURL('image/jpeg', 0.6)});
+                background-size: cover;
+                background-position: center;
+                border: 2px solid transparent;
+                transition: border 0.2s;
+            `;
             frameImg.onclick = () => {
+                document.querySelectorAll('#videoFrames > div').forEach(el => {
+                    el.style.border = '2px solid transparent';
+                });
+                frameImg.style.border = '2px solid #667eea';
+                
                 trimStart = currentTime;
-                document.getElementById('trimStartRange').value = trimStart;
-                document.getElementById('trimStartLabel').textContent = trimStart.toFixed(1) + 's';
+                trimEnd = Math.min(currentTime + 3, duration);
+                
+                const previewVideo = document.getElementById('stickerVideoPreview');
+                previewVideo.currentTime = trimStart;
+                previewVideo.play();
             };
+            
             framesContainer.appendChild(frameImg);
             stickerFrames.push(currentTime);
             
@@ -2215,33 +2246,18 @@ function updateTrimEnd(value) {
 function generateStickerFromVideo() {
     if (!stickerVideoElement) return;
     
-    const duration = trimEnd - trimStart;
-    if (duration < 0.5 || duration > 3.5) {
-        alert('Kesit 0.5 - 3 saniye arasında olmalı!');
-        return;
-    }
-    
     document.getElementById('stickerStep2').style.display = 'none';
     document.getElementById('stickerStep3').style.display = 'block';
     document.getElementById('stickerPreviewArea').innerHTML = '<div style="color:#ccc; padding:20px;">Kesit oluşturuluyor...</div>';
     
-    // Canvas ile video kesitini kaydet
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    stickerVideoElement.currentTime = trimStart;
-    stickerVideoElement.onseeked = () => {
-        canvas.width = 200;
-        canvas.height = 200;
-        ctx.drawImage(stickerVideoElement, 0, 0, 200, 200);
+    setTimeout(() => {
+        stickerPreviewData = stickerVideoElement.src;
+        stickerPreviewType = 'video';
         
-        // Video sticker olarak değil, fotoğraf sticker olarak kaydet
-        // (Gerçek video sticker için WebM encode gerekir, basitlik için ilk kareyi alıyoruz)
-        stickerPreviewData = canvas.toDataURL('image/png');
-        stickerPreviewType = 'image';
-        
-        document.getElementById('stickerPreviewArea').innerHTML = `<img src="${stickerPreviewData}" class="sticker-preview" alt="Sticker">`;
-    };
+        document.getElementById('stickerPreviewArea').innerHTML = `
+            <video src="${stickerPreviewData}" style="width:120px; height:120px; border-radius:50%; object-fit:cover; border:2px solid #667eea;" autoplay muted loop playsinline></video>
+        `;
+    }, 500);
 }
 
 function saveSticker() {
@@ -2463,75 +2479,94 @@ async function startAudioCall() {
         await initCall();
     }
 }
-        async function initCall() {
-            try {
-                const constraints = callType === 'video'
-                    ? { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: { echoCancellation: true, noiseSuppression: true } }
-                    : { audio: { echoCancellation: true, noiseSuppression: true } };
+async function initCall() {
+    try {
+        const constraints = callType === 'video'
+            ? { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: { echoCancellation: true, noiseSuppression: true } }
+            : { audio: { echoCancellation: true, noiseSuppression: true } };
 
-                localStream = await navigator.mediaDevices.getUserMedia(constraints);
-                
-                showCallOverlay();
-                document.getElementById('callName').textContent = callTarget;
-                document.getElementById('callStatus').textContent = 'Aranıyor...';
-                document.getElementById('callTimer').style.display = 'none';
-                document.getElementById('callMuteBtn').classList.remove('active');
-                
-                if (callType === 'video') {
-                    document.getElementById('callLocalVideo').style.display = 'block';
-                    document.getElementById('callLocalVideo').srcObject = localStream;
-                    document.getElementById('callRemoteVideo').style.display = 'none';
-                    document.getElementById('callAvatar').style.display = 'none';
-                } else {
-                    document.getElementById('callLocalVideo').style.display = 'none';
-                    document.getElementById('callRemoteVideo').style.display = 'none';
-                    document.getElementById('callAvatar').style.display = 'block';
-                    document.getElementById('callAvatar').src = currentUser?.photo || '';
-                }
-
-                peerConnection = new RTCPeerConnection(rtcConfig);
-                
-                localStream.getTracks().forEach(track => {
-                    peerConnection.addTrack(track, localStream);
-                });
-
-                peerConnection.ontrack = (event) => {
-                    if (callType === 'video') {
-                        document.getElementById('callRemoteVideo').style.display = 'block';
-                        document.getElementById('callRemoteVideo').srcObject = event.streams[0];
-                        document.getElementById('callAvatar').style.display = 'none';
-                    }
-                };
-
-                peerConnection.onicecandidate = (event) => {
-                    if (event.candidate) {
-                        socket.emit('webrtc-ice-candidate', { targetUserName: callTarget, candidate: event.candidate });
-                    }
-                };
-
-                peerConnection.onconnectionstatechange = () => {
-                    if (peerConnection && peerConnection.connectionState === 'connected') {
-                        document.getElementById('callStatus').textContent = 'Bağlandı';
-                        startCallTimer();
-                    }
-                };
-
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-
-                socket.emit('start-call', {
-                    targetUserName: callTarget,
-                    offer: offer,
-                    type: callType,
-                    callerName: currentUser.name
-                });
-
-            } catch (error) {
-                console.error('Arama başlatılamadı:', error);
-                alert('Mikrofon/kamera erişimi reddedildi veya hata oluştu!');
-                hideCallOverlay();
-            }
+        localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        showCallOverlay();
+        document.getElementById('callName').textContent = callTarget;
+        document.getElementById('callStatus').textContent = 'Aranıyor...';
+        document.getElementById('callTimer').style.display = 'none';
+        document.getElementById('callMuteBtn').classList.remove('active');
+        
+        if (callType === 'video') {
+            document.getElementById('callLocalVideo').style.display = 'block';
+            document.getElementById('callLocalVideo').srcObject = localStream;
+            document.getElementById('callRemoteVideo').style.display = 'none';
+            document.getElementById('callAvatar').style.display = 'none';
+        } else {
+            document.getElementById('callLocalVideo').style.display = 'none';
+            document.getElementById('callRemoteVideo').style.display = 'none';
+            document.getElementById('callAvatar').style.display = 'block';
+            document.getElementById('callAvatar').src = currentUser?.photo || '';
         }
+
+        peerConnection = new RTCPeerConnection(rtcConfig);
+        
+        localStream.getTracks().forEach(track => {
+            peerConnection.addTrack(track, localStream);
+        });
+
+        // GELİŞMİŞ ONTRACK - HEM SES HEM VİDEO
+        peerConnection.ontrack = (event) => {
+            const stream = event.streams[0];
+            const remoteAudio = document.getElementById('callRemoteAudio');
+            
+            if (event.track.kind === 'audio') {
+                remoteAudio.srcObject = stream;
+                remoteAudio.play().catch(e => console.error('Ses oynatma:', e));
+            }
+            
+            if (event.track.kind === 'video' && callType === 'video') {
+                document.getElementById('callRemoteVideo').style.display = 'block';
+                document.getElementById('callRemoteVideo').srcObject = stream;
+                document.getElementById('callAvatar').style.display = 'none';
+            }
+        };
+
+        // ICE CANDIDATE TOPLAMA
+        let iceCandidates = [];
+        peerConnection.onicecandidate = (event) => {
+            if (event.candidate) {
+                iceCandidates.push(event.candidate);
+                // Ayrıca anında gönder
+                socket.emit('webrtc-ice-candidate', { 
+                    targetUserName: callTarget, 
+                    candidate: event.candidate 
+                });
+            } else {
+                console.log('✅ ICE toplama tamamlandı, toplam: ' + iceCandidates.length);
+            }
+        };
+
+        peerConnection.onconnectionstatechange = () => {
+            console.log('🔗 Durum:', peerConnection.connectionState);
+            if (peerConnection && peerConnection.connectionState === 'connected') {
+                document.getElementById('callStatus').textContent = 'Bağlandı';
+                startCallTimer();
+            }
+        };
+
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+
+        socket.emit('start-call', {
+            targetUserName: callTarget,
+            offer: offer,
+            type: callType,
+            callerName: currentUser.name
+        });
+
+    } catch (error) {
+        console.error('Arama başlatılamadı:', error);
+        alert('Mikrofon/kamera erişimi reddedildi veya hata oluştu!');
+        hideCallOverlay();
+    }
+}
 
         function showCallOverlay() {
             document.getElementById('callOverlay').classList.add('active');
@@ -2628,13 +2663,21 @@ async function startAudioCall() {
                         peerConnection = new RTCPeerConnection(rtcConfig);
                         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
                         
-                        peerConnection.ontrack = (event) => {
-                            if (data.type === 'video') {
-                                document.getElementById('callRemoteVideo').style.display = 'block';
-                                document.getElementById('callRemoteVideo').srcObject = event.streams[0];
-                                document.getElementById('callAvatar').style.display = 'none';
-                            }
-                        };
+peerConnection.ontrack = (event) => {
+    const stream = event.streams[0];
+    const remoteAudio = document.getElementById('callRemoteAudio');
+    
+    if (event.track.kind === 'audio') {
+        remoteAudio.srcObject = stream;
+        remoteAudio.play().catch(e => console.error('Ses oynatma:', e));
+    }
+    
+    if (event.track.kind === 'video' && data.type === 'video') {
+        document.getElementById('callRemoteVideo').style.display = 'block';
+        document.getElementById('callRemoteVideo').srcObject = stream;
+        document.getElementById('callAvatar').style.display = 'none';
+    }
+};
                         
                         peerConnection.onicecandidate = (event) => {
                             if (event.candidate) socket.emit('webrtc-ice-candidate', { targetUserName: data.callerName, candidate: event.candidate });
