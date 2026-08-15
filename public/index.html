@@ -2511,7 +2511,7 @@ async function initCall() {
             peerConnection.addTrack(track, localStream);
         });
 
-        // GELİŞMİŞ ONTRACK - HEM SES HEM VİDEO
+        // GERÇEK BAĞLANTI KONTROLÜ
         peerConnection.ontrack = (event) => {
             const stream = event.streams[0];
             const remoteAudio = document.getElementById('callRemoteAudio');
@@ -2528,38 +2528,51 @@ async function initCall() {
             }
         };
 
-        // ICE CANDIDATE TOPLAMA
-        let iceCandidates = [];
+        // VANILLA ICE: Adayları topla, hazır olunca toplu gönder
+        let pendingCandidates = [];
         peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
-                iceCandidates.push(event.candidate);
-                // Ayrıca anında gönder
-                socket.emit('webrtc-ice-candidate', { 
-                    targetUserName: callTarget, 
-                    candidate: event.candidate 
-                });
-            } else {
-                console.log('✅ ICE toplama tamamlandı, toplam: ' + iceCandidates.length);
+                pendingCandidates.push(event.candidate);
             }
         };
 
+        // Sadece GERÇEKTEN bağlanınca "Bağlandı" yaz!
         peerConnection.onconnectionstatechange = () => {
             console.log('🔗 Durum:', peerConnection.connectionState);
             if (peerConnection && peerConnection.connectionState === 'connected') {
                 document.getElementById('callStatus').textContent = 'Bağlandı';
                 startCallTimer();
+            } else if (peerConnection.connectionState === 'failed') {
+                alert('Uzak ağ hatası! Farklı internet ağlarından bağlanılamadı.');
+                cleanupCall();
             }
         };
 
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
 
-        socket.emit('start-call', {
-            targetUserName: callTarget,
-            offer: offer,
-            type: callType,
-            callerName: currentUser.name
-        });
+        // Buzdağı toplamayı bekle veya 3 saniye sonra zorla gönder
+        const sendOfferWithCandidates = () => {
+            socket.emit('webrtc-offer', {
+                targetUserName: callTarget,
+                offer: peerConnection.localDescription,
+                candidates: pendingCandidates,
+                type: callType,
+                callerName: currentUser.name
+            });
+        };
+
+        if (peerConnection.iceGatheringState === 'complete') {
+            sendOfferWithCandidates();
+        } else {
+            peerConnection.onicegatheringstatechange = () => {
+                if (peerConnection.iceGatheringState === 'complete') {
+                    sendOfferWithCandidates();
+                }
+            };
+            // 3 saniye içinde toplanamazsa ne varsa onu gönder
+            setTimeout(sendOfferWithCandidates, 3000);
+        }
 
     } catch (error) {
         console.error('Arama başlatılamadı:', error);
@@ -2635,106 +2648,120 @@ async function initCall() {
         function setupCallSocketEvents() {
             if (!socket) return;
             
-            socket.on('incoming-call', async (data) => {
-                const accept = confirm(`${data.callerName} sizi ${data.type === 'video' ? 'görüntülü' : 'sesli'} arıyor. Kabul edilsin mi?`);
-                if (accept) {
-                    callTarget = data.callerName;
-                    callType = data.type;
-                    try {
-                        const constraints = data.type === 'video'
-                            ? { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: { echoCancellation: true, noiseSuppression: true } }
-                            : { audio: { echoCancellation: true, noiseSuppression: true } };
-                        
-                        localStream = await navigator.mediaDevices.getUserMedia(constraints);
-                        showCallOverlay();
-                        document.getElementById('callName').textContent = data.callerName;
-                        document.getElementById('callStatus').textContent = 'Bağlanıyor...';
-                        document.getElementById('callTimer').style.display = 'none';
-                        
-                        if (data.type === 'video') {
-                            document.getElementById('callLocalVideo').style.display = 'block';
-                            document.getElementById('callLocalVideo').srcObject = localStream;
-                            document.getElementById('callAvatar').style.display = 'none';
-                        } else {
-                            document.getElementById('callAvatar').style.display = 'block';
-                            document.getElementById('callAvatar').src = data.callerPhoto || '';
-                        }
+socket.on('incoming-call', async (data) => {
+    const accept = confirm(`${data.callerName} sizi ${data.type === 'video' ? 'görüntülü' : 'sesli'} arıyor. Kabul edilsin mi?`);
+    if (accept) {
+        callTarget = data.callerName;
+        callType = data.type;
+        try {
+            const constraints = data.type === 'video'
+                ? { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: { echoCancellation: true, noiseSuppression: true } }
+                : { audio: { echoCancellation: true, noiseSuppression: true } };
+            
+            localStream = await navigator.mediaDevices.getUserMedia(constraints);
+            showCallOverlay();
+            document.getElementById('callName').textContent = data.callerName;
+            document.getElementById('callStatus').textContent = 'Bağlanıyor...';
+            document.getElementById('callTimer').style.display = 'none';
+            
+            if (data.type === 'video') {
+                document.getElementById('callLocalVideo').style.display = 'block';
+                document.getElementById('callLocalVideo').srcObject = localStream;
+                document.getElementById('callAvatar').style.display = 'none';
+            } else {
+                document.getElementById('callAvatar').style.display = 'block';
+                document.getElementById('callAvatar').src = data.callerPhoto || '';
+            }
 
-                        peerConnection = new RTCPeerConnection(rtcConfig);
-                        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-peerConnection.ontrack = (event) => {
-    const stream = event.streams[0];
-    const remoteAudio = document.getElementById('callRemoteAudio');
-    
-    if (event.track.kind === 'audio') {
-        remoteAudio.srcObject = stream;
-        remoteAudio.play().catch(e => console.error('Ses oynatma:', e));
-    }
-    
-    if (event.track.kind === 'video' && data.type === 'video') {
-        document.getElementById('callRemoteVideo').style.display = 'block';
-        document.getElementById('callRemoteVideo').srcObject = stream;
-        document.getElementById('callAvatar').style.display = 'none';
-    }
-};
-                        
-                        peerConnection.onicecandidate = (event) => {
-                            if (event.candidate) socket.emit('webrtc-ice-candidate', { targetUserName: data.callerName, candidate: event.candidate });
-                        };
-
-peerConnection.onconnectionstatechange = () => {
-    console.log('🔗 Aranan taraf durum:', peerConnection.connectionState);
-    if (peerConnection && peerConnection.connectionState === 'connected') {
-        document.getElementById('callStatus').textContent = 'Bağlandı';
-        startCallTimer();
-        
-        // Remote stream'i al
-        const receivers = peerConnection.getReceivers();
-        receivers.forEach(receiver => {
-            if (receiver.track && receiver.track.kind === 'audio') {
-                const stream = new MediaStream([receiver.track]);
+            peerConnection = new RTCPeerConnection(rtcConfig);
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            
+            // UZAK BAĞLANTI KONTROLÜ
+            peerConnection.ontrack = (event) => {
+                const stream = event.streams[0];
                 const remoteAudio = document.getElementById('callRemoteAudio');
-                if (remoteAudio) {
+                
+                if (event.track.kind === 'audio') {
                     remoteAudio.srcObject = stream;
-                    remoteAudio.play().catch(e => console.error('Ses hatası:', e));
+                    remoteAudio.play().catch(e => console.error('Ses oynatma:', e));
+                }
+                
+                if (event.track.kind === 'video' && data.type === 'video') {
+                    document.getElementById('callRemoteVideo').style.display = 'block';
+                    document.getElementById('callRemoteVideo').srcObject = stream;
+                    document.getElementById('callAvatar').style.display = 'none';
+                }
+            };
+
+            // Gelen offer'ı ve adayları uygula
+            await peerConnection.setRemoteDescription(data.offer);
+            if (data.candidates && data.candidates.length > 0) {
+                for (const candidate of data.candidates) {
+                    await peerConnection.addIceCandidate(candidate);
                 }
             }
-        });
-    }
-};
 
-                        await peerConnection.setRemoteDescription(data.offer);
-                        const answer = await peerConnection.createAnswer();
-                        await peerConnection.setLocalDescription(answer);
-                        socket.emit('webrtc-answer', { targetUserName: data.callerName, answer: answer });
-                    } catch (error) {
-                        console.error('Çağrı kabul edilemedi:', error);
-                        cleanupCall();
-                    }
-                } else {
-                    socket.emit('reject-call', { targetUserName: data.callerName });
+            // Cevap adaylarını topla ve toplu gönder
+            let answerCandidates = [];
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    answerCandidates.push(event.candidate);
                 }
-            });
+            };
+
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+
+            const sendAnswerWithCandidates = () => {
+                socket.emit('webrtc-answer', {
+                    targetUserName: data.callerName,
+                    answer: peerConnection.localDescription,
+                    candidates: answerCandidates
+                });
+            };
+
+            if (peerConnection.iceGatheringState === 'complete') {
+                sendAnswerWithCandidates();
+            } else {
+                peerConnection.onicegatheringstatechange = () => {
+                    if (peerConnection.iceGatheringState === 'complete') {
+                        sendAnswerWithCandidates();
+                    }
+                };
+                setTimeout(sendAnswerWithCandidates, 3000);
+            }
+
+            // Sadece GERÇEKTEN bağlanınca "Bağlandı" yaz!
+            peerConnection.onconnectionstatechange = () => {
+                console.log('🔗 Aranan taraf durum:', peerConnection.connectionState);
+                if (peerConnection && peerConnection.connectionState === 'connected') {
+                    document.getElementById('callStatus').textContent = 'Bağlandı';
+                    startCallTimer();
+                } else if (peerConnection.connectionState === 'failed') {
+                    alert('Uzak ağ hatası! Farklı internet ağlarından bağlanılamadı.');
+                    cleanupCall();
+                }
+            };
+
+        } catch (error) {
+            console.error('Çağrı kabul edilemedi:', error);
+            cleanupCall();
+        }
+    } else {
+        socket.emit('reject-call', { targetUserName: data.callerName });
+    }
+});
 
 socket.on('webrtc-answer', async (data) => {
     if (peerConnection) {
         try {
             await peerConnection.setRemoteDescription(data.answer);
-            document.getElementById('callStatus').textContent = 'Bağlandı';
-            startCallTimer();
-            
-            // Remote stream'i al ve sesi bağla
-            const receivers = peerConnection.getReceivers();
-            receivers.forEach(receiver => {
-                if (receiver.track && receiver.track.kind === 'audio') {
-                    const stream = new MediaStream([receiver.track]);
-                    const remoteAudio = document.getElementById('callRemoteAudio');
-                    if (remoteAudio) {
-                        remoteAudio.srcObject = stream;
-                        remoteAudio.play().catch(e => console.error('Ses hatası:', e));
-                    }
+            if (data.candidates && data.candidates.length > 0) {
+                for (const candidate of data.candidates) {
+                    await peerConnection.addIceCandidate(candidate);
                 }
-            });
+            }
+            // BAĞLANDI YAZISINI BURADA YAZMA! Bağlantı durumu yukarıda onconnectionstatechange ile hallolacak.
         } catch (e) {
             console.error('Answer hatası:', e);
         }
