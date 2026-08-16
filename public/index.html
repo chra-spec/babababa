@@ -2360,31 +2360,33 @@ function closeFullscreen() {
         let callSeconds = 0;
 
         const rtcConfig = {
-            iceServers: [
-                { urls: "stun:stun.relay.metered.ca:80" },
-                {
-                    urls: "turn:europe.relay.metered.ca:80",
-                    username: "ad220e01a09e747e07691d03",
-                    credential: "v6pogJkl1odEH+ND"
-                },
-                {
-                    urls: "turn:europe.relay.metered.ca:80?transport=tcp",
-                    username: "ad220e01a09e747e07691d03",
-                    credential: "v6pogJkl1odEH+ND"
-                },
-                {
-                    urls: "turn:europe.relay.metered.ca:443",
-                    username: "ad220e01a09e747e07691d03",
-                    credential: "v6pogJkl1odEH+ND"
-                },
-                {
-                    urls: "turns:europe.relay.metered.ca:443?transport=tcp",
-                    username: "ad220e01a09e747e07691d03",
-                    credential: "v6pogJkl1odEH+ND"
-                }
-            ]
-        };
-
+    iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:stun.relay.metered.ca:80" },
+        {
+            urls: "turn:europe.relay.metered.ca:80",
+            username: "ad220e01a09e747e07691d03",
+            credential: "v6pogJkl1odEH+ND"
+        },
+        {
+            urls: "turn:europe.relay.metered.ca:80?transport=tcp",
+            username: "ad220e01a09e747e07691d03",
+            credential: "v6pogJkl1odEH+ND"
+        },
+        {
+            urls: "turn:europe.relay.metered.ca:443",
+            username: "ad220e01a09e747e07691d03",
+            credential: "v6pogJkl1odEH+ND"
+        },
+        {
+            urls: "turns:europe.relay.metered.ca:443?transport=tcp",
+            username: "ad220e01a09e747e07691d03",
+            credential: "v6pogJkl1odEH+ND"
+        }
+    ]
+};
+    
 function getOtherUsers() {
     if (!currentUser) return [];
     return onlineUsers
