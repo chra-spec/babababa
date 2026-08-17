@@ -182,9 +182,9 @@ io.on('connection', (socket) => {
         const sub = pushSubscriptions.get(user.userName);
         if (sub) {
           webpush.sendNotification(sub, JSON.stringify({
-            title: 'Yılan seni özledi!',
-            body: 'Gel ve skorunu arttır!'
-          })).catch(err => console.error('Push hatası:', err));
+  title: 'Yılan Oyunu Platformu',
+  body: 'Yılan seni özledi gel ve skorunu arttır!'
+})).catch(err => console.error('Push hatası:', err));
         }
       });
 
@@ -410,6 +410,9 @@ app.get('/', (req, res) => {
 
 app.get('/sw.js', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'sw.js'));
+});
+app.get('/manifest.json', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'manifest.json'));
 });
 
 app.get('*', (req, res) => {
