@@ -2,6 +2,7 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
+    <link rel="manifest" href="/manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
@@ -3092,13 +3093,7 @@ document.addEventListener('DOMContentLoaded', () => {
     applySavedFont();
     generateFood();
     drawGame();
-    
-// Bildirim izni verilmişse ve kullanıcı daha önce kapatmamışsa aktif et
-if (Notification.permission === 'granted' && localStorage.getItem('notificationsEnabled') === 'true') {
-    notificationsEnabled = true;
-} else if (Notification.permission === 'denied') {
-    notificationsEnabled = false;
-}
+
 
 document.getElementById('persistBtn').classList.toggle('active', persistEnabled);
 document.getElementById('notifBtn').classList.toggle('active', notificationsEnabled);
