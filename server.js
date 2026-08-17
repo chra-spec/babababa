@@ -4,6 +4,8 @@ const socketIo = require('socket.io');
 const path = require('path');
 const cors = require('cors');
 const fs = require('fs');
+const webpush = require('web-push');
+
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 10000;
@@ -26,7 +28,6 @@ const ROOM_CODE = 'efkaza7634';
 const PERSISTENT_FILE = './persistentMessages.json';
 let persistentMessages = [];
 
-// Sunucu başlarken kalıcı mesajları oku
 try {
   if (fs.existsSync(PERSISTENT_FILE)) {
     persistentMessages = JSON.parse(fs.readFileSync(PERSISTENT_FILE));
@@ -35,6 +36,19 @@ try {
 } catch (error) {
   console.error('❌ Kalıcı mesaj dosyası okunamadı:', error);
 }
+
+// VAPID anahtarları
+const VAPID_PUBLIC_KEY = 'BGi5YzcNdxf0cwoOedi2_IHJ3dQ8R6gzqSu-WmDUM9C0cldXbtjkoOZcQirdT-Pb3GVelT3G206tIAyaDu59m_0';
+const VAPID_PRIVATE_KEY = '4baVyLZ1-ruqf-j1m0du27BNbDJd9zv5VaB3fd_uhjQ';
+
+webpush.setVapidDetails(
+  'mailto:destek@example.com',
+  VAPID_PUBLIC_KEY,
+  VAPID_PRIVATE_KEY
+);
+
+const pushSubscriptions = new Map();
+
 const rooms = new Map();
 
 function generateUserColor(username) {
@@ -71,14 +85,14 @@ io.on('connection', (socket) => {
         return;
       }
 
-if (!rooms.has(ROOM_CODE)) {
-  rooms.set(ROOM_CODE, {
-    code: ROOM_CODE,
-    users: new Map(),
-    messages: persistentMessages.slice(),
-    createdAt: new Date()
-  });
-}
+      if (!rooms.has(ROOM_CODE)) {
+        rooms.set(ROOM_CODE, {
+          code: ROOM_CODE,
+          users: new Map(),
+          messages: persistentMessages.slice(),
+          createdAt: new Date()
+        });
+      }
 
       const room = rooms.get(ROOM_CODE);
 
@@ -103,6 +117,18 @@ if (!rooms.has(ROOM_CODE)) {
     } catch (error) {
       console.error('❌ Katılma hatası:', error);
       socket.emit('error', { message: 'Sohbete katılamadı' });
+    }
+  });
+
+  // ============ PUSH ABONELİĞİ KAYDET ============
+  socket.on('save-subscription', (data) => {
+    try {
+      if (currentUser && data.subscription) {
+        pushSubscriptions.set(currentUser.userName, data.subscription);
+        console.log(`🔔 ${currentUser.userName} bildirime abone oldu`);
+      }
+    } catch (error) {
+      console.error('❌ Abonelik hatası:', error);
     }
   });
 
@@ -134,19 +160,34 @@ if (!rooms.has(ROOM_CODE)) {
       };
 
       room.messages.push(message);
+      
       if (message.persist) {
-  persistentMessages.push(message);
-  try {
-    fs.writeFileSync(PERSISTENT_FILE, JSON.stringify(persistentMessages));
-  } catch (error) {
-    console.error('❌ Kalıcı mesaj yazılamadı:', error);
-  }
-}
+        persistentMessages.push(message);
+        try {
+          fs.writeFileSync(PERSISTENT_FILE, JSON.stringify(persistentMessages));
+        } catch (error) {
+          console.error('❌ Kalıcı mesaj yazılamadı:', error);
+        }
+      }
+
       if (room.messages.length > 500) {
         room.messages = room.messages.slice(-500);
       }
 
       io.to(currentRoomCode).emit('message', message);
+
+      // Diğer kullanıcılara push bildirimi gönder
+      const targetUsers = Array.from(room.users.values()).filter(u => u.userName !== currentUser.userName);
+      targetUsers.forEach(user => {
+        const sub = pushSubscriptions.get(user.userName);
+        if (sub) {
+          webpush.sendNotification(sub, JSON.stringify({
+            title: 'Yılan seni özledi!',
+            body: 'Gel ve skorunu arttır!'
+          })).catch(err => console.error('Push hatası:', err));
+        }
+      });
+
     } catch (error) {
       console.error('❌ Mesaj hatası:', error);
     }
@@ -214,58 +255,58 @@ if (!rooms.has(ROOM_CODE)) {
   });
 
   // ============ WEBRTC ARAMA ============
-socket.on('webrtc-offer', (data) => {
+  socket.on('webrtc-offer', (data) => {
     try {
-        const { targetUserName, offer, candidates, type, callerName } = data;
-        console.log(`📞 Teklif: ${callerName} -> ${targetUserName} (${type}) [${candidates ? candidates.length : 0} aday]`);
+      const { targetUserName, offer, candidates, type, callerName } = data;
+      console.log(`📞 Teklif: ${callerName} -> ${targetUserName} (${type}) [${candidates ? candidates.length : 0} aday]`);
 
-        let targetSocketId = null;
-        rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
-            if (user.userName === targetUserName) {
-                targetSocketId = socketId;
-            }
-        });
-
-        if (targetSocketId) {
-            io.to(targetSocketId).emit('incoming-call', {
-                offer: offer,
-                candidates: candidates || [],
-                callerName: callerName,
-                callerPhoto: currentUser?.userPhoto || '',
-                type: type
-            });
-            console.log(`✅ Teklif iletildi: ${callerName} -> ${targetUserName}`);
-        } else {
-            socket.emit('call-error', { message: 'Kullanıcı bulunamadı' });
+      let targetSocketId = null;
+      rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
+        if (user.userName === targetUserName) {
+          targetSocketId = socketId;
         }
-    } catch (error) {
-        console.error('❌ Teklif hatası:', error);
-    }
-});
+      });
 
-socket.on('webrtc-answer', (data) => {
+      if (targetSocketId) {
+        io.to(targetSocketId).emit('incoming-call', {
+          offer: offer,
+          candidates: candidates || [],
+          callerName: callerName,
+          callerPhoto: currentUser?.userPhoto || '',
+          type: type
+        });
+        console.log(`✅ Teklif iletildi: ${callerName} -> ${targetUserName}`);
+      } else {
+        socket.emit('call-error', { message: 'Kullanıcı bulunamadı' });
+      }
+    } catch (error) {
+      console.error('❌ Teklif hatası:', error);
+    }
+  });
+
+  socket.on('webrtc-answer', (data) => {
     try {
-        const { targetUserName, answer, candidates } = data;
+      const { targetUserName, answer, candidates } = data;
 
-        let targetSocketId = null;
-        rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
-            if (user.userName === targetUserName) {
-                targetSocketId = socketId;
-            }
-        });
-
-        if (targetSocketId) {
-            io.to(targetSocketId).emit('webrtc-answer', {
-                answer: answer,
-                candidates: candidates || [],
-                answererName: currentUser?.userName
-            });
-            console.log(`✅ Cevap iletildi: ${currentUser?.userName} -> ${targetUserName} [${candidates ? candidates.length : 0} aday]`);
+      let targetSocketId = null;
+      rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
+        if (user.userName === targetUserName) {
+          targetSocketId = socketId;
         }
+      });
+
+      if (targetSocketId) {
+        io.to(targetSocketId).emit('webrtc-answer', {
+          answer: answer,
+          candidates: candidates || [],
+          answererName: currentUser?.userName
+        });
+        console.log(`✅ Cevap iletildi: ${currentUser?.userName} -> ${targetUserName} [${candidates ? candidates.length : 0} aday]`);
+      }
     } catch (error) {
-        console.error('❌ Cevap hatası:', error);
+      console.error('❌ Cevap hatası:', error);
     }
-});
+  });
 
   socket.on('webrtc-ice-candidate', (data) => {
     try {
@@ -367,6 +408,10 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+app.get('/sw.js', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sw.js'));
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -377,4 +422,5 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`🔑 Oda kodu: ${ROOM_CODE}`);
   console.log(`📁 Maksimum dosya boyutu: 50MB`);
   console.log(`📞 WebRTC arama aktif (TURN ile uzak mesafe)`);
+  console.log(`🔔 Push bildirimler aktif`);
 });
