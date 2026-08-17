@@ -1,0 +1,9 @@
+{
+  "name": "Yılan Oyunu Platformu",
+  "short_name": "Yılan",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#667eea",
+  "icons": []
+}
