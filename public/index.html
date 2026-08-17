@@ -466,10 +466,10 @@
             flex-shrink: 0;
         }
         
-        .header-actions {
+.header-right {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 8px;
     flex-shrink: 0;
 }
 
@@ -1265,30 +1265,29 @@
 
     <!-- SOHBET ARAYÜZÜ -->
     <div class="chat-interface" id="chatInterface">
-        <div class="chat-header">
-            <div class="chat-header-left">
-                <img src="" class="chat-avatar" id="chatAvatar" alt="Avatar" onclick="showProfileFromHeader()">
-                <div class="chat-user-info">
-                    <div class="chat-user-name" id="chatUserName" onclick="showProfileFromHeader()">Kullanıcı</div>
-                    <div class="chat-online-count" id="chatOnlineCount">Çevrimiçi: 0</div>
-                </div>
-                <div class="call-buttons">
-                <button class="font-menu-btn" onclick="toggleFontPanel()" title="Menü">☰</button>
-                </div>
-            </div>
-            <div class="header-actions">
-    <button id="persistBtn" class="utility-btn" onclick="togglePersist()" title="Mesajları kalıcı tut">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-        </svg>
-    </button>
-    <button id="notifBtn" class="utility-btn" onclick="toggleNotifications()" title="Bildirimleri aç/kapat">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-        </svg>
-    </button>
-    <button class="chat-exit-btn" onclick="exitChat()">Çıkış</button>
+<div class="chat-header">
+    <div class="chat-header-left">
+        <img src="" class="chat-avatar" id="chatAvatar" alt="Avatar" onclick="showProfileFromHeader()">
+        <div class="chat-user-info">
+            <div class="chat-user-name" id="chatUserName" onclick="showProfileFromHeader()">Kullanıcı</div>
+            <div class="chat-online-count" id="chatOnlineCount">Çevrimiçi: 0</div>
+        </div>
+        <button class="font-menu-btn" onclick="toggleFontPanel()" title="Menü">☰</button>
+    </div>
+    <div class="header-right">
+        <button id="persistBtn" class="utility-btn" onclick="togglePersist()" title="Mesajları kalıcı tut">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            </svg>
+        </button>
+        <button id="notifBtn" class="utility-btn" onclick="toggleNotifications()" title="Bildirimleri aç/kapat">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+        </button>
+        <button class="chat-exit-btn" onclick="exitChat()">Çıkış</button>
+    </div>
 </div>
 
         <div class="messages-container scrollbar-thin" id="messagesContainer"></div>
