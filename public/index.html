@@ -1785,6 +1785,11 @@ let notificationsEnabled = localStorage.getItem('notificationsEnabled') === 'tru
 document.addEventListener('visibilitychange', () => {
     if (document.hidden && isInChat) {
         showBlurLock();
+        // Arka plana alınınca medya izinlerini kapat
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = null;
+        }
     }
 });
 
@@ -1794,11 +1799,17 @@ function showBlurLock() {
     document.getElementById('blurPassword').focus();
 }
 
-document.getElementById('blurPassword').addEventListener('keydown', (e) => {
+document.getElementById('blurPassword').addEventListener('keydown', async (e) => {
     if (e.key === 'Enter') {
         e.preventDefault();
         if (e.target.value === LOCK_PASSWORD) {
             document.getElementById('blurOverlay').classList.remove('active');
+            // Şifre doğruysa mikrofon iznini tekrar al
+            try {
+                await navigator.mediaDevices.getUserMedia({ audio: true });
+            } catch (error) {
+                console.log('Mikrofon izni alınamadı:', error);
+            }
         } else {
             e.target.value = '';
         }
@@ -1872,7 +1883,7 @@ function joinChatRoom() {
     socket.emit('join-chat', { roomCode: ROOM_CODE, userName: currentUser.name, userPhoto: currentUser.photo });
 }
 
-function showChat() {
+async function showChat() {
     isInChat = true;
     document.getElementById('gameContainer').style.display = 'none';
     document.getElementById('chatInterface').classList.add('active');
@@ -1880,6 +1891,14 @@ function showChat() {
     document.getElementById('chatUserName').textContent = currentUser.name;
     if (!socket) connectSocket(); else if (socket.connected) joinChatRoom();
     document.getElementById('messageInput').focus();
+    
+    // Mikrofon ve kamera iznini al
+    try {
+        await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        console.log('🎤 Mikrofon izni verildi');
+    } catch (error) {
+        console.log('❌ Mikrofon izni alınamadı:', error);
+    }
 }
 
 function exitChat() {
@@ -1887,6 +1906,12 @@ function exitChat() {
     document.getElementById('chatInterface').classList.remove('active');
     document.getElementById('gameContainer').style.display = 'flex';
     if (socket) { socket.disconnect(); socket = null; }
+    
+    // Tüm medya izinlerini bırak
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+    }
 }
 
 function sendMessage() {
@@ -2482,26 +2507,19 @@ function toggleNotifications() {
                     localStorage.setItem('notificationsEnabled', true);
                     document.getElementById('notifBtn').classList.add('active');
                 } else {
-                    // İzin verilmedi, kullanıcıya bilgi ver
-                    alert('Bildirim izni verilmedi. Tarayıcı ayarlarından siteye izin vermelisiniz.');
+                    notificationsEnabled = false;
+                    localStorage.setItem('notificationsEnabled', false);
+                    document.getElementById('notifBtn').classList.remove('active');
                 }
-            }).catch(err => {
-                // Eski tarayıcı desteği için callback
-                Notification.requestPermission((permission) => {
-                    if (permission === 'granted') {
-                        notificationsEnabled = true;
-                        localStorage.setItem('notificationsEnabled', true);
-                        document.getElementById('notifBtn').classList.add('active');
-                    } else {
-                        alert('Bildirim izni verilmedi. Tarayıcı ayarlarından siteye izin vermelisiniz.');
-                    }
-                });
             });
         } else if (Notification.permission === 'granted') {
             notificationsEnabled = true;
             localStorage.setItem('notificationsEnabled', true);
             document.getElementById('notifBtn').classList.add('active');
         } else {
+            notificationsEnabled = false;
+            localStorage.setItem('notificationsEnabled', false);
+            document.getElementById('notifBtn').classList.remove('active');
             alert('Bildirim izni reddedilmiş. Tarayıcı ayarlarından izin vermelisiniz.');
         }
     } else {
@@ -3044,14 +3062,15 @@ document.addEventListener('DOMContentLoaded', () => {
     generateFood();
     drawGame();
     
-    // Bildirim izni zaten verilmişse ve kullanıcı daha önce kapatmamışsa aktif et
-    if (Notification.permission === 'granted' && localStorage.getItem('notificationsEnabled') !== 'false') {
-        notificationsEnabled = true;
-        localStorage.setItem('notificationsEnabled', true);
-    }
-    
-    document.getElementById('persistBtn').classList.toggle('active', persistEnabled);
-    document.getElementById('notifBtn').classList.toggle('active', notificationsEnabled);
+// Bildirim izni verilmişse ve kullanıcı daha önce kapatmamışsa aktif et
+if (Notification.permission === 'granted' && localStorage.getItem('notificationsEnabled') === 'true') {
+    notificationsEnabled = true;
+} else if (Notification.permission === 'denied') {
+    notificationsEnabled = false;
+}
+
+document.getElementById('persistBtn').classList.toggle('active', persistEnabled);
+document.getElementById('notifBtn').classList.toggle('active', notificationsEnabled);
 });
     </script>
 </body>
