@@ -509,6 +509,7 @@
             min-width: 200px;
             box-shadow: 0 5px 20px rgba(0,0,0,0.5);
         }
+        
 
         .font-panel.active { display: block; }
 
@@ -536,6 +537,52 @@
             background: rgba(102,126,234,0.3);
             border: 1px solid #667eea;
         }
+        
+        .menu-section {
+    min-width: 200px;
+}
+
+.menu-header-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.menu-back-btn {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.menu-back-btn:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.menu-item {
+    padding: 10px 15px;
+    font-size: 15px;
+    color: #fff;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.2s;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.menu-item:hover {
+    background: rgba(255,255,255,0.1);
+}
 
         .messages-container {
             flex: 1;
@@ -1226,9 +1273,7 @@
                     <div class="chat-online-count" id="chatOnlineCount">Çevrimiçi: 0</div>
                 </div>
                 <div class="call-buttons">
-                    <button class="call-btn video-call" onclick="startVideoCall()" title="Görüntülü Ara">📹</button>
-                    <button class="call-btn audio-call" onclick="startAudioCall()" title="Sesli Ara">📞</button>
-                    <button class="font-menu-btn" onclick="toggleFontPanel()" title="Yazı tipi">☰</button>
+                <button class="font-menu-btn" onclick="toggleFontPanel()" title="Menü">☰</button>
                 </div>
             </div>
             <div class="header-actions">
@@ -1262,11 +1307,42 @@
         </div>
     </div>
 
-    <!-- FONT PANELİ -->
-    <div class="font-panel" id="fontPanel">
-        <div class="font-panel-title">Yazı Tipi Seç</div>
+   <!-- HAMBURGER MENÜ -->
+<div class="font-panel" id="fontPanel">
+    <!-- ANA MENÜ -->
+    <div id="menuMain" class="menu-section">
+        <div class="font-panel-title">Menü</div>
+        <div class="menu-item" onclick="showCallMenu()">
+            📞 Aramalar
+        </div>
+        <div class="menu-item" onclick="showFontMenu()">
+            ✍️ Yazı Tipi
+        </div>
+    </div>
+    
+    <!-- ARAMA MENÜSÜ -->
+    <div id="menuCalls" class="menu-section" style="display:none;">
+        <div class="menu-header-row">
+            <button class="menu-back-btn" onclick="showMainMenu()">←</button>
+            <div class="font-panel-title">Aramalar</div>
+        </div>
+        <div class="menu-item" onclick="hideFontPanel(); startVideoCall();">
+            📹 Görüntülü Ara
+        </div>
+        <div class="menu-item" onclick="hideFontPanel(); startAudioCall();">
+            📞 Sesli Ara
+        </div>
+    </div>
+    
+    <!-- FONT MENÜSÜ -->
+    <div id="menuFonts" class="menu-section" style="display:none;">
+        <div class="menu-header-row">
+            <button class="menu-back-btn" onclick="showMainMenu()">←</button>
+            <div class="font-panel-title">Yazı Tipi</div>
+        </div>
         <div id="fontOptions"></div>
     </div>
+</div>
 
     <!-- STICKER PANELİ -->
     <div class="sticker-panel" id="stickerPanel">
@@ -2359,15 +2435,38 @@ function closeFullscreen() {
             document.getElementById('fontPanel').classList.remove('active');
         }
 
-        function toggleFontPanel() {
-            const panel = document.getElementById('fontPanel');
-            if (panel.classList.contains('active')) {
-                panel.classList.remove('active');
-            } else {
-                initFontPanel();
-                panel.classList.add('active');
-            }
-        }
+function toggleFontPanel() {
+    const panel = document.getElementById('fontPanel');
+    if (panel.classList.contains('active')) {
+        panel.classList.remove('active');
+    } else {
+        showMainMenu();
+        panel.classList.add('active');
+    }
+}
+
+function hideFontPanel() {
+    document.getElementById('fontPanel').classList.remove('active');
+}
+
+function showMainMenu() {
+    document.getElementById('menuMain').style.display = 'block';
+    document.getElementById('menuCalls').style.display = 'none';
+    document.getElementById('menuFonts').style.display = 'none';
+}
+
+function showCallMenu() {
+    document.getElementById('menuMain').style.display = 'none';
+    document.getElementById('menuCalls').style.display = 'block';
+    document.getElementById('menuFonts').style.display = 'none';
+}
+
+function showFontMenu() {
+    document.getElementById('menuMain').style.display = 'none';
+    document.getElementById('menuCalls').style.display = 'none';
+    document.getElementById('menuFonts').style.display = 'block';
+    initFontPanel(); // Font listesini doldur
+}
 
 function togglePersist() {
     persistEnabled = !persistEnabled;
@@ -2383,7 +2482,21 @@ function toggleNotifications() {
                     notificationsEnabled = true;
                     localStorage.setItem('notificationsEnabled', true);
                     document.getElementById('notifBtn').classList.add('active');
+                } else {
+                    // İzin verilmedi, kullanıcıya bilgi ver
+                    alert('Bildirim izni verilmedi. Tarayıcı ayarlarından siteye izin vermelisiniz.');
                 }
+            }).catch(err => {
+                // Eski tarayıcı desteği için callback
+                Notification.requestPermission((permission) => {
+                    if (permission === 'granted') {
+                        notificationsEnabled = true;
+                        localStorage.setItem('notificationsEnabled', true);
+                        document.getElementById('notifBtn').classList.add('active');
+                    } else {
+                        alert('Bildirim izni verilmedi. Tarayıcı ayarlarından siteye izin vermelisiniz.');
+                    }
+                });
             });
         } else if (Notification.permission === 'granted') {
             notificationsEnabled = true;
@@ -2931,6 +3044,13 @@ document.addEventListener('DOMContentLoaded', () => {
     applySavedFont();
     generateFood();
     drawGame();
+    
+    // Bildirim izni zaten verilmişse ve kullanıcı daha önce kapatmamışsa aktif et
+    if (Notification.permission === 'granted' && localStorage.getItem('notificationsEnabled') !== 'false') {
+        notificationsEnabled = true;
+        localStorage.setItem('notificationsEnabled', true);
+    }
+    
     document.getElementById('persistBtn').classList.toggle('active', persistEnabled);
     document.getElementById('notifBtn').classList.toggle('active', notificationsEnabled);
 });
