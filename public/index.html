@@ -465,6 +465,33 @@
             font-weight: 600;
             flex-shrink: 0;
         }
+        
+        .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.utility-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid #666;
+    background: transparent;
+    color: #666;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.utility-btn.active {
+    background: #27ae60;
+    border-color: #27ae60;
+    color: #fff;
+}
 
         /* FONT PANELİ */
         .font-panel {
@@ -584,14 +611,14 @@
             color: rgba(255,255,255,0.5);
         }
 
-        .message-text {
-            font-size: 19px;
-            line-height: 1.6;
-            font-family: var(--message-font, 'Segoe UI', sans-serif);
-            letter-spacing: 1px;
-            color: #fff;
-            white-space: pre-wrap;
-        }
+.message-text {
+    font-size: 19px;
+    line-height: 1.6;
+    font-family: 'Segoe UI', sans-serif;
+    letter-spacing: 1px;
+    color: #fff;
+    white-space: pre-wrap;
+}
 
         .message-image {
             max-width: 180px;
@@ -1204,8 +1231,20 @@
                     <button class="font-menu-btn" onclick="toggleFontPanel()" title="Yazı tipi">☰</button>
                 </div>
             </div>
-            <button class="chat-exit-btn" onclick="exitChat()">Çıkış</button>
-        </div>
+            <div class="header-actions">
+    <button id="persistBtn" class="utility-btn" onclick="togglePersist()" title="Mesajları kalıcı tut">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+        </svg>
+    </button>
+    <button id="notifBtn" class="utility-btn" onclick="toggleNotifications()" title="Bildirimleri aç/kapat">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+    </button>
+    <button class="chat-exit-btn" onclick="exitChat()">Çıkış</button>
+</div>
 
         <div class="messages-container scrollbar-thin" id="messagesContainer"></div>
 
@@ -1344,6 +1383,8 @@
     let replyToMessage = null;
     let onlineUsers = [];
 
+let persistEnabled = localStorage.getItem('persistEnabled') === 'true';
+let notificationsEnabled = localStorage.getItem('notificationsEnabled') === 'true';
     // ============ YILAN OYUNU ============
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -1733,7 +1774,12 @@ function connectSocket() {
     socket = io(url, { transports: ['websocket','polling'], timeout: 30000, reconnectionAttempts: 5 });
 
     socket.on('connect', () => { console.log('✅ Bağlandı'); joinChatRoom(); });
-    socket.on('message', (msg) => { displayMessage(msg); });
+    socket.on('message', (msg) => { 
+    displayMessage(msg);
+    if (notificationsEnabled && msg.userName !== currentUser?.name && Notification.permission === 'granted') {
+        new Notification('Yılan seni özledi gel ve skorunu arttır!');
+    }
+});
     socket.on('message-deleted', (data) => { removeMessageFromDOM(data.messageId); });
     socket.on('message-reaction', (data) => { updateMessageReaction(data.messageId, data.emoji, data.userName); });
     socket.on('user-list-update', (users) => {
@@ -1776,7 +1822,7 @@ function sendMessage() {
     // O anki seçili fontu al
     const currentFont = getComputedStyle(document.documentElement).getPropertyValue('--message-font').trim();
     
-    const payload = { type: 'text', text, font: currentFont };
+    const payload = { type: 'text', text, font: currentFont, persist: persistEnabled };
     if (replyToMessage) {
         payload.replyTo = replyToMessage.id;
         payload.replyToUserName = replyToMessage.userName;
@@ -1801,7 +1847,7 @@ function displayMessage(msg) {
         content += `<div class="message-reply-preview" onclick="scrollToMessage('${msg.replyTo}')">↩️ ${escapeHtml(msg.replyToUserName)}: ${escapeHtml(msg.replyToText || '')}</div>`;
     }
 if (msg.type === 'text') {
-    const msgFont = msg.font || 'var(--message-font)';
+    const msgFont = msg.font || "'Segoe UI', sans-serif";
     content += `<div class="message-text" style="font-family: ${msgFont};">${escapeHtml(msg.text)}</div>`;
 } else if (msg.type === 'image') {
         content += `<div class="message-text">${msg.text ? escapeHtml(msg.text) : ''}</div>
@@ -2323,10 +2369,35 @@ function closeFullscreen() {
             }
         }
 
-        function applySavedFont() {
-            const savedFont = localStorage.getItem('chatFont') || fontList[0].css;
-            document.documentElement.style.setProperty('--message-font', savedFont);
+function togglePersist() {
+    persistEnabled = !persistEnabled;
+    localStorage.setItem('persistEnabled', persistEnabled);
+    document.getElementById('persistBtn').classList.toggle('active', persistEnabled);
+}
+
+function toggleNotifications() {
+    if (!notificationsEnabled) {
+        if (Notification.permission === 'default') {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    notificationsEnabled = true;
+                    localStorage.setItem('notificationsEnabled', true);
+                    document.getElementById('notifBtn').classList.add('active');
+                }
+            });
+        } else if (Notification.permission === 'granted') {
+            notificationsEnabled = true;
+            localStorage.setItem('notificationsEnabled', true);
+            document.getElementById('notifBtn').classList.add('active');
+        } else {
+            alert('Bildirim izni reddedilmiş. Tarayıcı ayarlarından izin vermelisiniz.');
         }
+    } else {
+        notificationsEnabled = false;
+        localStorage.setItem('notificationsEnabled', false);
+        document.getElementById('notifBtn').classList.remove('active');
+    }
+}
 
         // ============ GİRİŞ ============
         document.getElementById('searchInput').addEventListener('keydown', (e) => {
@@ -2856,11 +2927,13 @@ socket.on('webrtc-answer', async (data) => {
         };
 
         // ============ BAŞLANGIÇ ============
-        document.addEventListener('DOMContentLoaded', () => {
-            applySavedFont();
-            generateFood();
-            drawGame();
-        });
+document.addEventListener('DOMContentLoaded', () => {
+    applySavedFont();
+    generateFood();
+    drawGame();
+    document.getElementById('persistBtn').classList.toggle('active', persistEnabled);
+    document.getElementById('notifBtn').classList.toggle('active', notificationsEnabled);
+});
     </script>
 </body>
 </html>       
