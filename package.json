@@ -1,7 +1,7 @@
 {
   "name": "destek-merkezi",
   "version": "1.0.0",
-  "description": "Yılan oyunu ve gizli sohbet platformu",
+  "description": "Yılan oyunu platformu",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -13,19 +13,21 @@
     "snake-game",
     "chat",
     "realtime",
+    "webrtc",
     "emoji-reactions",
-    "sticker"
+    "sticker",
+    "push-notifications"
   ],
   "author": "Kaan",
   "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
     "socket.io": "^4.7.2",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
-    "web-push": "^3.6.7"
   },
   "engines": {
     "node": ">=18.0.0"
