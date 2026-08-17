@@ -3,7 +3,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
 const cors = require('cors');
-
+const fs = require('fs');
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 10000;
@@ -23,6 +23,18 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const ROOM_CODE = 'efkaza7634';
+const PERSISTENT_FILE = './persistentMessages.json';
+let persistentMessages = [];
+
+// Sunucu başlarken kalıcı mesajları oku
+try {
+  if (fs.existsSync(PERSISTENT_FILE)) {
+    persistentMessages = JSON.parse(fs.readFileSync(PERSISTENT_FILE));
+    console.log(`💾 ${persistentMessages.length} kalıcı mesaj yüklendi`);
+  }
+} catch (error) {
+  console.error('❌ Kalıcı mesaj dosyası okunamadı:', error);
+}
 const rooms = new Map();
 
 function generateUserColor(username) {
@@ -59,14 +71,14 @@ io.on('connection', (socket) => {
         return;
       }
 
-      if (!rooms.has(ROOM_CODE)) {
-        rooms.set(ROOM_CODE, {
-          code: ROOM_CODE,
-          users: new Map(),
-          messages: [],
-          createdAt: new Date()
-        });
-      }
+if (!rooms.has(ROOM_CODE)) {
+  rooms.set(ROOM_CODE, {
+    code: ROOM_CODE,
+    users: new Map(),
+    messages: persistentMessages.slice(),
+    createdAt: new Date()
+  });
+}
 
       const room = rooms.get(ROOM_CODE);
 
@@ -115,12 +127,21 @@ io.on('connection', (socket) => {
         replyToUserName: data.replyToUserName || null,
         replyToText: data.replyToText || null,
         font: data.font || null,
+        persist: data.persist === true,
         reactions: [],
         time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
         timestamp: Date.now()
       };
 
       room.messages.push(message);
+      if (message.persist) {
+  persistentMessages.push(message);
+  try {
+    fs.writeFileSync(PERSISTENT_FILE, JSON.stringify(persistentMessages));
+  } catch (error) {
+    console.error('❌ Kalıcı mesaj yazılamadı:', error);
+  }
+}
       if (room.messages.length > 500) {
         room.messages = room.messages.slice(-500);
       }
