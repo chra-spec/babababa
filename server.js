@@ -5,6 +5,7 @@ const path = require('path');
 const cors = require('cors');
 const fs = require('fs');
 const webpush = require('web-push');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const server = http.createServer(app);
@@ -25,17 +26,11 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const ROOM_CODE = 'efkaza7634';
-const PERSISTENT_FILE = './persistentMessages.json';
-let persistentMessages = [];
 
-try {
-  if (fs.existsSync(PERSISTENT_FILE)) {
-    persistentMessages = JSON.parse(fs.readFileSync(PERSISTENT_FILE));
-    console.log(`💾 ${persistentMessages.length} kalıcı mesaj yüklendi`);
-  }
-} catch (error) {
-  console.error('❌ Kalıcı mesaj dosyası okunamadı:', error);
-}
+// Supabase bağlantısı
+const supabaseUrl = 'https://xmmwsjzipluvbdtsqegz.supabase.co';
+const supabaseKey = 'sb_publishable_CWiyCnet9IVtwAK8mSI7VQ_YRTyrg0r';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // VAPID anahtarları
 const VAPID_PUBLIC_KEY = 'BGi5YzcNdxf0cwoOedi2_IHJ3dQ8R6gzqSu-WmDUM9C0cldXbtjkoOZcQirdT-Pb3GVelT3G206tIAyaDu59m_0';
@@ -48,7 +43,6 @@ webpush.setVapidDetails(
 );
 
 const pushSubscriptions = new Map();
-
 const rooms = new Map();
 
 function generateUserColor(username) {
@@ -76,7 +70,7 @@ io.on('connection', (socket) => {
   let currentRoomCode = null;
 
   // ============ SOBETE KATIL ============
-  socket.on('join-chat', (data) => {
+  socket.on('join-chat', async (data) => {
     try {
       const { roomCode, userName, userPhoto } = data;
 
@@ -89,7 +83,7 @@ io.on('connection', (socket) => {
         rooms.set(ROOM_CODE, {
           code: ROOM_CODE,
           users: new Map(),
-          messages: persistentMessages.slice(),
+          messages: [],
           createdAt: new Date()
         });
       }
@@ -107,8 +101,18 @@ io.on('connection', (socket) => {
       currentRoomCode = ROOM_CODE;
       socket.join(ROOM_CODE);
 
-      const previousMessages = room.messages.slice(-50);
-      previousMessages.forEach(msg => socket.emit('message', msg));
+      // Önce Supabase'den kalıcı mesajları çek (son 50)
+      const { data: persistentMessages, error } = await supabase
+        .from('persistent_messages')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (!error && persistentMessages) {
+        persistentMessages.reverse().forEach(msg => {
+          socket.emit('message', msg);
+        });
+      }
 
       socket.to(ROOM_CODE).emit('user-joined', { userName: currentUser.userName });
       updateUserList(ROOM_CODE);
@@ -133,7 +137,7 @@ io.on('connection', (socket) => {
   });
 
   // ============ MESAJ GÖNDER ============
-  socket.on('message', (data) => {
+  socket.on('message', async (data) => {
     try {
       if (!currentRoomCode || !currentUser) return;
       const room = rooms.get(currentRoomCode);
@@ -160,18 +164,27 @@ io.on('connection', (socket) => {
       };
 
       room.messages.push(message);
-      
-      if (message.persist) {
-        persistentMessages.push(message);
-        try {
-          fs.writeFileSync(PERSISTENT_FILE, JSON.stringify(persistentMessages));
-        } catch (error) {
-          console.error('❌ Kalıcı mesaj yazılamadı:', error);
-        }
-      }
 
-      if (room.messages.length > 500) {
-        room.messages = room.messages.slice(-500);
+      // Persist ise Supabase'e kaydet
+      if (message.persist) {
+        const { error } = await supabase.from('persistent_messages').insert({
+          id: message.id,
+          room_code: currentRoomCode,
+          user_name: message.userName,
+          user_photo: message.userPhoto,
+          type: message.type,
+          text: message.text,
+          file_data: message.fileData,
+          mime_type: message.mimeType,
+          sticker_type: message.stickerType,
+          reply_to: message.replyTo,
+          reply_to_user_name: message.replyToUserName,
+          reply_to_text: message.replyToText,
+          font: message.font,
+          time: message.time,
+          timestamp: message.timestamp
+        });
+        if (error) console.error('Supabase kayıt hatası:', error.message);
       }
 
       io.to(currentRoomCode).emit('message', message);
@@ -182,9 +195,9 @@ io.on('connection', (socket) => {
         const sub = pushSubscriptions.get(user.userName);
         if (sub) {
           webpush.sendNotification(sub, JSON.stringify({
-  title: 'Yılan Oyunu Platformu',
-  body: 'Yılan seni özledi gel ve skorunu arttır!'
-})).catch(err => console.error('Push hatası:', err));
+            title: 'Yılan Oyunu Platformu',
+            body: 'Yılan seni özledi gel ve skorunu arttır!'
+          })).catch(err => console.error('Push hatası:', err));
         }
       });
 
@@ -194,41 +207,26 @@ io.on('connection', (socket) => {
   });
 
   // ============ MESAJ SİL ============
-// ============ MESAJ SİL ============
-socket.on('delete-message', (data) => {
-  try {
-    if (!currentRoomCode || !currentUser) return;
-    const room = rooms.get(currentRoomCode);
-    if (!room) return;
-
-    const messageIndex = room.messages.findIndex(m => m.id === data.messageId);
-    if (messageIndex === -1) return;
-
-    const message = room.messages[messageIndex];
-    if (message.userName !== currentUser.userName) {
-      socket.emit('error', { message: 'Sadece kendi mesajını silebilirsin' });
-      return;
-    }
-
-    // Geçici bellekten sil
-    room.messages.splice(messageIndex, 1);
-
-    // Kalıcı dosyadan da sil (eğer persist mesajıysa)
-    persistentMessages = persistentMessages.filter(m => m.id !== data.messageId);
+  socket.on('delete-message', async (data) => {
     try {
-      fs.writeFileSync(PERSISTENT_FILE, JSON.stringify(persistentMessages));
-    } catch (error) {
-      console.error('❌ Kalıcı mesaj dosyası güncellenemedi:', error);
-    }
+      if (!currentRoomCode || !currentUser) return;
+      const room = rooms.get(currentRoomCode);
+      if (!room) return;
 
-    io.to(currentRoomCode).emit('message-deleted', { messageId: data.messageId });
-    console.log(`🗑️ Mesaj silindi: ${data.messageId}`);
-  } catch (error) {
-    console.error('❌ Mesaj silme hatası:', error);
-  }
-});
+      const messageIndex = room.messages.findIndex(m => m.id === data.messageId);
+      if (messageIndex === -1) return;
+
+      const message = room.messages[messageIndex];
+      if (message.userName !== currentUser.userName) {
+        socket.emit('error', { message: 'Sadece kendi mesajını silebilirsin' });
+        return;
+      }
 
       room.messages.splice(messageIndex, 1);
+
+      // Supabase'den sil
+      await supabase.from('persistent_messages').delete().eq('id', data.messageId);
+
       io.to(currentRoomCode).emit('message-deleted', { messageId: data.messageId });
       console.log(`🗑️ Mesaj silindi: ${data.messageId}`);
     } catch (error) {
@@ -390,6 +388,60 @@ socket.on('delete-message', (data) => {
       console.error('❌ Çağrı sonlandırma hatası:', error);
     }
   });
+  
+    // ============ DM MESAJLARI ============
+  socket.on('dm-message', async (data) => {
+    try {
+      if (!currentUser) return;
+      const { receiver, text } = data;
+      if (!receiver || !text) return;
+
+      const dmMessage = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+        sender: currentUser.userName,
+        receiver: receiver,
+        message: text,
+        created_at: new Date().toISOString()
+      };
+
+      // Supabase'e kaydet
+      const { error } = await supabase.from('dm_messages').insert({
+        id: dmMessage.id,
+        sender: dmMessage.sender,
+        receiver: dmMessage.receiver,
+        message: dmMessage.message
+      });
+      if (error) console.error('DM kayıt hatası:', error.message);
+
+      // Alıcıya ilet
+      let receiverSocketId = null;
+      rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
+        if (user.userName === receiver) {
+          receiverSocketId = socketId;
+        }
+      });
+
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit('dm-message', dmMessage);
+      }
+      // Gönderene de ilet
+      socket.emit('dm-message', dmMessage);
+    } catch (error) {
+      console.error('DM mesaj hatası:', error);
+    }
+  });
+
+  socket.on('dm-delete', async (data) => {
+    try {
+      if (!currentUser) return;
+      const { messageId } = data;
+      await supabase.from('dm_messages').delete().eq('id', messageId).eq('sender', currentUser.userName);
+      // Basitçe silme işlemini taraflara bildir
+      io.emit('dm-deleted', { messageId });
+    } catch (error) {
+      console.error('DM silme hatası:', error);
+    }
+  });
 
   // ============ BAĞLANTI KOPTU ============
   socket.on('disconnect', () => {
@@ -415,12 +467,7 @@ socket.on('delete-message', (data) => {
 });
 
 app.get('/api/health', (req, res) => {
-  const room = rooms.get(ROOM_CODE);
-  res.json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    onlineUsers: room ? room.users.size : 0
-  });
+  res.json({ status: 'OK', onlineUsers: rooms.get(ROOM_CODE)?.users.size || 0 });
 });
 
 app.get('/', (req, res) => {
@@ -430,6 +477,7 @@ app.get('/', (req, res) => {
 app.get('/sw.js', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'sw.js'));
 });
+
 app.get('/manifest.json', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'manifest.json'));
 });
@@ -440,9 +488,6 @@ app.get('*', (req, res) => {
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server ${PORT} portunda çalışıyor`);
-  console.log(`🎮 Yılan oyunu + Gizli sohbet aktif`);
-  console.log(`🔑 Oda kodu: ${ROOM_CODE}`);
-  console.log(`📁 Maksimum dosya boyutu: 50MB`);
-  console.log(`📞 WebRTC arama aktif (TURN ile uzak mesafe)`);
   console.log(`🔔 Push bildirimler aktif`);
+  console.log(`💾 Supabase bağlantısı kuruldu`);
 });
