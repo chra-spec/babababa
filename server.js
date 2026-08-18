@@ -194,20 +194,39 @@ io.on('connection', (socket) => {
   });
 
   // ============ MESAJ SİL ============
-  socket.on('delete-message', (data) => {
+// ============ MESAJ SİL ============
+socket.on('delete-message', (data) => {
+  try {
+    if (!currentRoomCode || !currentUser) return;
+    const room = rooms.get(currentRoomCode);
+    if (!room) return;
+
+    const messageIndex = room.messages.findIndex(m => m.id === data.messageId);
+    if (messageIndex === -1) return;
+
+    const message = room.messages[messageIndex];
+    if (message.userName !== currentUser.userName) {
+      socket.emit('error', { message: 'Sadece kendi mesajını silebilirsin' });
+      return;
+    }
+
+    // Geçici bellekten sil
+    room.messages.splice(messageIndex, 1);
+
+    // Kalıcı dosyadan da sil (eğer persist mesajıysa)
+    persistentMessages = persistentMessages.filter(m => m.id !== data.messageId);
     try {
-      if (!currentRoomCode || !currentUser) return;
-      const room = rooms.get(currentRoomCode);
-      if (!room) return;
+      fs.writeFileSync(PERSISTENT_FILE, JSON.stringify(persistentMessages));
+    } catch (error) {
+      console.error('❌ Kalıcı mesaj dosyası güncellenemedi:', error);
+    }
 
-      const messageIndex = room.messages.findIndex(m => m.id === data.messageId);
-      if (messageIndex === -1) return;
-
-      const message = room.messages[messageIndex];
-      if (message.userName !== currentUser.userName) {
-        socket.emit('error', { message: 'Sadece kendi mesajını silebilirsin' });
-        return;
-      }
+    io.to(currentRoomCode).emit('message-deleted', { messageId: data.messageId });
+    console.log(`🗑️ Mesaj silindi: ${data.messageId}`);
+  } catch (error) {
+    console.error('❌ Mesaj silme hatası:', error);
+  }
+});
 
       room.messages.splice(messageIndex, 1);
       io.to(currentRoomCode).emit('message-deleted', { messageId: data.messageId });
