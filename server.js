@@ -466,6 +466,37 @@ io.on('connection', (socket) => {
   });
 });
 
+app.get('/api/dm-messages', async (req, res) => {
+  try {
+    const { sender, receiver } = req.query;
+    if (!sender || !receiver) {
+      return res.status(400).json({ error: 'sender ve receiver gerekli' });
+    }
+
+    const { data, error } = await supabase
+      .from('dm_messages')
+      .select('*')
+      .or(`sender.eq.${sender},receiver.eq.${sender}`)
+      .or(`sender.eq.${receiver},receiver.eq.${receiver}`)
+      .order('created_at', { ascending: true })
+      .limit(100);
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    // İki kişi arasındaki mesajları filtrele
+    const filtered = data.filter(msg => 
+      (msg.sender === sender && msg.receiver === receiver) ||
+      (msg.sender === receiver && msg.receiver === sender)
+    );
+
+    res.json(filtered);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', onlineUsers: rooms.get(ROOM_CODE)?.users.size || 0 });
 });
