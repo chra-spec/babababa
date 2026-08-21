@@ -1445,28 +1445,35 @@
 
     <!-- TAM EKRAN MEDYA -->
     <div class="fullscreen-media" id="fullscreenMedia">
-        <button class="fullscreen-close" onclick="closeFullscreen()">✕</button>
+        <button class="fullscreen-close" onclick="closeFullscreen()">×✕×</button>
         <div id="fullscreenContent"></div>
     </div>
 
     <!-- CONTEXT MENÜ -->
     <div class="context-menu" id="contextMenu">
-        <div class="context-item" onclick="contextReply()">↩️ Yanıtla</div>
-        <div class="context-item" onclick="contextReact()">😀 İfade Bırak</div>
+        <div class="context-item" onclick="contextReply()">∞ Yanıtla</div>
+        <div class="context-item" onclick="contextReact()">🐼 İfade Bırak</div>
         <div class="context-item danger" onclick="contextDelete()">🗑️ Sil</div>
     </div>
+    
+    <!-- DM CONTEXT MENÜ -->
+<div class="context-menu" id="dmContextMenu">
+    <div class="context-item" onclick="dmReplyToMessage()">∞ Yanıtla</div>
+    <div class="context-item" onclick="dmEditMessage()">‡ Düzenle</div>
+    <div class="context-item" onclick="dmReactToMessage()"> 🐼 İfade Bırak</div>
+</div>
 
     <!-- EMOJİ SEÇİCİ -->
     <div class="reaction-picker" id="reactionPicker">
         <span class="reaction-emoji" onclick="addReaction('🖕')">🖕</span>
-        <span class="reaction-emoji" onclick="addReaction('🤨')">🤨</span>
+        <span class="reaction-emoji" onclick="addReaction('❤️')">❤️</span>
         <span class="reaction-emoji" onclick="addReaction('😜')">😜</span>
         <span class="reaction-emoji" onclick="addReaction('🤍')">🤍</span>
     </div>
 
     <!-- BLUR OVERLAY + ŞİFRE -->
     <div class="blur-overlay" id="blurOverlay">
-        <div class="blur-title">🔒 Ekran Kilitli</div>
+        <div class="blur-title">⚙️ Ekran Kilitli</div>
         <div class="blur-subtitle">Devam etmek için şifreyi gir</div>
         <input type="password" class="blur-password-input" id="blurPassword" placeholder="Şifre" autocomplete="off">
     </div>
@@ -1474,7 +1481,7 @@
     <!-- DM SOHBET MODAL -->
 <div class="modal dm-modal" id="dmModal">
     <div class="modal-content">
-        <h2 id="dmModalTitle">💬 DM</h2>
+        <h2 id="dmModalTitle">🧸DM</h2>
         <div class="messages-container scrollbar-thin" id="dmMessagesContainer" style="height:300px;"></div>
         <div class="input-area" style="margin-top:10px;">
             <textarea class="message-input" id="dmMessageInput" placeholder="Mesaj yaz..." rows="1"></textarea>
@@ -2231,7 +2238,7 @@ document.getElementById('imageInput').addEventListener('change', function(e) {
 document.getElementById('videoInput').addEventListener('change', function(e) {
     const files = Array.from(e.target.files);
     files.forEach(file => {
-        if (file.size > 20 * 1024 * 1024) { alert('Video 20MB altı olmalı'); return; }
+        if (file.size > 50 * 1024 * 1024) { alert('Video 50MB altı olmalı'); return; }
         const reader = new FileReader();
         reader.onload = (ev) => {
             socket.emit('message', { type: 'video', fileData: ev.target.result, mimeType: file.type });
@@ -2369,8 +2376,8 @@ function closeStickerModal() {
 function handleStickerFile(file) {
     if (!file) return;
    // Video boyutu kontrolü
-    if (file.type.startsWith('video') && file.size > 2 * 1024 * 1024) {
-        alert('Video 2MB\'dan küçük olmalı. Daha kısa bir video seçin.');
+    if (file.type.startsWith('video') && file.size > 20 * 1024 * 1024) {
+        alert('Video 20MB\'dan küçük olmalı. Daha kısa bir video seçin.');
         return;
     }
     stickerFile = file;
@@ -2578,12 +2585,21 @@ function sendDMMessage() {
     const text = input.value.trim();
     if (!text || !currentDMUser || !socket) return;
     
-    socket.emit('dm-message', {
+    const payload = {
         receiver: currentDMUser,
         text: text
-    });
+    };
+    
+    if (dmReplyTo) {
+        payload.replyTo = dmReplyTo.text;
+        payload.replyToId = dmReplyTo.id;
+        payload.replyToSender = dmReplyTo.sender;
+    }
+    
+    socket.emit('dm-message', payload);
     
     input.value = '';
+    dmReplyTo = null;
     input.focus();
 }
 
@@ -2602,17 +2618,48 @@ function displayDMMessage(msg) {
     const isOwn = msg.sender === currentUser?.name;
     const div = document.createElement('div');
     div.className = `message ${isOwn ? 'own' : ''}`;
+    div.dataset.dmId = msg.id;
+
+    let content = '';
+    if (msg.reply_to) {
+        content += `<div class="message-reply-preview">↩️ ${escapeHtml(msg.reply_to)}</div>`;
+    }
+    content += `<div class="message-text">${escapeHtml(msg.message)}${msg.edited ? ' <span style="font-size:10px;opacity:0.6;">(düzenlendi)</span>' : ''}</div>`;
+
+    if (msg.reactions && msg.reactions.length > 0) {
+        content += `<div class="message-reactions">`;
+        msg.reactions.forEach(r => {
+            content += `<span class="reaction-badge">${r.emoji} ${r.count > 1 ? r.count : ''}</span>`;
+        });
+        content += `</div>`;
+    }
+
     div.innerHTML = `
         <div class="message-body">
             <div class="message-content">
                 <div class="message-header">
-                    <span class="message-sender">${isOwn ? 'Sen' : msg.sender}</span>
+                    <span class="message-sender">${isOwn ? 'Sen' : escapeHtml(msg.sender)}</span>
                     <span class="message-time">${new Date(msg.created_at).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})}</span>
                 </div>
-                <div class="message-text">${escapeHtml(msg.message)}</div>
+                ${content}
             </div>
         </div>
     `;
+
+    // Uzun basma - DM context menu
+    div.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        showDMContextMenu(e.clientX, e.clientY, msg.id, div);
+    });
+    let longPressTimer;
+    div.addEventListener('touchstart', (e) => {
+        longPressTimer = setTimeout(() => {
+            showDMContextMenu(e.touches[0].clientX, e.touches[0].clientY, msg.id, div);
+        }, 500);
+    });
+    div.addEventListener('touchend', () => clearTimeout(longPressTimer));
+    div.addEventListener('touchmove', () => clearTimeout(longPressTimer));
+
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
 }
@@ -2625,12 +2672,106 @@ function setupDMSocketEvents() {
         if (currentDMUser === msg.sender || currentDMUser === msg.receiver) {
             displayDMMessage(msg);
         }
-    });
-    
-    socket.on('dm-deleted', (data) => {
-        const el = document.querySelector(`[data-dm-id="${data.messageId}"]`);
-        if (el) el.remove();
-    });
+    });    
+socket.on('dm-reaction-updated', (data) => {
+    const el = document.querySelector(`[data-dm-id="${data.messageId}"]`);
+    if (!el) return;
+    const contentEl = el.querySelector('.message-content');
+    let reactionsDiv = contentEl.querySelector('.message-reactions');
+    if (!reactionsDiv) {
+        reactionsDiv = document.createElement('div');
+        reactionsDiv.className = 'message-reactions';
+        contentEl.appendChild(reactionsDiv);
+    }
+    let badge = reactionsDiv.querySelector(`[data-emoji="${data.emoji}"]`);
+    if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'reaction-badge';
+        badge.dataset.emoji = data.emoji;
+        badge.textContent = data.emoji;
+        reactionsDiv.appendChild(badge);
+    } else {
+        const count = badge.textContent.includes(data.emoji) ? parseInt(badge.textContent.slice(data.emoji.length) || 1) : 1;
+        badge.textContent = `${data.emoji} ${count + 1}`;
+    }
+});
+
+socket.on('dm-edited', (data) => {
+    const el = document.querySelector(`[data-dm-id="${data.messageId}"]`);
+    if (el) {
+        const textEl = el.querySelector('.message-text');
+        if (textEl) {
+            textEl.innerHTML = `${escapeHtml(data.newText)} <span style="font-size:10px;opacity:0.6;">(düzenlendi)</span>`;
+        }
+    }
+});
+}
+
+// DM Context Menu ve İşlemleri
+let activeDMMessageId = null;
+let activeDMMessageElement = null;
+let dmReplyTo = null;
+
+function showDMContextMenu(x, y, messageId, element) {
+    activeDMMessageId = messageId;
+    activeDMMessageElement = element;
+    const menu = document.getElementById('dmContextMenu');
+    menu.style.left = Math.min(x, window.innerWidth - 160) + 'px';
+    menu.style.top = Math.min(y, window.innerHeight - 120) + 'px';
+    menu.classList.add('active');
+}
+
+document.addEventListener('click', () => {
+    document.getElementById('dmContextMenu').classList.remove('active');
+    document.getElementById('reactionPicker').classList.remove('active');
+});
+
+document.getElementById('dmContextMenu').addEventListener('click', (e) => e.stopPropagation());
+
+function dmReplyToMessage() {
+    if (activeDMMessageId) {
+        // Yanıtlanacak mesajı bul
+        const el = document.querySelector(`[data-dm-id="${activeDMMessageId}"]`);
+        if (el) {
+            const sender = el.querySelector('.message-sender')?.textContent;
+            const text = el.querySelector('.message-text')?.textContent;
+            dmReplyTo = { id: activeDMMessageId, sender: sender, text: text };
+        }
+    }
+    document.getElementById('dmContextMenu').classList.remove('active');
+    document.getElementById('dmMessageInput').focus();
+}
+
+function dmEditMessage() {
+    if (activeDMMessageId) {
+        const el = document.querySelector(`[data-dm-id="${activeDMMessageId}"]`);
+        if (el) {
+            const currentText = el.querySelector('.message-text')?.textContent;
+            const newText = prompt('Mesajı düzenle:', currentText);
+            if (newText && newText.trim() && newText.trim() !== currentText) {
+                socket.emit('dm-edit', { messageId: activeDMMessageId, newText: newText.trim() });
+            }
+        }
+    }
+    document.getElementById('dmContextMenu').classList.remove('active');
+}
+
+function dmReactToMessage() {
+    const menu = document.getElementById('dmContextMenu');
+    const rect = menu.getBoundingClientRect();
+    const picker = document.getElementById('reactionPicker');
+    picker.style.left = rect.left + 'px';
+    picker.style.top = rect.top - 60 + 'px';
+    picker.classList.add('active');
+    menu.classList.remove('active');
+}
+
+// DM mesajına reaksiyon ekle
+function addDMReaction(emoji) {
+    if (activeDMMessageId && socket) {
+        socket.emit('dm-react', { messageId: activeDMMessageId, emoji: emoji });
+    }
+    document.getElementById('reactionPicker').classList.remove('active');
 }
 
         // ============ FONT SEÇİMİ ============
