@@ -352,47 +352,52 @@ io.on('connection', (socket) => {
     }
   });
   
-    // ============ DM MESAJLARI ============
-  socket.on('dm-message', async (data) => {
-    try {
-      if (!currentUser) return;
-      const { receiver, text } = data;
-      if (!receiver || !text) return;
+// ============ DM MESAJLARI ============
+socket.on('dm-message', async (data) => {
+  try {
+    if (!currentUser) return;
+    const { receiver, text, replyTo, replyToId, replyToSender } = data;
+    if (!receiver || !text) return;
 
-      const dmMessage = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-        sender: currentUser.userName,
-        receiver: receiver,
-        message: text,
-        created_at: new Date().toISOString()
-      };
+    const dmMessage = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+      sender: currentUser.userName,
+      receiver: receiver,
+      message: text,
+      reply_to: replyTo ? `${replyToSender ? replyToSender + ': ' : ''}${replyTo}` : null,
+      reply_to_id: replyToId || null,
+      edited: false,
+      reactions: [],
+      created_at: new Date().toISOString()
+    };
 
-      // Supabase'e kaydet
-      const { error } = await supabase.from('dm_messages').insert({
-        id: dmMessage.id,
-        sender: dmMessage.sender,
-        receiver: dmMessage.receiver,
-        message: dmMessage.message
-      });
-      if (error) console.error('DM kayıt hatası:', error.message);
+    const { error } = await supabase.from('dm_messages').insert({
+      id: dmMessage.id,
+      sender: dmMessage.sender,
+      receiver: dmMessage.receiver,
+      message: dmMessage.message,
+      reply_to: dmMessage.reply_to,
+      reply_to_id: dmMessage.reply_to_id,
+      edited: dmMessage.edited,
+      reactions: dmMessage.reactions
+    });
+    if (error) console.error('DM kayıt hatası:', error.message);
 
-      // Alıcıya ilet
-      let receiverSocketId = null;
-      rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
-        if (user.userName === receiver) {
-          receiverSocketId = socketId;
-        }
-      });
-
-      if (receiverSocketId) {
-        io.to(receiverSocketId).emit('dm-message', dmMessage);
+    let receiverSocketId = null;
+    rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
+      if (user.userName === receiver) {
+        receiverSocketId = socketId;
       }
-      // Gönderene de ilet
-      socket.emit('dm-message', dmMessage);
-    } catch (error) {
-      console.error('DM mesaj hatası:', error);
+    });
+
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit('dm-message', dmMessage);
     }
-  });
+    socket.emit('dm-message', dmMessage);
+  } catch (error) {
+    console.error('DM mesaj hatası:', error);
+  }
+});
 
   socket.on('dm-delete', async (data) => {
     try {
@@ -405,6 +410,90 @@ io.on('connection', (socket) => {
       console.error('DM silme hatası:', error);
     }
   });
+  
+  // ============ DM İFADE BIRAK ============
+socket.on('dm-react', async (data) => {
+  try {
+    if (!currentUser) return;
+    const { messageId, emoji } = data;
+    if (!messageId || !emoji) return;
+    if (!['🖕', '🤨', '😜', '🤍'].includes(emoji)) return;
+
+    // Supabase'den mesajı çek
+    const { data: dmMsg, error: fetchError } = await supabase
+      .from('dm_messages')
+      .select('*')
+      .eq('id', messageId)
+      .single();
+
+    if (fetchError || !dmMsg) {
+      console.error('DM mesaj bulunamadı:', fetchError?.message);
+      return;
+    }
+
+    // Mevcut reaksiyonları güncelle
+    let reactions = dmMsg.reactions || [];
+    const existingReaction = reactions.find(r => r.emoji === emoji);
+    if (existingReaction) {
+      if (existingReaction.users.includes(currentUser.userName)) return;
+      existingReaction.users.push(currentUser.userName);
+      existingReaction.count = existingReaction.users.length;
+    } else {
+      reactions.push({
+        emoji: emoji,
+        users: [currentUser.userName],
+        count: 1
+      });
+    }
+
+    const { error: updateError } = await supabase
+      .from('dm_messages')
+      .update({ reactions: reactions })
+      .eq('id', messageId);
+
+    if (updateError) {
+      console.error('DM reaksiyon güncelleme hatası:', updateError.message);
+      return;
+    }
+
+    // Taraflara bildir
+    io.emit('dm-reaction-updated', {
+      messageId: messageId,
+      emoji: emoji,
+      userName: currentUser.userName
+    });
+  } catch (error) {
+    console.error('DM reaksiyon hatası:', error);
+  }
+});
+
+// ============ DM MESAJ DÜZENLE ============
+socket.on('dm-edit', async (data) => {
+  try {
+    if (!currentUser) return;
+    const { messageId, newText } = data;
+    if (!messageId || !newText || !newText.trim()) return;
+
+    const { error } = await supabase
+      .from('dm_messages')
+      .update({ message: newText.trim(), edited: true })
+      .eq('id', messageId)
+      .eq('sender', currentUser.userName);
+
+    if (error) {
+      console.error('DM düzenleme hatası:', error.message);
+      return;
+    }
+
+    io.emit('dm-edited', {
+      messageId: messageId,
+      newText: newText.trim(),
+      edited: true
+    });
+  } catch (error) {
+    console.error('DM düzenleme hatası:', error);
+  }
+});
 
   // ============ BAĞLANTI KOPTU ============
   socket.on('disconnect', () => {
