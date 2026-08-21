@@ -1309,12 +1309,7 @@
         </div>
         <button class="font-menu-btn" onclick="toggleFontPanel()" title="Menü">☰</button>
     </div>
-    <div class="header-right">
-        <button id="persistBtn" class="utility-btn" onclick="togglePersist()" title="Mesajları kalıcı tut">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-            </svg>
-        </button>
+    <div class="header-right">        
         <button id="notifBtn" class="utility-btn" onclick="toggleNotifications()" title="Bildirimleri aç/kapat">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
@@ -1518,7 +1513,7 @@
     let replyToMessage = null;
     let onlineUsers = [];
 
-let persistEnabled = localStorage.getItem('persistEnabled') === 'true';
+
 let notificationsEnabled = localStorage.getItem('notificationsEnabled') === 'true';
     // ============ YILAN OYUNU ============
     const canvas = document.getElementById('gameCanvas');
@@ -1845,7 +1840,6 @@ let notificationsEnabled = localStorage.getItem('notificationsEnabled') === 'tru
 document.addEventListener('visibilitychange', () => {
     if (document.hidden && isInChat) {
         showBlurLock();
-        // Arka plana alınınca medya izinlerini kapat
         if (localStream) {
             localStream.getTracks().forEach(track => track.stop());
             localStream = null;
@@ -1920,11 +1914,8 @@ function connectSocket() {
     socket = io(url, { transports: ['websocket','polling'], timeout: 30000, reconnectionAttempts: 5 });
 
     socket.on('connect', () => { console.log('✅ Bağlandı'); joinChatRoom(); });
-    socket.on('message', (msg) => { 
+socket.on('message', (msg) => { 
     displayMessage(msg);
-    if (notificationsEnabled && msg.userName !== currentUser?.name && Notification.permission === 'granted') {
-        new Notification('Yılan seni özledi gel ve skorunu arttır!');
-    }
 });
     socket.on('message-deleted', (data) => { removeMessageFromDOM(data.messageId); });
     socket.on('message-reaction', (data) => { updateMessageReaction(data.messageId, data.emoji, data.userName); });
@@ -1983,12 +1974,12 @@ async function showChat() {
     if (!socket) connectSocket(); else if (socket.connected) joinChatRoom();
     document.getElementById('messageInput').focus();
     
-    // Mikrofon ve kamera iznini al
+    // Mikrofonu otomatik aç (önceden izin verilmişse sormaz)
     try {
-        await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        console.log('🎤 Mikrofon izni verildi');
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        console.log('🎤 Mikrofon otomatik açıldı');
     } catch (error) {
-        console.log('❌ Mikrofon izni alınamadı:', error);
+        console.log('❌ Mikrofon açılamadı:', error);
     }
 }
 
@@ -1998,7 +1989,7 @@ function exitChat() {
     document.getElementById('gameContainer').style.display = 'flex';
     if (socket) { socket.disconnect(); socket = null; }
     
-    // Tüm medya izinlerini bırak
+    // Mikrofonu kapat
     if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
         localStream = null;
@@ -2013,7 +2004,7 @@ function sendMessage() {
     // O anki seçili fontu al
     const currentFont = getComputedStyle(document.documentElement).getPropertyValue('--message-font').trim();
     
-    const payload = { type: 'text', text, font: currentFont, persist: persistEnabled };
+    const payload = { type: 'text', text, font: currentFont };
     if (replyToMessage) {
         payload.replyTo = replyToMessage.id;
         payload.replyToUserName = replyToMessage.userName;
@@ -2715,39 +2706,39 @@ function showFontMenu() {
     initFontPanel(); // Font listesini doldur
 }
 
-function togglePersist() {
-    persistEnabled = !persistEnabled;
-    localStorage.setItem('persistEnabled', persistEnabled ? 'true' : 'false');
-    document.getElementById('persistBtn').classList.toggle('active', persistEnabled);
-}
 
-function toggleNotifications() {
+async function toggleNotifications() {
     if (!notificationsEnabled) {
         if (Notification.permission === 'default') {
-            Notification.requestPermission().then(permission => {
-                if (permission === 'granted') {
-                    notificationsEnabled = true;
-                    localStorage.setItem('notificationsEnabled', 'true');
-                    document.getElementById('notifBtn').classList.add('active');
-                } else {
-                    notificationsEnabled = false;
-                    localStorage.setItem('notificationsEnabled', 'false');
-                    document.getElementById('notifBtn').classList.remove('active');
-                }
-            });
+            const perm = await Notification.requestPermission();
+            if (perm === 'granted') {
+                notificationsEnabled = true;
+                localStorage.setItem('notificationsEnabled', 'true');
+                document.getElementById('notifBtn').classList.add('active');
+                registerPush();
+            } else {
+                alert('Bildirim izni reddedildi.');
+            }
         } else if (Notification.permission === 'granted') {
             notificationsEnabled = true;
             localStorage.setItem('notificationsEnabled', 'true');
             document.getElementById('notifBtn').classList.add('active');
+            registerPush();
         } else {
-            notificationsEnabled = false;
-            localStorage.setItem('notificationsEnabled', 'false');
-            document.getElementById('notifBtn').classList.remove('active');
+            alert('Bildirim izni reddedilmiş. Tarayıcı ayarlarından izin verin.');
         }
     } else {
         notificationsEnabled = false;
         localStorage.setItem('notificationsEnabled', 'false');
         document.getElementById('notifBtn').classList.remove('active');
+
+        if ('serviceWorker' in navigator) {
+            const reg = await navigator.serviceWorker.getRegistration();
+            if (reg) {
+                const sub = await reg.pushManager.getSubscription();
+                if (sub) await sub.unsubscribe();
+            }
+        }
     }
 }
 
@@ -3284,8 +3275,7 @@ document.addEventListener('DOMContentLoaded', () => {
     applySavedFont();
     generateFood();
     drawGame();
-    
-    document.getElementById('persistBtn').classList.toggle('active', persistEnabled);
+       
     document.getElementById('notifBtn').classList.toggle('active', notificationsEnabled);
 });
     </script>
