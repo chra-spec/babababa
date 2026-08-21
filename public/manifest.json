@@ -7,7 +7,7 @@
   "theme_color": "#667eea",
   "icons": [
     {
-      "src": "/icon.png",
+      "src": "https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAEZnjVqiNcypAY9RPOqIiCfIwkYE0S-EQACHiEAAgK8SFT-tAhBtaDTQT0E.png",
       "sizes": "200x192",
       "type": "image/png"
     }
