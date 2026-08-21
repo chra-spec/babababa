@@ -101,19 +101,6 @@ io.on('connection', (socket) => {
       currentRoomCode = ROOM_CODE;
       socket.join(ROOM_CODE);
 
-      // Önce Supabase'den kalıcı mesajları çek (son 50)
-      const { data: persistentMessages, error } = await supabase
-        .from('persistent_messages')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (!error && persistentMessages) {
-        persistentMessages.reverse().forEach(msg => {
-          socket.emit('message', msg);
-        });
-      }
-
       socket.to(ROOM_CODE).emit('user-joined', { userName: currentUser.userName });
       updateUserList(ROOM_CODE);
 
@@ -156,36 +143,13 @@ io.on('connection', (socket) => {
         replyTo: data.replyTo || null,
         replyToUserName: data.replyToUserName || null,
         replyToText: data.replyToText || null,
-        font: data.font || null,
-        persist: data.persist === true,
+        font: data.font || null,        
         reactions: [],
         time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
         timestamp: Date.now()
       };
 
       room.messages.push(message);
-
-      // Persist ise Supabase'e kaydet
-      if (message.persist) {
-        const { error } = await supabase.from('persistent_messages').insert({
-          id: message.id,
-          room_code: currentRoomCode,
-          user_name: message.userName,
-          user_photo: message.userPhoto,
-          type: message.type,
-          text: message.text,
-          file_data: message.fileData,
-          mime_type: message.mimeType,
-          sticker_type: message.stickerType,
-          reply_to: message.replyTo,
-          reply_to_user_name: message.replyToUserName,
-          reply_to_text: message.replyToText,
-          font: message.font,
-          time: message.time,
-          timestamp: message.timestamp
-        });
-        if (error) console.error('Supabase kayıt hatası:', error.message);
-      }
 
       io.to(currentRoomCode).emit('message', message);
 
@@ -224,8 +188,7 @@ io.on('connection', (socket) => {
 
       room.messages.splice(messageIndex, 1);
 
-      // Supabase'den sil
-      await supabase.from('persistent_messages').delete().eq('id', data.messageId);
+
 
       io.to(currentRoomCode).emit('message-deleted', { messageId: data.messageId });
       console.log(`🗑️ Mesaj silindi: ${data.messageId}`);
@@ -516,6 +479,19 @@ app.get('/manifest.json', (req, res) => {
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+// 24 saatten eski DM mesajlarını temizle
+setInterval(async () => {
+    try {
+        const { error } = await supabase
+            .from('dm_messages')
+            .delete()
+            .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+        if (error) console.error('DM temizleme hatası:', error.message);
+    } catch (e) {
+        console.error('DM temizlik hatası:', e);
+    }
+}, 60 * 60 * 1000); // Her saat kontrol
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server ${PORT} portunda çalışıyor`);
