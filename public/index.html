@@ -680,6 +680,7 @@
             -webkit-user-drag: none;
             user-drag: none;
             object-fit: cover;
+            display: block;
         }
 
         .message-video {
@@ -690,6 +691,7 @@
             display: block;
             margin-top: 4px;
             object-fit: cover;
+            display: block;
         }
 
         .message-sticker {
@@ -2987,7 +2989,6 @@ function openFullscreenVideo(src) {
     document.getElementById('fullscreenMedia').classList.add('active');
 }
 
-function closeFullscreen() {
 let videoPlayerZoomLevel = 80; // %80 başlangıç
 let videoPlayerMinZoom = 80; // %80 minimum
 let videoPlayerMaxZoom = 92; // %92 maksimum
@@ -3065,7 +3066,6 @@ function getDistance(touch1, touch2) {
     const dx = touch1.clientX - touch2.clientX;
     const dy = touch1.clientY - touch2.clientY;
     return Math.sqrt(dx * dx + dy * dy);
-}
 }
 
 // ============ KAMERA SİSTEMİ ============
