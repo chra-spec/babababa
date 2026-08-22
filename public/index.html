@@ -2931,10 +2931,6 @@ let pendingMediaBlob = null;
 let pendingMediaType = null; // 'image' veya 'video'
 let pendingMediaURL = null;
 
-// Kırpma için
-let isCropping = false;
-let cropStartX, cropStartY, cropEndX, cropEndY;
-
 // ============ KAMERA AÇ ============
 async function openCamera() {
     try {
@@ -3108,24 +3104,44 @@ function selectGalleryMedia(type) {
 
 function handleGallerySelection(files) {
     if (!files || files.length === 0) return;
-
-    // Fotoğraf için maksimum 10
-    const maxPhotos = 10;
     const selectedFiles = Array.from(files);
+    const maxPhotos = 10;
 
     if (selectedFiles[0].type.startsWith('image')) {
         if (selectedFiles.length > maxPhotos) {
             alert(`En fazla ${maxPhotos} fotoğraf seçebilirsin.`);
             return;
         }
-        // Tek bir fotoğrafı işleyelim
-        const file = selectedFiles[0];
-        pendingMediaBlob = file;
-        pendingMediaType = 'image';
-        pendingMediaURL = URL.createObjectURL(file);
-        openMediaPreview();
+
+        if (selectedFiles.length === 1) {
+            // Tek fotoğraf → önizleme (kırpma için)
+            const file = selectedFiles[0];
+            pendingMediaBlob = file;
+            pendingMediaType = 'image';
+            pendingMediaURL = URL.createObjectURL(file);
+            openMediaPreview();
+        } else {
+            // Birden fazla fotoğraf → direkt hepsini sırayla gönder
+            selectedFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    socket.emit('message', {
+                        type: 'image',
+                        fileData: e.target.result,
+                        mimeType: file.type
+                    });
+                };
+                reader.readAsDataURL(file);
+            });
+            closeGallery();
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            document.getElementById('cameraOverlay').classList.remove('active');
+        }
     } else {
-        // Video
+        // Video tek seçilebilir
         const file = selectedFiles[0];
         pendingMediaBlob = file;
         pendingMediaType = 'video';
@@ -3181,6 +3197,8 @@ function closeMediaPreview() {
     pendingMediaBlob = null;
     pendingMediaType = null;
     pendingMediaURL = null;
+    isCropping = false;
+    if (cropBox) cropBox.style.display = 'none';
 }
 
 function handlePreviewAction() {
@@ -3557,6 +3575,12 @@ socket.on('dm-edited', (data) => {
         }
     }
 });
+
+socket.on('dm-deleted', (data) => {
+    const el = document.querySelector(`[data-dm-id="${data.messageId}"]`);
+    if (el) el.remove();
+});
+
 }
 
 // DM Context Menu ve İşlemleri
@@ -3618,14 +3642,6 @@ function dmReactToMessage() {
     menu.classList.remove('active');
 }
 
-// DM mesajına reaksiyon ekle
-function addDMReaction(emoji) {
-    if (activeDMMessageId && socket) {
-        socket.emit('dm-react', { messageId: activeDMMessageId, emoji: emoji });
-    }
-    document.getElementById('reactionPicker').classList.remove('active');
-}
-
         // ============ FONT SEÇİMİ ============
         const fontList = [
             { name: 'Varsayılan', css: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" },
@@ -3665,6 +3681,11 @@ function addDMReaction(emoji) {
             document.documentElement.style.setProperty('--message-font', fontCss);
             document.getElementById('fontPanel').classList.remove('active');
         }
+
+function applySavedFont() {
+    const savedFont = localStorage.getItem('chatFont') || fontList[0].css;
+    document.documentElement.style.setProperty('--message-font', savedFont);
+}
 
 function toggleFontPanel() {
     const panel = document.getElementById('fontPanel');
