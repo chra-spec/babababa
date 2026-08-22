@@ -42,6 +42,27 @@
             padding-top: 50px;
         }
 
+/* Pankart Mesaj */
+.banner-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px;
+    cursor: pointer;
+    background: #e67e22;
+    border: 2px solid #fff;
+    border-radius: 20px;
+    min-width: 150px;
+}
+
+.banner-emoji-row {
+    display: flex;
+    gap: 5px;
+    font-size: 24px;
+}
+
         /* ÜST BAR - SABİT */
         .top-bar {
             position: fixed;
@@ -128,6 +149,34 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.3; }
         }
+        
+        /* Dark Mode */
+body.dark-mode {
+    background: #000;
+}
+
+body.dark-mode .chat-header,
+body.dark-mode .input-area,
+body.dark-mode .font-panel,
+body.dark-mode .modal-content {
+    background: #111;
+    border-color: #27ae60;
+}
+
+body.dark-mode .message-content {
+    background: #333;
+    border: 1px solid #27ae60;
+}
+
+body.dark-mode .message.own .message-content {
+    background: #1e5631;
+    border-color: #27ae60;
+}
+
+body.dark-mode .chat-avatar,
+body.dark-mode .message-avatar {
+    border: 1px solid #27ae60;
+}
 
         /* YILAN OYUNU */
         .game-container {
@@ -635,6 +684,34 @@
             word-wrap: break-word;
             position: relative;
         }
+        
+        /* Video mesaj baloncuğu */
+.message-content.video-message {
+    background: #27ae60;
+    border: 2px solid #fff;
+}
+
+/* Video kartı */
+.message-video-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px;
+    cursor: pointer;
+}
+
+.message-video-card svg {
+    width: 48px;
+    height: 48px;
+}
+
+.message-video-card span {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+}
 
         .message.own .message-content { background: #667eea; }
 
@@ -1428,6 +1505,55 @@
     background: #5568d3;
 }
 
+.banner-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.9);
+    z-index: 50000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.banner-overlay.active { display: flex; }
+
+.banner-fullscreen {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.banner-fullscreen-text {
+    font-size: 28px;
+    color: #fff;
+    text-align: center;
+    padding: 20px;
+    animation: bannerTextFade 0.5s ease;
+}
+
+.banner-animated-emojis span {
+    position: absolute;
+    font-size: 40px;
+    animation: bannerEmojiFloat 2.5s ease forwards;
+}
+
+.banner-emoji-left { left: 10%; top: 50%; }
+.banner-emoji-right { right: 10%; top: 50%; }
+.banner-emoji-bottom { bottom: 20%; left: 50%; }
+
+@keyframes bannerEmojiFloat {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-200px) scale(2); }
+}
+
+@keyframes bannerTextFade {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+}
+
 /* Kırpma overlay */
 .crop-overlay {
     position: absolute;
@@ -1625,6 +1751,19 @@
         </div>
     </div>
 
+<!-- PANKART TAM EKRAN -->
+<div class="banner-overlay" id="bannerOverlay">
+    <button class="video-player-close" onclick="closeBanner()">←</button>
+    <div class="banner-fullscreen">
+        <div class="banner-animated-emojis">
+            <span class="banner-emoji-left">🐰</span>
+            <span class="banner-emoji-right">🧡</span>
+            <span class="banner-emoji-bottom">🤍</span>
+        </div>
+        <div class="banner-fullscreen-text" id="bannerFullscreenText"></div>
+    </div>
+</div>
+
     <!-- YILAN OYUNU -->
     <div class="game-container" id="gameContainer">
         <div class="game-header">
@@ -1727,6 +1866,12 @@
     <div class="menu-item" onclick="showFontMenu()">
         ✍️ Yazı Tipi
     </div>
+    <div class="menu-item" onclick="showSettingsMenu()">
+    ⚙️ Ayarlar
+</div>
+<div class="menu-item" onclick="showBannerMenu()">
+    🐰 Pankart
+</div>
 </div>
     
     <!-- ARAMA MENÜSÜ -->
@@ -1750,6 +1895,28 @@
         <div class="font-panel-title">DM</div>
     </div>
     <div id="dmListContainer"></div>
+</div>
+
+<!-- AYARLAR MENÜSÜ -->
+<div id="menuSettings" class="menu-section" style="display:none;">
+    <div class="menu-header-row">
+        <button class="menu-back-btn" onclick="showMainMenu()">←</button>
+        <div class="font-panel-title">Ayarlar</div>
+    </div>
+    <div class="menu-item" onclick="toggleDarkMode()">
+        🌙 Dark Mode <span id="darkModeStatus">Kapalı</span>
+    </div>
+</div>
+
+<!-- PANKART MENÜSÜ -->
+<div id="menuBanner" class="menu-section" style="display:none;">
+    <div class="menu-header-row">
+        <button class="menu-back-btn" onclick="showMainMenu()">←</button>
+        <div class="font-panel-title">Pankart</div>
+    </div>
+    <div class="menu-item" onclick="toggleBannerMode()">
+        🐰 Pankart Modu <span id="bannerModeStatus">Kapalı</span>
+    </div>
 </div>
     
     <!-- FONT MENÜSÜ -->
@@ -1996,9 +2163,30 @@
     let activeContextMessageElement = null;
     let replyToMessage = null;
     let onlineUsers = [];
-
-
+    let darkModeEnabled = localStorage.getItem('darkModeEnabled') === 'true';
+let bannerModeEnabled = localStorage.getItem('bannerModeEnabled') === 'true';
 let notificationsEnabled = localStorage.getItem('notificationsEnabled') === 'true';
+
+function openBanner(text) {
+    text = decodeURIComponent(text);
+    document.getElementById('bannerFullscreenText').textContent = text;
+    document.getElementById('bannerOverlay').classList.add('active');
+    
+    const emojis = document.querySelectorAll('.banner-animated-emojis span');
+    emojis.forEach(emoji => {
+        emoji.style.animation = 'none';
+        void emoji.offsetWidth;
+        emoji.style.animation = 'bannerEmojiFloat 2.5s ease forwards';
+    });
+    
+    setTimeout(() => {
+        closeBanner();
+    }, 3000);
+}
+
+function closeBanner() {
+    document.getElementById('bannerOverlay').classList.remove('active');
+}
     // ============ YILAN OYUNU ============
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -2483,6 +2671,7 @@ function exitChat() {
 function sendMessage() {
     const input = document.getElementById('messageInput');
     const text = input.value.trim();
+    const payload = { type: 'text', text, font: currentFont, bannerMode: bannerModeEnabled };
     if (!text || !socket) return;
     
     // O anki seçili fontu al
@@ -2508,28 +2697,46 @@ function displayMessage(msg) {
     div.className = `message ${isOwn ? 'own' : ''}`;
     div.dataset.messageId = msg.id;
 
-    let content = '';
-    if (msg.replyTo) {
-        content += `<div class="message-reply-preview" onclick="scrollToMessage('${msg.replyTo}')">↩️ ${escapeHtml(msg.replyToUserName)}: ${escapeHtml(msg.replyToText || '')}</div>`;
-    }
+let content = '';
+if (msg.replyTo) {
+    content += `<div class="message-reply-preview" onclick="scrollToMessage('${msg.replyTo}')">↩️ ${escapeHtml(msg.replyToUserName)}: ${escapeHtml(msg.replyToText || '')}</div>`;
+}
 if (msg.type === 'text') {
-    const msgFont = msg.font || "'Segoe UI', sans-serif";
-    content += `<div class="message-text" style="font-family: ${msgFont};">${escapeHtml(msg.text)}</div>`;
+    if (msg.bannerMode) {
+        const bannerText = encodeURIComponent(msg.text);
+        content += `
+        <div class="banner-message" onclick="openBanner('${bannerText}')">
+            <div class="banner-emoji-row">
+                <span>🐰</span>
+                <span>🧡</span>
+                <span>🤍</span>
+            </div>
+            <span>Pankartı Aç</span>
+        </div>`;
+    } else {
+        const msgFont = msg.font || "'Segoe UI', sans-serif";
+        content += `<div class="message-text" style="font-family: ${msgFont};">${escapeHtml(msg.text)}</div>`;
+    }
 } else if (msg.type === 'image') {
     content += `<div class="message-text">${msg.text ? escapeHtml(msg.text) : ''}</div>
     <img src="${msg.fileData}" class="message-image" alt="Fotoğraf" onclick="openFullscreenImage('${msg.fileData}')">`;
 } else if (msg.type === 'video') {
-    content += `<div class="message-text">${msg.text ? escapeHtml(msg.text) : ''}</div>
-    <video src="${msg.fileData}" class="message-video" preload="none" tabindex="-1" onclick="openFullscreenVideo('${msg.fileData}')"></video>`;
+    content += `<div class="message-video-card" onclick="openFullscreenVideo('${msg.fileData}')">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polygon points="10,8 16,12 10,16" fill="white"/>
+        </svg>
+        <span>Videoyu Aç</span>
+    </div>`;
 } else if (msg.type === 'sticker') {
-if (msg.stickerType === 'video') {
-    content += `<video src="${msg.fileData}" class="message-sticker" autoplay muted loop playsinline style="transform: rotate(90deg);" onloadedmetadata="setupStickerVideo(this)"></video>`;
-} else {
-            content += `<img src="${msg.fileData}" class="message-sticker" alt="Sticker">`;
-        }
-    } else if (msg.type === 'audio') {
-        content += `<div class="message-audio"><audio controls controlsList="nodownload" preload="metadata"><source src="${msg.fileData}" type="${msg.mimeType || 'audio/webm'}"></audio></div>`;
+    if (msg.stickerType === 'video') {
+        content += `<video src="${msg.fileData}" class="message-sticker" autoplay muted loop playsinline style="transform: rotate(90deg);" onloadedmetadata="setupStickerVideo(this)"></video>`;
+    } else {
+        content += `<img src="${msg.fileData}" class="message-sticker" alt="Sticker">`;
     }
+} else if (msg.type === 'audio') {
+    content += `<div class="message-audio"><audio controls controlsList="nodownload" preload="metadata"><source src="${msg.fileData}" type="${msg.mimeType || 'audio/webm'}"></audio></div>`;
+}
 
     if (msg.reactions && msg.reactions.length > 0) {
         content += `<div class="message-reactions">`;
@@ -2551,6 +2758,11 @@ if (msg.stickerType === 'video') {
             </div>
         </div>
     `;
+
+if (msg.type === 'video') {
+    const contentEl = div.querySelector('.message-content');
+    if (contentEl) contentEl.classList.add('video-message');
+}
 
     // Uzun basma - context menü
     div.addEventListener('contextmenu', (e) => {
@@ -2957,6 +3169,21 @@ function sendSticker(sticker) {
         socket.emit('message', { type: 'sticker', stickerType: sticker.type, fileData: sticker.data });
     }
     document.getElementById('stickerPanel').classList.remove('active');
+}
+
+function toggleDarkMode() {
+    darkModeEnabled = !darkModeEnabled;
+    localStorage.setItem('darkModeEnabled', darkModeEnabled);
+    document.body.classList.toggle('dark-mode', darkModeEnabled);
+    document.getElementById('darkModeStatus').textContent = darkModeEnabled ? 'Açık' : 'Kapalı';
+    hideFontPanel();
+}
+
+function toggleBannerMode() {
+    bannerModeEnabled = !bannerModeEnabled;
+    localStorage.setItem('bannerModeEnabled', bannerModeEnabled);
+    document.getElementById('bannerModeStatus').textContent = bannerModeEnabled ? 'Açık' : 'Kapalı';
+    hideFontPanel();
 }
 
 // ============ PROFİL GÖRÜNTÜLEME ============
@@ -3927,6 +4154,9 @@ function showMainMenu() {
     document.getElementById('menuMain').style.display = 'block';
     document.getElementById('menuCalls').style.display = 'none';
     document.getElementById('menuFonts').style.display = 'none';
+    document.getElementById('menuDM').style.display = 'none';
+    document.getElementById('menuSettings').style.display = 'none';
+    document.getElementById('menuBanner').style.display = 'none';
 }
 
 function showCallMenu() {
@@ -3941,7 +4171,23 @@ function showFontMenu() {
     document.getElementById('menuFonts').style.display = 'block';
     initFontPanel(); // Font listesini doldur
 }
+function showSettingsMenu() {
+    document.getElementById('menuMain').style.display = 'none';
+    document.getElementById('menuCalls').style.display = 'none';
+    document.getElementById('menuFonts').style.display = 'none';
+    document.getElementById('menuDM').style.display = 'none';
+    document.getElementById('menuBanner').style.display = 'none';
+    document.getElementById('menuSettings').style.display = 'block';
+}
 
+function showBannerMenu() {
+    document.getElementById('menuMain').style.display = 'none';
+    document.getElementById('menuCalls').style.display = 'none';
+    document.getElementById('menuFonts').style.display = 'none';
+    document.getElementById('menuDM').style.display = 'none';
+    document.getElementById('menuSettings').style.display = 'none';
+    document.getElementById('menuBanner').style.display = 'block';
+}
 
 async function toggleNotifications() {
     if (!notificationsEnabled) {
@@ -4508,6 +4754,13 @@ connectSocket = function() {
 
         // ============ BAŞLANGIÇ ============
 document.addEventListener('DOMContentLoaded', () => {
+if (darkModeEnabled) {
+    document.body.classList.add('dark-mode');
+    document.getElementById('darkModeStatus').textContent = 'Açık';
+}
+if (bannerModeEnabled) {
+    document.getElementById('bannerModeStatus').textContent = 'Açık';
+}
     applySavedFont();
     generateFood();
     drawGame();
