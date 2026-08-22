@@ -141,11 +141,12 @@ io.on('connection', (socket) => {
         mimeType: data.mimeType || null,
         stickerType: data.stickerType || null,
         replyTo: data.replyTo || null,
+        isMirrored: data.isMirrored === true,
         replyToUserName: data.replyToUserName || null,
         replyToText: data.replyToText || null,
         font: data.font || null,        
         reactions: [],
-        time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' }),
+        time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
         timestamp: Date.now()
       };
 
