@@ -3245,6 +3245,15 @@ isCropping = false;
 }
 
 function closeMediaPreview() {
+    const previewContent = document.getElementById('previewContent');
+    const video = previewContent.querySelector('video');
+    if (video) {
+        video.pause();
+        video.src = ''; // Kaynağı kaldır, ses tamamen dursun
+        video.load();
+    }
+    previewContent.innerHTML = ''; // İçeriği temizle
+    
     document.getElementById('mediaPreviewOverlay').classList.remove('active');
     pendingMediaBlob = null;
     pendingMediaType = null;
@@ -3422,6 +3431,14 @@ function sendMediaFromPreview() {
 }
 
 function finishSending() {
+    const previewContent = document.getElementById('previewContent');
+const video = previewContent.querySelector('video');
+if (video) {
+    video.pause();
+    video.src = '';
+    video.load();
+}
+previewContent.innerHTML = '';
     closeMediaPreview();
     isCropping = false;
     if (cropBox) cropBox.style.display = 'none';
