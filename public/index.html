@@ -2441,10 +2441,12 @@ if (msg.type === 'text') {
     const msgFont = msg.font || "'Segoe UI', sans-serif";
     content += `<div class="message-text" style="font-family: ${msgFont};">${escapeHtml(msg.text)}</div>`;
 } else if (msg.type === 'image') {
-        content += `<div class="message-text">${msg.text ? escapeHtml(msg.text) : ''}</div>
-    } else if (msg.type === 'video') {
-        content += `<div class="message-text">${msg.text ? escapeHtml(msg.text) : ''}</div>
-    } else if (msg.type === 'sticker') {
+    content += `<div class="message-text">${msg.text ? escapeHtml(msg.text) : ''}</div>
+    <img src="${msg.fileData}" class="message-image" alt="Fotoğraf" onclick="openFullscreenImage('${msg.fileData}')">`;
+} else if (msg.type === 'video') {
+    content += `<div class="message-text">${msg.text ? escapeHtml(msg.text) : ''}</div>
+    <video src="${msg.fileData}" class="message-video" controls preload="none" controlsList="nodownload" onclick="openFullscreenVideo('${msg.fileData}')"></video>`;
+} else if (msg.type === 'sticker') {
 if (msg.stickerType === 'video') {
     content += `<video src="${msg.fileData}" class="message-sticker" autoplay muted loop playsinline style="transform: rotate(90deg);" onloadedmetadata="setupStickerVideo(this)"></video>`;
 } else {
@@ -2950,17 +2952,13 @@ setCameraMode('photo'); // Varsayılan fotoğraf
 
         cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
 
-        const video = document.getElementById('cameraPreview');
-        video.srcObject = cameraStream;
-        const video = document.getElementById('cameraPreview');
+const video = document.getElementById('cameraPreview');
 video.srcObject = cameraStream;
 video.classList.remove('rear');
 video.classList.add('zoom');
 cameraCanvas.width = 1280;
 cameraCanvas.height = 720;
 startCanvasDraw(video);
-        video.classList.remove('rear');
-        video.classList.add('zoom');
 
         if (cameraFacing === 'environment') {
             video.classList.add('rear');
@@ -3107,24 +3105,22 @@ function switchCamera() {
     };
 
     navigator.mediaDevices.getUserMedia(constraints)
-        .then((stream) => {
-            cameraStream = stream;
-            const video = document.getElementById('cameraPreview');
-            video.srcObject = stream;
-            if (cameraFacing === 'environment') {
-                video.classList.add('rear');
-            } else {
-                video.classList.remove('rear');
-            }
-        })
-        .catch((error) => {
-            console.error('Kamera değiştirme hatası:', error);
-            alert('Kamera değiştirilemedi!');
-        });
-        const video = document.getElementById('cameraPreview');
-video.srcObject = stream;
-video.classList.add('zoom'); // İstersen kaldır
-startCanvasDraw(video);
+.then((stream) => {
+    cameraStream = stream;
+    const video = document.getElementById('cameraPreview');
+    video.srcObject = stream;
+    video.classList.add('zoom');
+    if (cameraFacing === 'environment') {
+        video.classList.add('rear');
+    } else {
+        video.classList.remove('rear');
+    }
+    startCanvasDraw(video);
+})
+.catch((error) => {
+    console.error('Kamera değiştirme hatası:', error);
+    alert('Kamera değiştirilemedi!');
+});
 }
 
 // ============ GALERİ ============
@@ -3223,7 +3219,6 @@ video.controls = true;
 video.autoplay = true;
 video.loop = true;
 video.muted = false;
-video.style.transform = 'scaleX(-1)'; // Ayna modu korunur
         previewContent.appendChild(video);
         document.getElementById('previewActionBtn').style.display = 'flex';
         document.getElementById('previewActionBtn').innerHTML = `
