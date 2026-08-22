@@ -146,7 +146,7 @@ io.on('connection', (socket) => {
         replyToText: data.replyToText || null,
         font: data.font || null,        
         reactions: [],
-        time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+        time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' }),
         timestamp: Date.now()
       };
 
