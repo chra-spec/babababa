@@ -144,7 +144,8 @@ io.on('connection', (socket) => {
         isMirrored: data.isMirrored === true,
         replyToUserName: data.replyToUserName || null,
         replyToText: data.replyToText || null,
-        font: data.font || null,        
+        font: data.font || null, 
+        bannerMode: data.bannerMode === true,
         reactions: [],
         time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' }),
         timestamp: Date.now()
