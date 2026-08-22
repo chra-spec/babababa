@@ -42,25 +42,44 @@
             padding-top: 50px;
         }
 
-/* Pankart Mesaj */
 .banner-message {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 20px;
+    gap: 5px;
+    padding: 15px;
     cursor: pointer;
-    background: #e67e22;
-    border: 2px solid #fff;
-    border-radius: 20px;
-    min-width: 150px;
+    background: #e67e22; /* turuncu */
+    border: 3px solid #fff; /* beyaz kenarlık */
+    border-radius: 50%; /* tam daire */
+    width: 130px;
+    height: 130px;
+    margin: 0 auto;
+    box-shadow: 0 0 0 3px #e67e22, 0 0 0 5px #fff; /* çift çizgi efekti */
 }
 
-.banner-emoji-row {
-    display: flex;
-    gap: 5px;
-    font-size: 24px;
+.banner-exploding {
+    animation: bannerExplode 0.6s ease forwards;
+}
+
+@keyframes bannerExplode {
+    0% {
+        transform: scale(0.5);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+    70% {
+        transform: scale(1.5);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(3);
+        opacity: 0;
+    }
 }
 
         /* ÜST BAR - SABİT */
@@ -652,6 +671,11 @@ body.dark-mode .message-avatar {
             animation: msgAppear 0.3s ease;
             position: relative;
         }
+        .message.banner-mode {
+    align-self: center;
+    flex-direction: column;
+    max-width: 100%;
+}
 
         @keyframes msgAppear {
             from { opacity: 0; transform: translateY(8px); }
@@ -1991,6 +2015,7 @@ body.dark-mode .message-avatar {
 <div class="video-player-overlay" id="videoPlayerOverlay">
     <div class="video-player-container" id="videoPlayerContainer">
         <video id="videoPlayer" playsinline preload="metadata" tabindex="-1"></video>
+        <img id="imagePlayer" style="display:none; width:100%; height:100%; object-fit:contain;" alt="Fotoğraf">
     </div>
     <button class="video-player-close" id="videoPlayerClose" onclick="closeVideoPlayer()">←</button>
     <button class="video-player-fullscreen" id="videoPlayerFullscreen" onclick="toggleVideoPlayerZoom()">⛶</button>
@@ -2167,10 +2192,14 @@ body.dark-mode .message-avatar {
 let bannerModeEnabled = localStorage.getItem('bannerModeEnabled') === 'true';
 let notificationsEnabled = localStorage.getItem('notificationsEnabled') === 'true';
 
-function openBanner(text) {
+function openBanner(text, messageId) {
     text = decodeURIComponent(text);
     document.getElementById('bannerFullscreenText').textContent = text;
     document.getElementById('bannerOverlay').classList.add('active');
+    
+    // Otomatik kapanma YOK, kullanıcı geri tuşuyla kapatacak
+    // mesajId'yi sakla
+    window.currentBannerMessageId = messageId;
     
     const emojis = document.querySelectorAll('.banner-animated-emojis span');
     emojis.forEach(emoji => {
@@ -2178,14 +2207,28 @@ function openBanner(text) {
         void emoji.offsetWidth;
         emoji.style.animation = 'bannerEmojiFloat 2.5s ease forwards';
     });
-    
-    setTimeout(() => {
-        closeBanner();
-    }, 3000);
 }
 
 function closeBanner() {
     document.getElementById('bannerOverlay').classList.remove('active');
+    
+    const messageId = window.currentBannerMessageId;
+    if (!messageId) return;
+    
+    const bannerElement = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (bannerElement) {
+        bannerElement.classList.add('banner-exploding');
+        
+        // Animasyon bitince DOM'dan kaldır ve sunucuya silme isteği gönder
+        setTimeout(() => {
+            bannerElement.remove();
+            if (socket) {
+                socket.emit('delete-message', { messageId: messageId });
+            }
+        }, 600);
+    }
+    
+    window.currentBannerMessageId = null;
 }
     // ============ YILAN OYUNU ============
     const canvas = document.getElementById('gameCanvas');
@@ -2701,18 +2744,14 @@ if (msg.replyTo) {
     content += `<div class="message-reply-preview" onclick="scrollToMessage('${msg.replyTo}')">↩️ ${escapeHtml(msg.replyToUserName)}: ${escapeHtml(msg.replyToText || '')}</div>`;
 }
 if (msg.type === 'text') {
-    if (msg.bannerMode) {
-        const bannerText = encodeURIComponent(msg.text);
-        content += `
-        <div class="banner-message" onclick="openBanner('${bannerText}')">
-            <div class="banner-emoji-row">
-                <span>🐰</span>
-                <span>🧡</span>
-                <span>🤍</span>
-            </div>
-            <span>Pankartı Aç</span>
-        </div>`;
-    } else {
+if (msg.bannerMode) {
+    const bannerText = encodeURIComponent(msg.text);
+    content += `
+    <div class="banner-message" data-message-id="${msg.id}" onclick="openBanner('${bannerText}', '${msg.id}')">
+        <span style="font-size: 45px;">🐰</span>
+        <span style="font-size: 13px; font-weight: bold;">Pankartı Aç</span>
+    </div>`;
+} else {
         const msgFont = msg.font || "'Segoe UI', sans-serif";
         content += `<div class="message-text" style="font-family: ${msgFont};">${escapeHtml(msg.text)}</div>`;
     }
@@ -2757,6 +2796,10 @@ if (msg.type === 'text') {
             </div>
         </div>
     `;
+    
+    if (msg.bannerMode) {
+    div.classList.add('banner-mode');
+}
 
 if (msg.type === 'video') {
     const contentEl = div.querySelector('.message-content');
@@ -3204,9 +3247,23 @@ function closeProfileView() {
 
 // ============ TAM EKRAN MEDYA ============
 function openFullscreenImage(src) {
-    const content = document.getElementById('fullscreenContent');
-    content.innerHTML = `<img src="${src}" alt="Fotoğraf">`;
-    document.getElementById('fullscreenMedia').classList.add('active');
+    const overlay = document.getElementById('videoPlayerOverlay');
+    const video = document.getElementById('videoPlayer');
+    const img = document.getElementById('imagePlayer');
+    
+    video.style.display = 'none';
+    video.pause();
+    video.src = '';
+    video.load();
+    
+    img.src = src;
+    img.style.display = 'block';
+    overlay.classList.add('active');
+    
+    videoPlayerZoomLevel = videoPlayerMinZoom;
+    updateVideoPlayerZoom();
+    
+    img.focus({ preventScroll: true });
 }
 
 let videoPlayerZoomLevel = 80; // %80 başlangıç
@@ -3217,26 +3274,36 @@ function openFullscreenVideo(src) {
     const overlay = document.getElementById('videoPlayerOverlay');
     const container = document.getElementById('videoPlayerContainer');
     const video = document.getElementById('videoPlayer');
+    const img = document.getElementById('imagePlayer');
     
+    img.style.display = 'none';
+    img.src = '';
+    
+    video.style.display = 'block';
     video.src = src;
     video.autoplay = true;
     video.controls = false;
     overlay.classList.add('active');
     
-    // Başlangıç boyutu %80
     videoPlayerZoomLevel = videoPlayerMinZoom;
     updateVideoPlayerZoom();
     
-    // Klavye açılmasını engelle
     video.focus({ preventScroll: true });
 }
 
 function closeVideoPlayer() {
     const overlay = document.getElementById('videoPlayerOverlay');
     const video = document.getElementById('videoPlayer');
+    const img = document.getElementById('imagePlayer');
+    
     video.pause();
     video.src = '';
     video.load();
+    video.style.display = 'none';
+    
+    img.src = '';
+    img.style.display = 'none';
+    
     overlay.classList.remove('active');
 }
 
