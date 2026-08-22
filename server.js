@@ -520,6 +520,10 @@ socket.on('dm-edit', async (data) => {
   });
 });
 
+      app.get('/zombie', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'zombie.html'));
+});
+
 app.get('/api/dm-messages', async (req, res) => {
   try {
     const { sender, receiver } = req.query;
