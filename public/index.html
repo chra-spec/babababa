@@ -2671,13 +2671,12 @@ function exitChat() {
 function sendMessage() {
     const input = document.getElementById('messageInput');
     const text = input.value.trim();
-    const payload = { type: 'text', text, font: currentFont, bannerMode: bannerModeEnabled };
     if (!text || !socket) return;
     
     // O anki seçili fontu al
     const currentFont = getComputedStyle(document.documentElement).getPropertyValue('--message-font').trim();
     
-    const payload = { type: 'text', text, font: currentFont };
+    const payload = { type: 'text', text, font: currentFont, bannerMode: bannerModeEnabled };
     if (replyToMessage) {
         payload.replyTo = replyToMessage.id;
         payload.replyToUserName = replyToMessage.userName;
@@ -3207,12 +3206,6 @@ function closeProfileView() {
 function openFullscreenImage(src) {
     const content = document.getElementById('fullscreenContent');
     content.innerHTML = `<img src="${src}" alt="Fotoğraf">`;
-    document.getElementById('fullscreenMedia').classList.add('active');
-}
-
-function openFullscreenVideo(src) {
-    const content = document.getElementById('fullscreenContent');
-    content.innerHTML = `<video src="${src}" controls autoplay></video>`;
     document.getElementById('fullscreenMedia').classList.add('active');
 }
 
