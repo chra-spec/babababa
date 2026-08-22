@@ -1803,8 +1803,8 @@
         <button class="camera-top-btn" onclick="closeCamera()">✕</button>
     </div>
     
-    <video id="cameraPreview" autoplay playsinline muted></video>
-    <canvas id="cameraCanvas" style="display:none;"></canvas>
+  <video id="cameraPreview" autoplay playsinline muted style="display:none;"></video>
+<canvas id="cameraCanvas" style="width:100%;height:100%;object-fit:cover;"></canvas>
     
     <!-- Mod Seçici -->
     <div class="camera-mode-selector">
@@ -2442,10 +2442,8 @@ if (msg.type === 'text') {
     content += `<div class="message-text" style="font-family: ${msgFont};">${escapeHtml(msg.text)}</div>`;
 } else if (msg.type === 'image') {
         content += `<div class="message-text">${msg.text ? escapeHtml(msg.text) : ''}</div>
-        <img src="${msg.fileData}" class="message-image" alt="Fotoğraf" style="${msg.isMirrored ? 'transform: scaleX(-1);' : ''}" onclick="openFullscreenImage('${msg.fileData}')">`;
     } else if (msg.type === 'video') {
         content += `<div class="message-text">${msg.text ? escapeHtml(msg.text) : ''}</div>
-        <video src="${msg.fileData}" class="message-video" controls preload="none" controlsList="nodownload" style="${msg.isMirrored ? 'transform: scaleX(-1);' : ''}" onclick="openFullscreenVideo('${msg.fileData}')"></video>`;
     } else if (msg.type === 'sticker') {
 if (msg.stickerType === 'video') {
     content += `<video src="${msg.fileData}" class="message-sticker" autoplay muted loop playsinline style="transform: rotate(90deg);" onloadedmetadata="setupStickerVideo(this)"></video>`;
@@ -2928,6 +2926,9 @@ let videoRecorder = null;
 let videoRecordedChunks = [];
 let recordedVideoBlob = null;
 let pendingMediaIsMirrored = false;
+let cameraCanvas = document.getElementById('cameraCanvas');
+let cameraCtx = cameraCanvas.getContext('2d');
+let drawLoop = null;
 
 // Şu an önizlemedeki medya
 let pendingMediaBlob = null;
@@ -2951,6 +2952,13 @@ setCameraMode('photo'); // Varsayılan fotoğraf
 
         const video = document.getElementById('cameraPreview');
         video.srcObject = cameraStream;
+        const video = document.getElementById('cameraPreview');
+video.srcObject = cameraStream;
+video.classList.remove('rear');
+video.classList.add('zoom');
+cameraCanvas.width = 1280;
+cameraCanvas.height = 720;
+startCanvasDraw(video);
         video.classList.remove('rear');
         video.classList.add('zoom');
 
@@ -2973,6 +2981,23 @@ function closeCamera() {
         cameraStream = null;
     }
     document.getElementById('cameraOverlay').classList.remove('active');
+}
+
+function startCanvasDraw(video) {
+    if (drawLoop) cancelAnimationFrame(drawLoop);
+    function draw() {
+        if (video.readyState >= 2) {
+            cameraCtx.save();
+            cameraCtx.clearRect(0, 0, cameraCanvas.width, cameraCanvas.height);
+            // Ayna modu: sağa göre yansıt
+            cameraCtx.translate(cameraCanvas.width, 0);
+            cameraCtx.scale(-1, 1);
+            cameraCtx.drawImage(video, 0, 0, cameraCanvas.width, cameraCanvas.height);
+            cameraCtx.restore();
+        }
+        drawLoop = requestAnimationFrame(draw);
+    }
+    draw();
 }
 
 // ============ MOD DEĞİŞTİR ============
@@ -3013,20 +3038,29 @@ function capturePhoto() {
         pendingMediaBlob = blob;
         pendingMediaType = 'image';
         pendingMediaURL = imageDataURL;
-        pendingMediaIsMirrored = true;
+        pendingMediaIsMirrored = false;
         openMediaPreview();
     }, 'image/jpeg', 0.9);
 }
 
-// Video kaydını başlat/durdur
 function toggleVideoRecording() {
     const captureBtn = document.getElementById('captureBtn');
     const captureImg = captureBtn.querySelector('img');
 
     if (!isRecordingVideo) {
-        // Kaydı başlat
         videoRecordedChunks = [];
-        videoRecorder = new MediaRecorder(cameraStream, {
+
+        // Canvas stream'i al
+        const canvasStream = cameraCanvas.captureStream(30);
+
+        // Ses track'ini ekle (kamera stream'den)
+        if (cameraStream) {
+            cameraStream.getAudioTracks().forEach(track => {
+                canvasStream.addTrack(track);
+            });
+        }
+
+        videoRecorder = new MediaRecorder(canvasStream, {
             mimeType: 'video/webm;codecs=vp9'
         });
 
@@ -3041,7 +3075,7 @@ function toggleVideoRecording() {
             pendingMediaBlob = recordedVideoBlob;
             pendingMediaType = 'video';
             pendingMediaURL = URL.createObjectURL(recordedVideoBlob);
-            pendingMediaIsMirrored = true;
+            pendingMediaIsMirrored = false; // Video dosyası ayna modlu
             openMediaPreview();
         };
 
@@ -3049,7 +3083,6 @@ function toggleVideoRecording() {
         isRecordingVideo = true;
         captureImg.src = 'https://cdn.phototourl.com/free/2026-08-22-de5dcf7d-23aa-4f8e-a1eb-fc01e62c2737.png';
     } else {
-        // Kaydı durdur
         videoRecorder.stop();
         isRecordingVideo = false;
         captureImg.src = 'https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAEZnjVqiNcypAY9RPOqIiCfIwkYE0S-EQACHiEAAgK8SFT-tAhBtaDTQT0E.png';
@@ -3088,6 +3121,10 @@ function switchCamera() {
             console.error('Kamera değiştirme hatası:', error);
             alert('Kamera değiştirilemedi!');
         });
+        const video = document.getElementById('cameraPreview');
+video.srcObject = stream;
+video.classList.add('zoom'); // İstersen kaldır
+startCanvasDraw(video);
 }
 
 // ============ GALERİ ============
@@ -3186,9 +3223,6 @@ video.controls = true;
 video.autoplay = true;
 video.loop = true;
 video.muted = false;
-if (pendingMediaIsMirrored) {
-    video.style.transform = 'scaleX(-1)';
-}
 video.style.transform = 'scaleX(-1)'; // Ayna modu korunur
         previewContent.appendChild(video);
         document.getElementById('previewActionBtn').style.display = 'flex';
