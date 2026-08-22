@@ -1091,6 +1091,312 @@
             margin-top: 5px;
         }
 
+/* ============ KAMERA SİSTEMİ STİLLERİ ============ */
+.camera-overlay,
+.gallery-overlay,
+.media-preview-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    z-index: 30000;
+    display: none;
+    flex-direction: column;
+}
+
+.camera-overlay.active,
+.gallery-overlay.active,
+.media-preview-overlay.active {
+    display: flex;
+}
+
+/* Üst bar */
+.camera-top {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+}
+
+.camera-top-btn {
+    background: rgba(0,0,0,0.5);
+    border: none;
+    color: #fff;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.camera-top-btn:hover {
+    background: rgba(0,0,0,0.7);
+}
+
+/* Kamera önizleme */
+#cameraPreview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1); /* Ön kamera ayna modu */
+    background: #000;
+}
+
+#cameraPreview.rear {
+    transform: scaleX(1); /* Arka kamera normal */
+}
+
+/* Instagram tarzı hafif zoom */
+#cameraPreview.zoom {
+    transform: scaleX(-1) scale(1.15);
+}
+
+#cameraPreview.rear.zoom {
+    transform: scaleX(1) scale(1.15);
+}
+
+/* Mod seçici */
+.camera-mode-selector {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 15px;
+    z-index: 5;
+}
+
+.camera-mode-btn {
+    background: rgba(0,0,0,0.4);
+    border: 2px solid transparent;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.camera-mode-btn.active {
+    background: #667eea;
+    border-color: #fff;
+}
+
+/* Alt bar */
+.camera-bottom {
+    position: absolute;
+    bottom: 40px;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    z-index: 10;
+}
+
+.camera-bottom-left,
+.camera-bottom-right {
+    flex: 1;
+}
+
+.camera-bottom-left {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.camera-bottom-right {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.camera-bottom-center {
+    flex: 0 0 auto;
+}
+
+.camera-icon-btn {
+    background: rgba(0,0,0,0.5);
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.camera-icon-btn:hover {
+    background: rgba(0,0,0,0.7);
+}
+
+.camera-capture-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    transition: transform 0.2s;
+}
+
+.camera-capture-btn:active {
+    transform: scale(0.9);
+}
+
+/* Galeri seçim ekranı */
+.gallery-top {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+}
+
+.gallery-options {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+.gallery-option-btn {
+    background: #2d2d44;
+    border: 2px solid #444;
+    color: #fff;
+    padding: 20px 30px;
+    border-radius: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 18px;
+    font-weight: 600;
+    width: 250px;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+.gallery-option-btn:hover {
+    background: #3d3d54;
+    border-color: #667eea;
+}
+
+/* Medya önizleme / kırpma */
+.preview-top {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+}
+
+.preview-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 60px 20px 100px;
+}
+
+.preview-content img,
+.preview-content video {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.preview-actions {
+    position: absolute;
+    bottom: 40px;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    z-index: 10;
+}
+
+.preview-action-btn {
+    background: rgba(0,0,0,0.5);
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.preview-send-btn {
+    background: #667eea;
+    border: none;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.preview-send-btn:hover {
+    background: #5568d3;
+}
+
+/* Kırpma overlay */
+.crop-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.crop-box {
+    border: 2px dashed #fff;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
+    pointer-events: auto;
+    position: relative;
+}
+
+@media (max-width: 768px) {
+    .camera-bottom {
+        padding: 0 20px;
+    }
+    
+    .camera-capture-btn img {
+        width: 65px !important;
+        height: 65px !important;
+    }
+    
+    .camera-icon-btn {
+        width: 45px;
+        height: 45px;
+    }
+    
+    .preview-actions {
+        padding: 0 20px;
+    }
+}
+
         /* ÇAĞRI ARAYÜZÜ */
         .call-overlay {
             display: none;
@@ -1324,13 +1630,13 @@
 
         <div class="input-area">
             <div class="input-buttons">
-                <button class="input-btn" onclick="document.getElementById('imageInput').click()" title="Fotoğraf">📷</button>
-                <button class="input-btn" onclick="document.getElementById('videoInput').click()" title="Video">🎬</button>
-                <button class="input-btn" onclick="toggleStickerPanel()" title="Çıkartma">🐰</button>
-                <button class="input-btn" id="recordBtn" onclick="toggleRecording()" title="Ses Kaydı">🎤</button>
-                <input type="file" id="imageInput" accept="image/*" multiple style="display: none;">
-                <input type="file" id="videoInput" accept="video/*" multiple style="display: none;">
-            </div>
+    <button class="input-btn" onclick="openCamera()" title="Kamera">📷</button>
+    <button class="input-btn" onclick="openCameraGallery()" title="Galeri">🖼️</button>
+    <button class="input-btn" onclick="toggleStickerPanel()" title="Çıkartma">🐰</button>
+    <button class="input-btn" id="recordBtn" onclick="toggleRecording()" title="Ses Kaydı">🎤</button>
+    <input type="file" id="imageInput" accept="image/*" multiple style="display: none;">
+    <input type="file" id="videoInput" accept="video/*" multiple style="display: none;">
+</div>
             <textarea class="message-input" id="messageInput" placeholder="Mesaj yaz..." rows="1"></textarea>
             <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
         </div>
@@ -1488,6 +1794,103 @@
             <button class="send-btn" onclick="sendDMMessage()">➤</button>
         </div>
         <button class="btn-full" style="margin-top:10px; background:#e74c3c;" onclick="closeDM()">Kapat</button>
+    </div>
+</div>
+
+
+<!-- KAMERA SİSTEMİ -->
+<div class="camera-overlay" id="cameraOverlay">
+    <div class="camera-top">
+        <button class="camera-top-btn" onclick="closeCamera()">✕</button>
+    </div>
+    
+    <video id="cameraPreview" autoplay playsinline muted></video>
+    <canvas id="cameraCanvas" style="display:none;"></canvas>
+    
+    <!-- Mod Seçici -->
+    <div class="camera-mode-selector">
+        <button class="camera-mode-btn" id="photoModeBtn" onclick="setCameraMode('photo')">
+            Fotoğraf
+        </button>
+        <button class="camera-mode-btn active" id="videoModeBtn" onclick="setCameraMode('video')">
+            Video
+        </button>
+    </div>
+    
+    <!-- Alt Kontroller -->
+    <div class="camera-bottom">
+        <div class="camera-bottom-left">
+            <button class="camera-icon-btn" onclick="openCameraGallery()" title="Galeri">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21,15 16,10 5,21"/>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="camera-bottom-center">
+            <button class="camera-capture-btn" id="captureBtn" onclick="handleCapture()">
+                <img src="https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAEZnjVqiNcypAY9RPOqIiCfIwkYE0S-EQACHiEAAgK8SFT-tAhBtaDTQT0E.png" alt="Çekim" style="width:70px;height:70px;border-radius:50%;">
+            </button>
+        </div>
+        
+        <div class="camera-bottom-right">
+            <button class="camera-icon-btn" onclick="switchCamera()" title="Kamera Çevir">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                    <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9h3m-3 0a9 9 0 0 1-9 9M3 12a9 9 0 0 1 9-9m-9 9a9 9 0 0 0 9 9m-9-9H0m3 0a9 9 0 0 1 9-9"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- GALERİ SEÇİM SİSTEMİ -->
+<div class="gallery-overlay" id="galleryOverlay">
+    <div class="gallery-top">
+        <button class="camera-top-btn" onclick="closeGallery()">✕</button>
+    </div>
+    <div class="gallery-options">
+        <button class="gallery-option-btn" onclick="selectGalleryMedia('image')">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21,15 16,10 5,21"/>
+            </svg>
+            <span>Fotoğraf Seç</span>
+        </button>
+        <button class="gallery-option-btn" onclick="selectGalleryMedia('video')">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                <polygon points="23,7 16,12 23,17"/>
+                <rect x="1" y="5" width="15" height="14" rx="2"/>
+            </svg>
+            <span>Video Seç</span>
+        </button>
+    </div>
+    <input type="file" id="galleryInput" accept="image/*" multiple style="display:none;" onchange="handleGallerySelection(this.files)">
+    <input type="file" id="galleryVideoInput" accept="video/*" style="display:none;" onchange="handleGallerySelection(this.files)">
+</div>
+
+<!-- MEDYA ÖNİZLEME / KIRPMA -->
+<div class="media-preview-overlay" id="mediaPreviewOverlay">
+    <div class="preview-top">
+        <button class="camera-top-btn" onclick="closeMediaPreview()">←</button>
+    </div>
+    <div class="preview-content" id="previewContent">
+        <!-- Önizleme buraya gelecek -->
+    </div>
+    <div class="preview-actions">
+        <button class="preview-action-btn" id="previewActionBtn" onclick="handlePreviewAction()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                <path d="M22 2L11 13"/>
+                <path d="M22 2l-7 20-4-9-9-4z"/>
+            </svg>
+        </button>
+        <button class="preview-send-btn" onclick="sendMediaFromPreview()">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="white">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+        </button>
     </div>
 </div>
 
@@ -2212,6 +2615,8 @@ function findMessageById(id) {
 function addReaction(emoji) {
     if (activeContextMessageId && socket) {
         socket.emit('react-message', { messageId: activeContextMessageId, emoji });
+    } else if (activeDMMessageId && socket) {
+        socket.emit('dm-react', { messageId: activeDMMessageId, emoji });
     }
     document.getElementById('reactionPicker').classList.remove('active');
 }
@@ -2255,19 +2660,25 @@ async function toggleRecording() {
     const btn = document.getElementById('recordBtn');
     if (isRecording) { stopRecording(); return; }
     try {
-        // Ses filtrelerini KAPAT - doğal ses için
+        // Ses filtrelerini ayarla
         const stream = await navigator.mediaDevices.getUserMedia({
             audio: {
-                echoCancellation: false,
+                echoCancellation: true,
                 noiseSuppression: false,
-                autoGainControl: false,
+                autoGainControl: true,
                 channelCount: 1,
                 sampleRate: 48000,
-                sampleSize: 16
+                sampleSize: 16,
+                latency: 0.01,
+                googEchoCancellation: true,
+                googNoiseSuppression: false,
+                googAutoGainControl: true,
+                googHighpassFilter: false,
+                googAudioMirroring: false
             }
         });
-        
-        // Yüksek kalite format seç
+
+        // BURAYA mimeType seçimi gelecek
         let mimeType = 'audio/webm;codecs=opus';
         if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
             mimeType = 'audio/webm;codecs=opus';
@@ -2276,10 +2687,10 @@ async function toggleRecording() {
         } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
             mimeType = 'audio/ogg;codecs=opus';
         }
-        
+
         mediaRecorder = new MediaRecorder(stream, {
             mimeType: mimeType,
-            audioBitsPerSecond: 128000  // Yüksek kalite ses
+            audioBitsPerSecond: 320000
         });
         
         audioChunks = [];
@@ -2506,6 +2917,447 @@ function closeFullscreen() {
     document.getElementById('fullscreenContent').innerHTML = '';
 }
 
+// ============ KAMERA SİSTEMİ ============
+let cameraStream = null;
+let cameraFacing = 'user'; // 'user' = ön, 'environment' = arka
+let cameraMode = 'photo'; // 'photo' veya 'video'
+let isRecordingVideo = false;
+let videoRecorder = null;
+let videoRecordedChunks = [];
+let recordedVideoBlob = null;
+
+// Şu an önizlemedeki medya
+let pendingMediaBlob = null;
+let pendingMediaType = null; // 'image' veya 'video'
+let pendingMediaURL = null;
+
+// Kırpma için
+let isCropping = false;
+let cropStartX, cropStartY, cropEndX, cropEndY;
+
+// ============ KAMERA AÇ ============
+async function openCamera() {
+    try {
+        const constraints = {
+            video: {
+                facingMode: cameraFacing,
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            },
+            audio: true
+        };
+
+        cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+        const video = document.getElementById('cameraPreview');
+        video.srcObject = cameraStream;
+        video.classList.remove('rear');
+        video.classList.add('zoom');
+
+        if (cameraFacing === 'environment') {
+            video.classList.add('rear');
+        }
+
+        document.getElementById('cameraOverlay').classList.add('active');
+        document.getElementById('captureBtn').style.display = 'block';
+    } catch (error) {
+        console.error('Kamera açılamadı:', error);
+        alert('Kamera erişimi reddedildi veya bulunamadı!');
+    }
+}
+
+// ============ KAMERA KAPAT ============
+function closeCamera() {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+    }
+    document.getElementById('cameraOverlay').classList.remove('active');
+}
+
+// ============ MOD DEĞİŞTİR ============
+function setCameraMode(mode) {
+    cameraMode = mode;
+    document.getElementById('photoModeBtn').classList.remove('active');
+    document.getElementById('videoModeBtn').classList.remove('active');
+
+    if (mode === 'photo') {
+        document.getElementById('photoModeBtn').classList.add('active');
+    } else {
+        document.getElementById('videoModeBtn').classList.add('active');
+    }
+}
+
+// ============ ÇEKİM / KAYIT ============
+function handleCapture() {
+    if (cameraMode === 'photo') {
+        capturePhoto();
+    } else {
+        toggleVideoRecording();
+    }
+}
+
+// Fotoğraf çek
+function capturePhoto() {
+    const video = document.getElementById('cameraPreview');
+    const canvas = document.getElementById('cameraCanvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0);
+
+    const imageDataURL = canvas.toDataURL('image/jpeg', 0.9);
+    canvas.toBlob((blob) => {
+        pendingMediaBlob = blob;
+        pendingMediaType = 'image';
+        pendingMediaURL = imageDataURL;
+        openMediaPreview();
+    }, 'image/jpeg', 0.9);
+}
+
+// Video kaydını başlat/durdur
+function toggleVideoRecording() {
+    const captureBtn = document.getElementById('captureBtn');
+    const captureImg = captureBtn.querySelector('img');
+
+    if (!isRecordingVideo) {
+        // Kaydı başlat
+        videoRecordedChunks = [];
+        videoRecorder = new MediaRecorder(cameraStream, {
+            mimeType: 'video/webm;codecs=vp9'
+        });
+
+        videoRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                videoRecordedChunks.push(event.data);
+            }
+        };
+
+        videoRecorder.onstop = () => {
+            recordedVideoBlob = new Blob(videoRecordedChunks, { type: 'video/webm' });
+            pendingMediaBlob = recordedVideoBlob;
+            pendingMediaType = 'video';
+            pendingMediaURL = URL.createObjectURL(recordedVideoBlob);
+            openMediaPreview();
+        };
+
+        videoRecorder.start();
+        isRecordingVideo = true;
+        captureImg.src = 'https://cdn.phototourl.com/free/2026-08-22-de5dcf7d-23aa-4f8e-a1eb-fc01e62c2737.png';
+    } else {
+        // Kaydı durdur
+        videoRecorder.stop();
+        isRecordingVideo = false;
+        captureImg.src = 'https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAEZnjVqiNcypAY9RPOqIiCfIwkYE0S-EQACHiEAAgK8SFT-tAhBtaDTQT0E.png';
+    }
+}
+
+// ============ KAMERA ÇEVİR ============
+function switchCamera() {
+    cameraFacing = cameraFacing === 'user' ? 'environment' : 'user';
+
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+    }
+
+    const constraints = {
+        video: {
+            facingMode: cameraFacing,
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+        },
+        audio: true
+    };
+
+    navigator.mediaDevices.getUserMedia(constraints)
+        .then((stream) => {
+            cameraStream = stream;
+            const video = document.getElementById('cameraPreview');
+            video.srcObject = stream;
+            if (cameraFacing === 'environment') {
+                video.classList.add('rear');
+            } else {
+                video.classList.remove('rear');
+            }
+        })
+        .catch((error) => {
+            console.error('Kamera değiştirme hatası:', error);
+            alert('Kamera değiştirilemedi!');
+        });
+}
+
+// ============ GALERİ ============
+function openCameraGallery() {
+    document.getElementById('galleryOverlay').classList.add('active');
+}
+
+function closeGallery() {
+    document.getElementById('galleryOverlay').classList.remove('active');
+}
+
+function selectGalleryMedia(type) {
+    closeGallery();
+    if (type === 'image') {
+        document.getElementById('galleryInput').click();
+    } else {
+        document.getElementById('galleryVideoInput').click();
+    }
+}
+
+function handleGallerySelection(files) {
+    if (!files || files.length === 0) return;
+
+    // Fotoğraf için maksimum 10
+    const maxPhotos = 10;
+    const selectedFiles = Array.from(files);
+
+    if (selectedFiles[0].type.startsWith('image')) {
+        if (selectedFiles.length > maxPhotos) {
+            alert(`En fazla ${maxPhotos} fotoğraf seçebilirsin.`);
+            return;
+        }
+        // Tek bir fotoğrafı işleyelim
+        const file = selectedFiles[0];
+        pendingMediaBlob = file;
+        pendingMediaType = 'image';
+        pendingMediaURL = URL.createObjectURL(file);
+        openMediaPreview();
+    } else {
+        // Video
+        const file = selectedFiles[0];
+        pendingMediaBlob = file;
+        pendingMediaType = 'video';
+        pendingMediaURL = URL.createObjectURL(file);
+        openMediaPreview();
+    }
+}
+
+// ============ MEDYA ÖNİZLEME ============
+function openMediaPreview() {
+    const previewContent = document.getElementById('previewContent');
+    previewContent.innerHTML = '';
+
+    if (pendingMediaType === 'image') {
+        const img = document.createElement('img');
+        img.src = pendingMediaURL;
+        previewContent.appendChild(img);
+        document.getElementById('previewActionBtn').style.display = 'flex';
+        document.getElementById('previewActionBtn').innerHTML = `
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                <path d="M14 14l6-6v6h-6z"/>
+                <path d="M14 14l-6 6"/>
+                <path d="M12 2a10 10 0 1 0 10 10"/>
+            </svg>
+        `;
+    } else if (pendingMediaType === 'video') {
+        const video = document.createElement('video');
+        video.src = pendingMediaURL;
+        video.controls = true;
+        video.autoplay = true;
+        video.loop = true;
+        video.muted = false;
+        previewContent.appendChild(video);
+        document.getElementById('previewActionBtn').style.display = 'flex';
+        document.getElementById('previewActionBtn').innerHTML = `
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+        `;
+    }
+    
+if (cropBox) {
+    cropBox.style.display = 'none';
+}
+isCropping = false;
+    document.getElementById('mediaPreviewOverlay').classList.add('active');
+}
+
+function closeMediaPreview() {
+    document.getElementById('mediaPreviewOverlay').classList.remove('active');
+    pendingMediaBlob = null;
+    pendingMediaType = null;
+    pendingMediaURL = null;
+}
+
+function handlePreviewAction() {
+    if (pendingMediaType === 'image') {
+        startCrop();
+    } else if (pendingMediaType === 'video') {
+        const video = document.querySelector('#previewContent video');
+        if (video) {
+            video.muted = !video.muted;
+            const btn = document.getElementById('previewActionBtn');
+            if (video.muted) {
+                btn.innerHTML = `
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                        <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                        <line x1="23" y1="9" x2="17" y2="15"/>
+                        <line x1="17" y1="9" x2="23" y2="15"/>
+                    </svg>
+                `;
+            } else {
+                btn.innerHTML = `
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                        <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                    </svg>
+                `;
+            }
+        }
+    }
+}
+
+let cropBox = null;
+let isCropping = false;
+let cropStartX, cropStartY;
+let cropOrigLeft, cropOrigTop;
+
+function startCrop() {
+    const previewContent = document.getElementById('previewContent');
+    const img = previewContent.querySelector('img');
+    if (!img) return;
+
+    isCropping = true;
+    if (!cropBox) {
+        cropBox = document.createElement('div');
+        cropBox.className = 'crop-box';
+        cropBox.style.width = '200px';
+        cropBox.style.height = '200px';
+        cropBox.style.position = 'absolute';
+        cropBox.style.cursor = 'move';
+        document.querySelector('.media-preview-overlay').appendChild(cropBox);
+
+        cropBox.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            cropStartX = e.clientX;
+            cropStartY = e.clientY;
+            cropOrigLeft = cropBox.offsetLeft;
+            cropOrigTop = cropBox.offsetTop;
+
+            function onMouseMove(e) {
+                const dx = e.clientX - cropStartX;
+                const dy = e.clientY - cropStartY;
+                cropBox.style.left = (cropOrigLeft + dx) + 'px';
+                cropBox.style.top = (cropOrigTop + dy) + 'px';
+            }
+
+            function onMouseUp() {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+
+        cropBox.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            cropStartX = touch.clientX;
+            cropStartY = touch.clientY;
+            cropOrigLeft = cropBox.offsetLeft;
+            cropOrigTop = cropBox.offsetTop;
+
+            function onTouchMove(e) {
+                const touch = e.touches[0];
+                const dx = touch.clientX - cropStartX;
+                const dy = touch.clientY - cropStartY;
+                cropBox.style.left = (cropOrigLeft + dx) + 'px';
+                cropBox.style.top = (cropOrigTop + dy) + 'px';
+            }
+
+            function onTouchEnd() {
+                document.removeEventListener('touchmove', onTouchMove);
+                document.removeEventListener('touchend', onTouchEnd);
+            }
+
+            document.addEventListener('touchmove', onTouchMove, { passive: false });
+            document.addEventListener('touchend', onTouchEnd);
+        });
+    }
+
+    cropBox.style.display = 'block';
+}
+
+function getCroppedImage(image, cropBoxRect, callback) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const previewContent = document.getElementById('previewContent');
+    const imgRect = image.getBoundingClientRect();
+    const boxRect = cropBoxRect;
+
+    const scaleX = image.naturalWidth / imgRect.width;
+    const scaleY = image.naturalHeight / imgRect.height;
+
+    canvas.width = boxRect.width;
+    canvas.height = boxRect.height;
+
+    ctx.drawImage(
+        image,
+        (boxRect.left - imgRect.left) * scaleX,
+        (boxRect.top - imgRect.top) * scaleY,
+        boxRect.width * scaleX,
+        boxRect.height * scaleY,
+        0, 0,
+        canvas.width, canvas.height
+    );
+
+    callback(canvas.toDataURL('image/jpeg', 0.9));
+}
+
+function sendMediaFromPreview() {
+    if (!pendingMediaBlob || !pendingMediaType) return;
+
+    if (pendingMediaType === 'image' && isCropping && cropBox) {
+        // Kırpılmış görüntüyü al ve gönder
+        const img = document.querySelector('#previewContent img');
+        if (img) {
+            const boxRect = cropBox.getBoundingClientRect();
+            getCroppedImage(img, boxRect, (croppedDataURL) => {
+                socket.emit('message', {
+                    type: 'image',
+                    fileData: croppedDataURL,
+                    mimeType: 'image/jpeg'
+                });
+                finishSending();
+            });
+            return;
+        }
+    }
+
+    const file = new File([pendingMediaBlob], pendingMediaType === 'image' ? 'photo.jpg' : 'video.webm', {
+        type: pendingMediaType === 'image' ? 'image/jpeg' : 'video/webm'
+    });
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        socket.emit('message', {
+            type: pendingMediaType,
+            fileData: e.target.result,
+            mimeType: file.type
+        });
+        finishSending();
+    };
+    reader.readAsDataURL(file);
+}
+
+function finishSending() {
+    closeMediaPreview();
+    isCropping = false;
+    if (cropBox) cropBox.style.display = 'none';
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+    }
+    document.getElementById('cameraOverlay').classList.remove('active');
+    document.getElementById('galleryOverlay').classList.remove('active');
+}
 // ============ DM SİSTEMİ ============
 let dmList = JSON.parse(localStorage.getItem('dmList') || '[]');
 let currentDMUser = null;
