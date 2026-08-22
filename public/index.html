@@ -1090,6 +1090,76 @@
             color: #ccc;
             margin-top: 5px;
         }
+        
+        /* Özel Video Oynatıcı */
+.video-player-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.95);
+    z-index: 40000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-player-overlay.active {
+    display: flex;
+}
+
+.video-player-container {
+    position: absolute;
+    width: 80%;
+    height: 80%;
+    transition: width 0.3s ease, height 0.3s ease, left 0.3s ease, top 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-player-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.video-player-close {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.6);
+    border: none;
+    color: #fff;
+    font-size: 22px;
+    cursor: pointer;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-player-fullscreen {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.6);
+    border: none;
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
 /* ============ KAMERA SİSTEMİ STİLLERİ ============ */
 .camera-overlay,
@@ -1748,11 +1818,14 @@
     </div>
 </div>
 
-    <!-- TAM EKRAN MEDYA -->
-    <div class="fullscreen-media" id="fullscreenMedia">
-        <button class="fullscreen-close" onclick="closeFullscreen()">×✕×</button>
-        <div id="fullscreenContent"></div>
+<!-- ÖZEL VİDEO OYNATICI -->
+<div class="video-player-overlay" id="videoPlayerOverlay">
+    <div class="video-player-container" id="videoPlayerContainer">
+        <video id="videoPlayer" playsinline preload="metadata" tabindex="-1"></video>
     </div>
+    <button class="video-player-close" id="videoPlayerClose" onclick="closeVideoPlayer()">←</button>
+    <button class="video-player-fullscreen" id="videoPlayerFullscreen" onclick="toggleVideoPlayerZoom()">⛶</button>
+</div>
 
     <!-- CONTEXT MENÜ -->
     <div class="context-menu" id="contextMenu">
@@ -2445,7 +2518,7 @@ if (msg.type === 'text') {
     <img src="${msg.fileData}" class="message-image" alt="Fotoğraf" onclick="openFullscreenImage('${msg.fileData}')">`;
 } else if (msg.type === 'video') {
     content += `<div class="message-text">${msg.text ? escapeHtml(msg.text) : ''}</div>
-    <video src="${msg.fileData}" class="message-video" controls preload="none" controlsList="nodownload" onclick="openFullscreenVideo('${msg.fileData}')"></video>`;
+    <video src="${msg.fileData}" class="message-video" preload="none" tabindex="-1" onclick="openFullscreenVideo('${msg.fileData}')"></video>`;
 } else if (msg.type === 'sticker') {
 if (msg.stickerType === 'video') {
     content += `<video src="${msg.fileData}" class="message-sticker" autoplay muted loop playsinline style="transform: rotate(90deg);" onloadedmetadata="setupStickerVideo(this)"></video>`;
@@ -2915,8 +2988,84 @@ function openFullscreenVideo(src) {
 }
 
 function closeFullscreen() {
-    document.getElementById('fullscreenMedia').classList.remove('active');
-    document.getElementById('fullscreenContent').innerHTML = '';
+let videoPlayerZoomLevel = 80; // %80 başlangıç
+let videoPlayerMinZoom = 80; // %80 minimum
+let videoPlayerMaxZoom = 92; // %92 maksimum
+
+function openFullscreenVideo(src) {
+    const overlay = document.getElementById('videoPlayerOverlay');
+    const container = document.getElementById('videoPlayerContainer');
+    const video = document.getElementById('videoPlayer');
+    
+    video.src = src;
+    video.autoplay = true;
+    video.controls = false;
+    overlay.classList.add('active');
+    
+    // Başlangıç boyutu %80
+    videoPlayerZoomLevel = videoPlayerMinZoom;
+    updateVideoPlayerZoom();
+    
+    // Klavye açılmasını engelle
+    video.focus({ preventScroll: true });
+}
+
+function closeVideoPlayer() {
+    const overlay = document.getElementById('videoPlayerOverlay');
+    const video = document.getElementById('videoPlayer');
+    video.pause();
+    video.src = '';
+    video.load();
+    overlay.classList.remove('active');
+}
+
+function toggleVideoPlayerZoom() {
+    if (videoPlayerZoomLevel <= videoPlayerMinZoom) {
+        videoPlayerZoomLevel = videoPlayerMaxZoom;
+    } else {
+        videoPlayerZoomLevel = videoPlayerMinZoom;
+    }
+    updateVideoPlayerZoom();
+}
+
+function updateVideoPlayerZoom() {
+    const container = document.getElementById('videoPlayerContainer');
+    container.style.width = videoPlayerZoomLevel + '%';
+    container.style.height = videoPlayerZoomLevel + '%';
+    container.style.left = ((100 - videoPlayerZoomLevel) / 2) + '%';
+    container.style.top = ((100 - videoPlayerZoomLevel) / 2) + '%';
+}
+
+// Pinch Zoom
+let pinchStartDistance = 0;
+let pinchStartZoomLevel = 80;
+
+document.getElementById('videoPlayerOverlay').addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+        e.preventDefault();
+        pinchStartDistance = getDistance(e.touches[0], e.touches[1]);
+        pinchStartZoomLevel = videoPlayerZoomLevel;
+    }
+}, { passive: false });
+
+document.getElementById('videoPlayerOverlay').addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2) {
+        e.preventDefault();
+        const currentDistance = getDistance(e.touches[0], e.touches[1]);
+        const scale = currentDistance / pinchStartDistance;
+        
+        // Yeni zoom seviyesini hesapla
+        const newZoom = Math.max(videoPlayerMinZoom, Math.min(videoPlayerMaxZoom, pinchStartZoomLevel + (scale - 1) * 100));
+        videoPlayerZoomLevel = newZoom;
+        updateVideoPlayerZoom();
+    }
+}, { passive: false });
+
+function getDistance(touch1, touch2) {
+    const dx = touch1.clientX - touch2.clientX;
+    const dy = touch1.clientY - touch2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+}
 }
 
 // ============ KAMERA SİSTEMİ ============
