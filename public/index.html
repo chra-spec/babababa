@@ -1804,7 +1804,7 @@
     </div>
     
   <video id="cameraPreview" autoplay playsinline muted style="display:none;"></video>
-<canvas id="cameraCanvas" style="width:100%;height:100%;object-fit:cover;"></canvas>
+<canvas id="cameraCanvas" style="width:100%;height:100%;object-fit:contain;"></canvas>
     
     <!-- Mod Seçici -->
     <div class="camera-mode-selector">
@@ -2956,8 +2956,8 @@ const video = document.getElementById('cameraPreview');
 video.srcObject = cameraStream;
 video.classList.remove('rear');
 video.classList.add('zoom');
-cameraCanvas.width = 1280;
-cameraCanvas.height = 720;
+cameraCanvas.width = 850;
+cameraCanvas.height = 1400;
 startCanvasDraw(video);
 
         if (cameraFacing === 'environment') {
@@ -2984,7 +2984,13 @@ function closeCamera() {
 function startCanvasDraw(video) {
     if (drawLoop) cancelAnimationFrame(drawLoop);
     function draw() {
-        if (video.readyState >= 2) {
+        if (video.readyState >= 2 && video.videoWidth && video.videoHeight) {
+            // Canvas'ı video oranına göre ayarla
+            const vw = video.videoWidth;
+            const vh = video.videoHeight;
+            cameraCanvas.width = vw;
+            cameraCanvas.height = vh;
+
             cameraCtx.save();
             cameraCtx.clearRect(0, 0, cameraCanvas.width, cameraCanvas.height);
             // Ayna modu: sağa göre yansıt
@@ -3023,13 +3029,13 @@ function handleCapture() {
 // Fotoğraf çek
 function capturePhoto() {
     const video = document.getElementById('cameraPreview');
-    const canvas = document.getElementById('cameraCanvas');
+    const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
-    ctx.drawImage(video, 0, 0);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     const imageDataURL = canvas.toDataURL('image/jpeg', 0.9);
     canvas.toBlob((blob) => {
@@ -3219,6 +3225,7 @@ video.controls = true;
 video.autoplay = true;
 video.loop = true;
 video.muted = false;
+video.style.transform = 'scaleX(1)'; 
         previewContent.appendChild(video);
         document.getElementById('previewActionBtn').style.display = 'flex';
         document.getElementById('previewActionBtn').innerHTML = `
