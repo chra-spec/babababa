@@ -208,7 +208,7 @@ io.on('connection', (socket) => {
       if (!message) return;
 
       const { emoji } = data;
-      if (!['🖕', '🤨', '😜', '🤍'].includes(emoji)) return;
+      if (!['🖕', '❤️', '😜', '🤍'].includes(emoji)) return;
 
       const existingReaction = message.reactions.find(r => r.emoji === emoji);
       if (existingReaction) {
@@ -417,7 +417,7 @@ socket.on('dm-react', async (data) => {
     if (!currentUser) return;
     const { messageId, emoji } = data;
     if (!messageId || !emoji) return;
-    if (!['🖕', '🤨', '😜', '🤍'].includes(emoji)) return;
+    if (!['🖕', '❤️', '😜', '🤍'].includes(emoji)) return;
 
     // Supabase'den mesajı çek
     const { data: dmMsg, error: fetchError } = await supabase
