@@ -601,6 +601,70 @@ socket.on('music-control', (data) => {
   }
 });
 
+// ============ MÜZİK İZİN İSTE ============
+socket.on('request-music-permission', (data) => {
+  try {
+    if (!currentUser) return;
+    
+    data.requester = currentUser.name;
+    data.requesterId = socket.id;
+    
+    const targetUsers = Array.from(rooms.get(ROOM_CODE)?.users.values() || [])
+      .filter(u => u.userName !== currentUser.name);
+    
+    if (targetUsers.length === 0) {
+      socket.emit('music-permission-status', { status: 'no-users' });
+      return;
+    }
+    
+    targetUsers.forEach(user => {
+      const targetSocketId = Array.from(rooms.get(ROOM_CODE).users.entries())
+        .find(([id, u]) => u.userName === user.userName)?.[0];
+      
+      if (targetSocketId && targetSocketId !== socket.id) {
+        io.to(targetSocketId).emit('music-permission-request', data);
+      }
+    });
+    
+    socket.emit('music-permission-status', { status: 'sent' });
+  } catch (error) {
+    console.error('Müzik izin istek hatası:', error);
+  }
+});
+
+socket.on('accept-music-permission', (data) => {
+  try {
+    const requesterId = data.requesterId;
+    if (requesterId) {
+      io.to(requesterId).emit('music-permission-status', { status: 'accepted', listenerName: currentUser.name });
+    }
+  } catch (error) {
+    console.error('Müzik izin kabul hatası:', error);
+  }
+});
+
+socket.on('reject-music-permission', (data) => {
+  try {
+    const requesterId = data.requesterId;
+    if (requesterId) {
+      io.to(requesterId).emit('music-permission-status', { status: 'rejected' });
+    }
+  } catch (error) {
+    console.error('Müzik izin reddetme hatası:', error);
+  }
+});
+
+socket.on('revoke-music-permission', (data) => {
+  try {
+    const requesterId = data.requesterId;
+    if (requesterId) {
+      io.to(requesterId).emit('music-permission-status', { status: 'revoked', listenerName: currentUser.name });
+    }
+  } catch (error) {
+    console.error('Müzik izin iptal hatası:', error);
+  }
+});
+  
   // ============ BAĞLANTI KOPTU ============
   socket.on('disconnect', () => {
     console.log('🔌 Ayrıldı:', socket.id);
