@@ -1786,44 +1786,7 @@ body.dark-mode .message-avatar {
         </div>
         <div class="banner-fullscreen-text" id="bannerFullscreenText"></div>
     </div>
-</div>
-
-<!-- YILAN OYUNU -->
-<div class="game-container" id="gameContainer">
-    <div class="game-header">
-        <span class="score-display">Skor: <span id="score">0</span></span>
-        <span class="best-score-display">Rekor: <span id="bestScore">0</span></span>
-    </div>
-    <div class="canvas-wrapper">
-        <canvas id="gameCanvas" width="400" height="400"></canvas>
-        <div class="game-overlay" id="startOverlay">
-            <div class="overlay-title">🐍 Yılan Oyunu</div>
-            <div class="overlay-subtitle">Hazır olduğunda başlat</div>
-            <button class="btn btn-primary" onclick="startGame()">Başlat</button>
-        </div>
-        <div class="game-overlay hidden" id="gameOverOverlay">
-            <div class="overlay-title" style="color:#e74c3c;">Oyun Bitti</div>
-            <div class="overlay-score">Skor: <span id="finalScore">0</span></div>
-            <button class="btn btn-primary" onclick="restartGame()">Tekrar Başlat</button>
-        </div>
-    </div>
-    <div class="game-hint">Yön tuşları veya WASD ile oyna</div>
-    <div class="mobile-controls">
-        <div class="mobile-row">
-            <button class="mobile-btn" onclick="changeDirection('up')">↑</button>
-        </div>
-        <div class="mobile-row">
-            <button class="mobile-btn" onclick="changeDirection('left')">←</button>
-            <button class="mobile-btn" onclick="changeDirection('down')">↓</button>
-            <button class="mobile-btn" onclick="changeDirection('right')">→</button>
-        </div>
-    </div>
-    </div>
-    
-    <!-- 🎮 Oyun Değiştirme Butonu -->
-<button class="btn btn-secondary" id="gameToggleBtn" onclick="toggleGame()" style="margin-top:10px;">
-  🧟 Zombie Games
-</button>
+</div>    
 
 <div class="game-container" id="gameContainer">
     <!-- Oyun Değiştirme Butonu -->
