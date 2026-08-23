@@ -2087,12 +2087,11 @@ body.dark-mode .message-avatar {
     <button class="btn-full" onclick="requestMusicPermission()" style="margin-bottom:8px;">
         🎧 Müzik İzni İste
     </button>
-        </div>
     <input type="text" id="musicSearchInput" class="music-search-input" placeholder="Müzik ara..." onkeypress="if(event.key==='Enter') searchMusic()">
     <button class="btn-full" onclick="searchMusic()" style="margin-top:8px;">🔍 Ara</button>
     <div id="musicResults" style="margin-top:10px; max-height:300px; overflow-y:auto;"></div>
 </div>
-</div>
+
 <!-- PANKART MENÜSÜ -->
 <div id="menuBanner" class="menu-section" style="display:none;">
     <div class="menu-header-row">
@@ -2464,7 +2463,18 @@ function showMusicMenu() {
 
 function requestMusicPermission() {
     if (!socket) return;
-    socket.emit('request-music-permission', {});
+    
+    // Odada başka kullanıcı var mı kontrol et
+    const otherUsers = onlineUsers.filter(u => u.userName !== currentUser?.name);
+    if (otherUsers.length === 0) {
+        alert('❌ Odada müzik izni isteyecek başka kullanıcı yok!');
+        return;
+    }
+    
+    socket.emit('request-music-permission', {
+        requesterId: socket.id,
+        requester: currentUser?.name || 'Bilinmeyen Kullanıcı'
+    });
 }
 
 async function searchMusic() {
@@ -2505,65 +2515,83 @@ function displayMusicResults(items) {
 
 function selectMusic(videoId, title, channel) {
     if (hasMusicPermission && socket) {
-        // İzin varsa ve odaya gönder
+        // İzin varsa ve biz kontrolcüyüz - herkese gönder
         socket.emit('music-play', {
             videoId: videoId,
             title: title,
             channel: channel,
             requesterId: socket.id
         });
+        // Kendi oynatıcımızda da başlat
+        playMusic(videoId, title, channel, socket.id);
     } else {
-        // İzin yoksa kendi kendine çal
+        // İzin yoksa sadece kendimiz için oynat
         playMusic(videoId, title, channel, socket.id);
     }
 }
 
 function playMusic(videoId, title, channel, requesterId) {
+    // Eski oynatıcıyı temizle ve yok et
+    if (youtubePlayer && typeof youtubePlayer.destroy === 'function') {
+        try {
+            youtubePlayer.destroy();
+        } catch (e) {
+            console.warn('Player destroy hatası:', e);
+        }
+    }
+    youtubePlayer = null;
+
     currentMusicVideoId = videoId;
     musicRequesterId = requesterId;
-    
-    // Kontrol yetkisi
-    isMusicController = (socket.id === requesterId || requesterId === undefined);
-    
+
+    // Kontrol yetkisi: biz gönderdiysek veya requesterId undefined ise kontrol bizde
+    isMusicController = (socket && requesterId === socket.id) || (!socket && requesterId === undefined);
+
     document.getElementById('musicPlayerTitle').textContent = title;
     document.getElementById('musicPlayerChannel').textContent = channel;
     document.getElementById('musicPlayer').classList.add('active');
-    
+
     const container = document.getElementById('musicPlayerContent');
-    
-    // Önce eski player'ı temizle
-    container.innerHTML = '';
-    
+    container.innerHTML = ''; // Eski içeriği temizle
+
     const toggleBtn = document.getElementById('musicToggleBtn');
     const muteBtn = document.getElementById('musicMuteBtn');
-    
-    // Kontrol butonlarını göster (kendi kendine dinlerken de açık olsun)
+
     toggleBtn.style.display = 'flex';
     muteBtn.style.display = 'flex';
-    
-    // Yeni player oluştur
+
+    // Yeni oynatıcıyı oluştur
     if (typeof YT !== 'undefined' && YT.Player) {
         youtubePlayer = new YT.Player(container, {
             height: '70',
-            width: '100',
+            width: '100%',
             videoId: videoId,
+            playerVars: {
+                autoplay: 1,
+                controls: 0,
+                modestbranding: 1,
+                rel: 0
+            },
             events: {
-                onReady: () => {
-                    youtubePlayer.playVideo();
+                onReady: (event) => {
+                    event.target.playVideo();
                     isMusicPlaying = true;
                     updateMusicToggleIcon();
+                    updateMusicMuteIcon();
                 },
                 onStateChange: (event) => {
                     if (event.data === YT.PlayerState.PLAYING) {
                         isMusicPlaying = true;
                         updateMusicToggleIcon();
-                    } else if (event.data === YT.PlayerState.PAUSED) {
+                    } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
                         isMusicPlaying = false;
                         updateMusicToggleIcon();
                     }
                 }
             }
         });
+    } else {
+        console.error('YouTube IFrame API yüklenmemiş!');
     }
 }
 
@@ -2576,52 +2604,67 @@ function updateMusicToggleIcon() {
     }
 }
 
+function updateMusicMuteIcon() {
+    const btn = document.getElementById('musicMuteBtn');
+    if (isMusicMuted) {
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
+    } else {
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+    }
+}
+
 function toggleMusicPlayback() {
     if (!youtubePlayer) return;
-    
-    // Kontrol yetkisi kontrolü kaldırıldı
-    // Kendi kendine dinlerken de çalışsın
+
     if (isMusicPlaying) {
         youtubePlayer.pauseVideo();
-        if (socket && musicRequesterId) {
-            socket.emit('music-control', { action: 'pause', requesterId: musicRequesterId });
+        if (socket && isMusicController) {
+            socket.emit('music-control', { action: 'pause', requesterId: socket.id });
         }
     } else {
         youtubePlayer.playVideo();
-        if (socket && musicRequesterId) {
-            socket.emit('music-control', { action: 'play', requesterId: musicRequesterId });
+        if (socket && isMusicController) {
+            socket.emit('music-control', { action: 'play', requesterId: socket.id });
         }
     }
 }
 
 function toggleMusicMute() {
     if (!youtubePlayer) return;
-    
+
     isMusicMuted = !isMusicMuted;
     if (isMusicMuted) {
         youtubePlayer.mute();
-        document.getElementById('musicMuteBtn').innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
     } else {
         youtubePlayer.unMute();
-        document.getElementById('musicMuteBtn').innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+    }
+    updateMusicMuteIcon();
+
+    // Eğer kontrolcü biz isek, bu değişikliği diğerlerine de gönder
+    if (socket && isMusicController) {
+        socket.emit('music-control', {
+            action: isMusicMuted ? 'mute' : 'unmute',
+            requesterId: socket.id
+        });
     }
 }
 
 function closeMusicPlayer() {
     document.getElementById('musicPlayer').classList.remove('active');
-    if (youtubePlayer) {
+
+    if (youtubePlayer && typeof youtubePlayer.destroy === 'function') {
         youtubePlayer.destroy();
-        youtubePlayer = null;
     }
+    youtubePlayer = null;
     currentMusicVideoId = null;
     isMusicPlaying = false;
     isMusicMuted = false;
     isMusicController = false;
     musicRequesterId = null;
-    
-    if (socket) {
-        socket.emit('music-control', { action: 'stop', requesterId: socket.id });
-        // Dinleyici kapatınca izin iptal
+
+    // Sadece kontrolcü ve izinli ise iptal et, döngüyü önlemek için bayrak kullan
+    if (socket && hasMusicPermission && isMusicController) {
+        hasMusicPermission = false;
         socket.emit('revoke-music-permission', { requesterId: socket.id });
     }
 }
@@ -2629,8 +2672,12 @@ function closeMusicPlayer() {
 function setupMusicSocketEvents() {
     if (!socket) return;
 
+    // Gelen izin isteği
     socket.on('music-permission-request', (data) => {
-        const accept = confirm(`${data.requester} müzik izni istiyor. Kabul edilsin mi?`);
+        // Kendi isteğimizi yok say
+        if (data.requesterId === socket.id) return;
+
+        const accept = confirm(`${data.requester || 'Bilinmeyen Kullanıcı'} müzik izni istiyor. Kabul edilsin mi?`);
         if (accept) {
             hasMusicPermission = true;
             socket.emit('accept-music-permission', data);
@@ -2640,6 +2687,7 @@ function setupMusicSocketEvents() {
         }
     });
 
+    // İzin durumu
     socket.on('music-permission-status', (data) => {
         if (data.status === 'sent') {
             alert('✅ Müzik izni isteği gönderildi');
@@ -2647,26 +2695,40 @@ function setupMusicSocketEvents() {
             alert('❌ Odada kimse yok');
         } else if (data.status === 'accepted') {
             hasMusicPermission = true;
-            alert(`✅ ${data.listenerName} müzik iznini kabul etti`);
+            alert(`✅ ${data.listenerName || 'Kullanıcı'} müzik iznini kabul etti`);
         } else if (data.status === 'rejected') {
             alert('❌ Müzik izni reddedildi');
         } else if (data.status === 'revoked') {
-            hasMusicPermission = false;
-            alert(`❌ ${data.listenerName} müzik iznini iptal etti`);
-            closeMusicPlayer();
+            // Eğer iptal eden biz değilsek, oynatıcıyı kapat
+            if (data.requesterId !== socket.id) {
+                hasMusicPermission = false;
+                alert(`❌ ${data.listenerName || 'Kullanıcı'} müzik iznini iptal etti`);
+                closeMusicPlayer();
+            }
         }
     });
 
+    // Müzik çalma komutu (başkasından gelir)
     socket.on('music-play', (data) => {
         playMusic(data.videoId, data.title, data.channel, data.requesterId);
     });
 
+    // Oynatma kontrolü komutu
     socket.on('music-control', (data) => {
         if (!youtubePlayer) return;
+
         if (data.action === 'play') {
             youtubePlayer.playVideo();
         } else if (data.action === 'pause') {
             youtubePlayer.pauseVideo();
+        } else if (data.action === 'mute') {
+            youtubePlayer.mute();
+            isMusicMuted = true;
+            updateMusicMuteIcon();
+        } else if (data.action === 'unmute') {
+            youtubePlayer.unMute();
+            isMusicMuted = false;
+            updateMusicMuteIcon();
         } else if (data.action === 'stop') {
             closeMusicPlayer();
         }
