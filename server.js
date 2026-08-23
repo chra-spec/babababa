@@ -518,6 +518,7 @@ socket.on('dm-edit', async (data) => {
 });
 
   socket.on('request-music', (data) => {
+    try{
   if (!currentUser || !currentUser.name) {
   socket.emit('music-status', { status: 'error' });
   return;
