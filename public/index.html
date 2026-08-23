@@ -2084,6 +2084,9 @@ body.dark-mode .message-avatar {
         <button class="menu-back-btn" onclick="showMainMenu()">←</button>
         <div class="font-panel-title">🎵 Müzik</div>
     </div>
+    <button class="btn-full" onclick="requestMusicPermission()" style="margin-bottom:8px;">
+        🎧 Müzik İzni İste
+    </button>
     <input type="text" id="musicSearchInput" class="music-search-input" placeholder="Müzik ara..." onkeypress="if(event.key==='Enter') searchMusic()">
     <button class="btn-full" onclick="searchMusic()" style="margin-top:8px;">🔍 Ara</button>
     <div id="musicResults" style="margin-top:10px; max-height:300px; overflow-y:auto;"></div>
@@ -2446,6 +2449,7 @@ let isMusicPlaying = false;
 let isMusicMuted = false;
 let isMusicController = false;
 let musicRequesterId = null;
+let hasMusicPermission = false;
 
 function showMusicMenu() {
     document.getElementById('menuMain').style.display = 'none';
@@ -2455,6 +2459,11 @@ function showMusicMenu() {
     document.getElementById('menuSettings').style.display = 'none';
     document.getElementById('menuBanner').style.display = 'none';
     document.getElementById('menuMusic').style.display = 'block';
+}
+
+function requestMusicPermission() {
+    if (!socket) return;
+    socket.emit('request-music-permission', {});
 }
 
 async function searchMusic() {
@@ -2488,26 +2497,29 @@ function displayMusicResults(items) {
                 <div class="music-result-channel">${item.snippet.channelTitle}</div>
             </div>
         `;
-        div.onclick = () => requestMusicPlay(item.id.videoId, item.snippet.title, item.snippet.channelTitle);
+        div.onclick = () => selectMusic(item.id.videoId, item.snippet.title, item.snippet.channelTitle);
         container.appendChild(div);
     });
 }
 
-function requestMusicPlay(videoId, title, channel) {
-    if (!socket) return;
-    socket.emit('request-music', {
-        videoId: videoId,
-        title: title,
-        channel: channel,
-        requesterId: socket.id  // ÖNEMLİ EKLEME
-    });
+function selectMusic(videoId, title, channel) {
+    if (hasMusicPermission) {
+        // İzin varsa direkt çal
+        socket.emit('music-play', {
+            videoId: videoId,
+            title: title,
+            channel: channel,
+            requesterId: socket.id
+        });
+    } else {
+        // İzin yoksa kendi kendine çal
+        playMusic(videoId, title, channel, socket.id);
+    }
 }
 
 function playMusic(videoId, title, channel, requesterId) {
     currentMusicVideoId = videoId;
     musicRequesterId = requesterId;
-    
-    // Kontrol yetkisi: socket.id === requesterId
     isMusicController = (socket.id === requesterId);
     
     document.getElementById('musicPlayerTitle').textContent = title;
@@ -2515,16 +2527,15 @@ function playMusic(videoId, title, channel, requesterId) {
     document.getElementById('musicPlayer').classList.add('active');
     document.getElementById('musicPlayerContent').innerHTML = '';
     
-    // Kontrol butonlarını göster/gizle
     const toggleBtn = document.getElementById('musicToggleBtn');
     const muteBtn = document.getElementById('musicMuteBtn');
     
     if (isMusicController) {
         toggleBtn.style.display = 'flex';
     } else {
-        toggleBtn.style.display = 'none'; // Kabul eden kişi kontrol edemez
+        toggleBtn.style.display = 'none';
     }
-    muteBtn.style.display = 'flex'; // Sessize alma herkeste olur
+    muteBtn.style.display = 'flex';
     
     if (typeof YT !== 'undefined' && YT.Player) {
         youtubePlayer = new YT.Player('musicPlayerContent', {
@@ -2553,8 +2564,7 @@ function playMusic(videoId, title, channel, requesterId) {
 
 function updateMusicToggleIcon() {
     const btn = document.getElementById('musicToggleBtn');
-    if (!isMusicController) return; // Kontrol sahibi değilse ikon değiştirme
-    
+    if (!isMusicController) return;
     if (isMusicPlaying) {
         btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
     } else {
@@ -2564,7 +2574,6 @@ function updateMusicToggleIcon() {
 
 function toggleMusicPlayback() {
     if (!youtubePlayer || !isMusicController) return;
-
     if (isMusicPlaying) {
         youtubePlayer.pauseVideo();
         socket.emit('music-control', { action: 'pause', requesterId: musicRequesterId });
@@ -2576,7 +2585,6 @@ function toggleMusicPlayback() {
 
 function toggleMusicMute() {
     if (!youtubePlayer) return;
-
     isMusicMuted = !isMusicMuted;
     if (isMusicMuted) {
         youtubePlayer.mute();
@@ -2598,20 +2606,42 @@ function closeMusicPlayer() {
     isMusicMuted = false;
     isMusicController = false;
     musicRequesterId = null;
+    
     if (socket) {
         socket.emit('music-control', { action: 'stop', requesterId: socket.id });
+        // Dinleyici kapatınca izin iptal
+        socket.emit('revoke-music-permission', { requesterId: socket.id });
     }
 }
 
 function setupMusicSocketEvents() {
     if (!socket) return;
 
-    socket.on('music-request', (data) => {
-        const accept = confirm(`${data.requester} birlikte "${data.title}" dinlemek istiyor. Kabul edilsin mi?`);
+    socket.on('music-permission-request', (data) => {
+        const accept = confirm(`${data.requester} müzik izni istiyor. Kabul edilsin mi?`);
         if (accept) {
-            socket.emit('music-accept', data);
+            hasMusicPermission = true;
+            socket.emit('accept-music-permission', data);
+            alert('✅ Müzik izni verdiniz');
         } else {
-            socket.emit('reject-music', data);
+            socket.emit('reject-music-permission', data);
+        }
+    });
+
+    socket.on('music-permission-status', (data) => {
+        if (data.status === 'sent') {
+            alert('✅ Müzik izni isteği gönderildi');
+        } else if (data.status === 'no-users') {
+            alert('❌ Odada kimse yok');
+        } else if (data.status === 'accepted') {
+            hasMusicPermission = true;
+            alert(`✅ ${data.listenerName} müzik iznini kabul etti`);
+        } else if (data.status === 'rejected') {
+            alert('❌ Müzik izni reddedildi');
+        } else if (data.status === 'revoked') {
+            hasMusicPermission = false;
+            alert(`❌ ${data.listenerName} müzik iznini iptal etti`);
+            closeMusicPlayer();
         }
     });
 
@@ -2629,20 +2659,71 @@ function setupMusicSocketEvents() {
             closeMusicPlayer();
         }
     });
-
-    // YENİ: Müzik durum bildirimleri
-socket.on('music-status', (data) => {
-    if (data.status === 'sent') {
-        alert('✅ Müzik isteği gönderildi');
-    } else if (data.status === 'no-users') {
-        alert('❌ Odada kimse yok, istek gönderilemedi');
-    } else if (data.status === 'accepted') {
-        alert('✅ Müzik isteği kabul edildi');
-    } else if (data.status === 'rejected') {
-        alert('❌ Müzik isteği reddedildi');
-    }
-});
 }
+
+// ============ MÜZİK İZİN İSTE ============
+socket.on('request-music-permission', (data) => {
+  try {
+    if (!currentUser) return;
+    
+    data.requester = currentUser.name;
+    data.requesterId = socket.id;
+    
+    const targetUsers = Array.from(rooms.get(ROOM_CODE)?.users.values() || [])
+      .filter(u => u.userName !== currentUser.name);
+    
+    if (targetUsers.length === 0) {
+      socket.emit('music-permission-status', { status: 'no-users' });
+      return;
+    }
+    
+    targetUsers.forEach(user => {
+      const targetSocketId = Array.from(rooms.get(ROOM_CODE).users.entries())
+        .find(([id, u]) => u.userName === user.userName)?.[0];
+      
+      if (targetSocketId && targetSocketId !== socket.id) {
+        io.to(targetSocketId).emit('music-permission-request', data);
+      }
+    });
+    
+    socket.emit('music-permission-status', { status: 'sent' });
+  } catch (error) {
+    console.error('Müzik izin istek hatası:', error);
+  }
+});
+
+socket.on('accept-music-permission', (data) => {
+  try {
+    const requesterId = data.requesterId;
+    if (requesterId) {
+      io.to(requesterId).emit('music-permission-status', { status: 'accepted', listenerName: currentUser.name });
+    }
+  } catch (error) {
+    console.error('Müzik izin kabul hatası:', error);
+  }
+});
+
+socket.on('reject-music-permission', (data) => {
+  try {
+    const requesterId = data.requesterId;
+    if (requesterId) {
+      io.to(requesterId).emit('music-permission-status', { status: 'rejected' });
+    }
+  } catch (error) {
+    console.error('Müzik izin reddetme hatası:', error);
+  }
+});
+
+socket.on('revoke-music-permission', (data) => {
+  try {
+    const requesterId = data.requesterId;
+    if (requesterId) {
+      io.to(requesterId).emit('music-permission-status', { status: 'revoked', listenerName: currentUser.name });
+    }
+  } catch (error) {
+    console.error('Müzik izin iptal hatası:', error);
+  }
+});
 
     // ============ YILAN OYUNU ============
     const canvas = document.getElementById('gameCanvas');
