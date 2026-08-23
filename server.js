@@ -517,8 +517,7 @@ socket.on('dm-edit', async (data) => {
   }
 });
 
-  // ============ MÜZİK OLAYLARI ============
-socket.on('request-music', (data) => {
+  socket.on('request-music', (data) => {
   try {
     if (!currentUser) return;
     
@@ -528,6 +527,12 @@ socket.on('request-music', (data) => {
     const targetUsers = Array.from(rooms.get(ROOM_CODE)?.users.values() || [])
       .filter(u => u.userName !== currentUser.name);
     
+    if (targetUsers.length === 0) {
+      // Odada kimse yok
+      socket.emit('music-status', { status: 'no-users' });
+      return;
+    }
+    
     targetUsers.forEach(user => {
       const targetSocketId = Array.from(rooms.get(ROOM_CODE).users.entries())
         .find(([id, u]) => u.userName === user.userName)?.[0];
@@ -535,6 +540,9 @@ socket.on('request-music', (data) => {
         io.to(targetSocketId).emit('music-request', data);
       }
     });
+    
+    // İstek atan kişiye "gönderildi" bildirimi
+    socket.emit('music-status', { status: 'sent' });
   } catch (error) {
     console.error('Müzik istek hatası:', error);
   }
@@ -542,7 +550,7 @@ socket.on('request-music', (data) => {
 
 socket.on('music-accept', (data) => {
   try {
-    // Kabul eden kişiye müziği çal (kontrol yetkisi YOK)
+    // Kabul eden kişiye müziği çal
     socket.emit('music-play', {
       videoId: data.videoId,
       title: data.title,
@@ -550,9 +558,10 @@ socket.on('music-accept', (data) => {
       requesterId: data.requesterId
     });
     
-    // İstek atan kişiye de çal (kontrol yetkisi VAR)
+    // İstek atan kişiye "kabul edildi" bildirimi + müzik
     const requesterId = data.requesterId;
     if (requesterId) {
+      io.to(requesterId).emit('music-status', { status: 'accepted' });
       io.to(requesterId).emit('music-play', {
         videoId: data.videoId,
         title: data.title,
@@ -562,6 +571,17 @@ socket.on('music-accept', (data) => {
     }
   } catch (error) {
     console.error('Müzik kabul hatası:', error);
+  }
+});
+
+  socket.on('reject-music', (data) => {
+  try {
+    const requesterId = data.requesterId;
+    if (requesterId) {
+      io.to(requesterId).emit('music-status', { status: 'rejected' });
+    }
+  } catch (error) {
+    console.error('Müzik reddetme hatası:', error);
   }
 });
 
