@@ -123,6 +123,26 @@ io.on('connection', (socket) => {
     }
   });
 
+// ============ MÜZİK OLAYLARI ============
+socket.on('request-music', (data) => {
+  const targetUsers = Array.from(rooms.get(ROOM_CODE)?.users.values() || []).filter(u => u.userName !== currentUser?.userName);
+  targetUsers.forEach(user => {
+    const targetSocketId = Array.from(rooms.get(ROOM_CODE).users.entries())
+      .find(([id, u]) => u.userName === user.userName)?.[0];
+    if (targetSocketId) {
+      io.to(targetSocketId).emit('music-request', data);
+    }
+  });
+});
+
+socket.on('music-accept', (data) => {
+  io.to(ROOM_CODE).emit('music-play', data);
+});
+
+socket.on('music-control', (data) => {
+  socket.to(ROOM_CODE).emit('music-control', data);
+});
+  
   // ============ MESAJ GÖNDER ============
   socket.on('message', async (data) => {
     try {
