@@ -18,6 +18,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Destek Merkezi</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
     <style>
         * { 
             margin: 0; padding: 0; box-sizing: border-box; 
@@ -195,6 +196,118 @@ body.dark-mode .message.own .message-content {
 body.dark-mode .chat-avatar,
 body.dark-mode .message-avatar {
     border: 1px solid #27ae60;
+}
+
+/* Müzik Menü */
+.music-search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #444;
+    border-radius: 8px;
+    background: #1a1a2e;
+    color: #fff;
+    font-size: 13px;
+    outline: none;
+    margin-bottom: 5px;
+}
+
+.music-result-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 5px;
+    transition: background 0.2s;
+}
+
+.music-result-item:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.music-result-thumb {
+    width: 50px;
+    height: 50px;
+    border-radius: 4px;
+    object-fit: cover;
+}
+
+.music-result-title {
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.music-result-channel {
+    font-size: 10px;
+    color: #aaa;
+}
+
+/* Müzik Oynatıcı */
+.music-player {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2d2d44;
+    border: 1px solid #444;
+    border-radius: 10px;
+    padding: 10px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    z-index: 35000;
+    max-width: 90%;
+}
+
+.music-player.active {
+    display: flex;
+}
+
+.music-player-close {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: #e74c3c;
+    border: none;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.music-player-info {
+    flex: 1;
+    min-width: 0;
+}
+
+#musicPlayerTitle {
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#musicPlayerChannel {
+    font-size: 10px;
+    color: #aaa;
+}
+
+.music-player-toggle {
+    background: #667eea;
+    border: none;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
 }
 
         /* YILAN OYUNU */
@@ -1905,6 +2018,9 @@ body.dark-mode .message-avatar {
     <div class="menu-item" onclick="showSettingsMenu()">
     ⚙️ Ayarlar
 </div>
+<div class="menu-item" onclick="showMusicMenu()">
+    🎵 Müzik
+</div>
 <div class="menu-item" onclick="showBannerMenu()">
     🐰 Pankart
 </div>
@@ -1942,6 +2058,17 @@ body.dark-mode .message-avatar {
     <div class="menu-item" onclick="toggleDarkMode()">
         🌙 Dark Mode <span id="darkModeStatus">Kapalı</span>
     </div>
+</div>
+
+<!-- MÜZİK MENÜSÜ -->
+<div id="menuMusic" class="menu-section" style="display:none;">
+    <div class="menu-header-row">
+        <button class="menu-back-btn" onclick="showMainMenu()">←</button>
+        <div class="font-panel-title">🎵 Müzik</div>
+    </div>
+    <input type="text" id="musicSearchInput" class="music-search-input" placeholder="Müzik ara..." onkeypress="if(event.key==='Enter') searchMusic()">
+    <button class="btn-full" onclick="searchMusic()" style="margin-top:8px;">🔍 Ara</button>
+    <div id="musicResults" style="margin-top:10px; max-height:300px; overflow-y:auto;"></div>
 </div>
 
 <!-- PANKART MENÜSÜ -->
@@ -2031,6 +2158,17 @@ body.dark-mode .message-avatar {
     </div>
     <button class="video-player-close" id="videoPlayerClose" onclick="closeVideoPlayer()">←</button>
     <button class="video-player-fullscreen" id="videoPlayerFullscreen" onclick="toggleVideoPlayerZoom()">⛶</button>
+</div>
+
+<!-- MÜZİK OYNATICI -->
+<div class="music-player" id="musicPlayer">
+    <button class="music-player-close" onclick="closeMusicPlayer()">✕</button>
+    <div id="musicPlayerContent" style="width:150px; height:100px; overflow:hidden; border-radius:8px;"></div>
+    <div class="music-player-info">
+        <div id="musicPlayerTitle">Şarkı adı</div>
+        <div id="musicPlayerChannel">Kanal</div>
+    </div>
+    <button class="music-player-toggle" id="musicToggleBtn" onclick="toggleMusicPlayback()">⏸️</button>
 </div>
 
     <!-- CONTEXT MENÜ -->
@@ -2265,6 +2403,151 @@ function toggleGame() {
     // Zombie oyununu yükle
     document.getElementById('zombieFrame').src = '/zombie';
   }
+}
+
+// ============ YOUTUBE MÜZİK SİSTEMİ ============
+const YOUTUBE_API_KEY = 'AIzaSyD6Jp8nyJ_p5MUaCnnn8BFh7pxpPMiMorc';
+let youtubePlayer = null;
+let currentMusicVideoId = null;
+let isMusicPlaying = false;
+
+function showMusicMenu() {
+    document.getElementById('menuMain').style.display = 'none';
+    document.getElementById('menuCalls').style.display = 'none';
+    document.getElementById('menuFonts').style.display = 'none';
+    document.getElementById('menuDM').style.display = 'none';
+    document.getElementById('menuSettings').style.display = 'none';
+    document.getElementById('menuBanner').style.display = 'none';
+    document.getElementById('menuMusic').style.display = 'block';
+}
+
+async function searchMusic() {
+    const query = document.getElementById('musicSearchInput').value.trim();
+    if (!query) return;
+
+    try {
+        const response = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=15&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`);
+        const data = await response.json();
+
+        if (data.items && data.items.length > 0) {
+            displayMusicResults(data.items);
+        } else {
+            document.getElementById('musicResults').innerHTML = '<div style="color:#666; padding:10px;">Sonuç bulunamadı</div>';
+        }
+    } catch (error) {
+        console.error('Müzik arama hatası:', error);
+        alert('Müzik arama hatası!');
+    }
+}
+
+function displayMusicResults(items) {
+    const container = document.getElementById('musicResults');
+    container.innerHTML = '';
+
+    items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'music-result-item';
+        div.innerHTML = `
+            <img src="${item.snippet.thumbnails.default.url}" class="music-result-thumb" alt="${item.snippet.title}">
+            <div>
+                <div class="music-result-title">${item.snippet.title}</div>
+                <div class="music-result-channel">${item.snippet.channelTitle}</div>
+            </div>
+        `;
+        div.onclick = () => requestMusicPlay(item.id.videoId, item.snippet.title, item.snippet.channelTitle);
+        container.appendChild(div);
+    });
+}
+
+function requestMusicPlay(videoId, title, channel) {
+    if (!socket) return;
+    socket.emit('request-music', {
+        videoId: videoId,
+        title: title,
+        channel: channel,
+        requester: currentUser.name
+    });
+}
+
+function playMusic(videoId, title, channel) {
+    currentMusicVideoId = videoId;
+    document.getElementById('musicPlayerTitle').textContent = title;
+    document.getElementById('musicPlayerChannel').textContent = channel;
+    document.getElementById('musicPlayer').classList.add('active');
+    document.getElementById('musicPlayerContent').innerHTML = '';
+
+    if (typeof YT !== 'undefined' && YT.Player) {
+        youtubePlayer = new YT.Player('musicPlayerContent', {
+            height: '100',
+            width: '150',
+            videoId: videoId,
+            events: {
+                onReady: () => {
+                    youtubePlayer.playVideo();
+                    isMusicPlaying = true;
+                },
+                onStateChange: (event) => {
+                    if (event.data === YT.PlayerState.PLAYING) {
+                        isMusicPlaying = true;
+                        document.getElementById('musicToggleBtn').textContent = '⏸️';
+                    } else if (event.data === YT.PlayerState.PAUSED) {
+                        isMusicPlaying = false;
+                        document.getElementById('musicToggleBtn').textContent = '▶️';
+                    }
+                }
+            }
+        });
+    }
+}
+
+function toggleMusicPlayback() {
+    if (!youtubePlayer) return;
+
+    if (isMusicPlaying) {
+        youtubePlayer.pauseVideo();
+        socket.emit('music-control', { action: 'pause', videoId: currentMusicVideoId });
+    } else {
+        youtubePlayer.playVideo();
+        socket.emit('music-control', { action: 'play', videoId: currentMusicVideoId });
+    }
+}
+
+function closeMusicPlayer() {
+    document.getElementById('musicPlayer').classList.remove('active');
+    if (youtubePlayer) {
+        youtubePlayer.destroy();
+        youtubePlayer = null;
+    }
+    currentMusicVideoId = null;
+    isMusicPlaying = false;
+    socket.emit('music-control', { action: 'stop', videoId: null });
+}
+
+// Socket olayları
+function setupMusicSocketEvents() {
+    if (!socket) return;
+
+    socket.on('music-request', (data) => {
+        const accept = confirm(`${data.requester} birlikte "${data.title}" dinlemek istiyor. Kabul edilsin mi?`);
+        if (accept) {
+            socket.emit('music-accept', data);
+        }
+    });
+
+    socket.on('music-play', (data) => {
+        playMusic(data.videoId, data.title, data.channel);
+    });
+
+    socket.on('music-control', (data) => {
+        if (!youtubePlayer) return;
+        if (data.action === 'play') {
+            youtubePlayer.playVideo();
+        } else if (data.action === 'pause') {
+            youtubePlayer.pauseVideo();
+        } else if (data.action === 'stop') {
+            closeMusicPlayer();
+        }
+    });
 }
 
     // ============ YILAN OYUNU ============
@@ -4847,6 +5130,7 @@ connectSocket = function() {
     originalConnectSocket();
     setupCallSocketEvents();
     setupDMSocketEvents();
+    setupMusicSocketEvents();
 };
 
         // ============ BAŞLANGIÇ ============
