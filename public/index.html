@@ -232,7 +232,6 @@ body.dark-mode .message-avatar {
 
 /* MÜZİK PANELİ */
 .music-panel {
-    display: none;
     position: fixed;
     top: 55px;
     left: 10px;
@@ -4752,8 +4751,18 @@ function toggleFontPanel() {
     }
 }
 
+function toggleMusicPanel() {
+    var panel = document.getElementById('musicPanel');
+    if (panel.style.display === 'block') {
+        panel.style.display = 'none';
+    } else {
+        panel.style.display = 'block';
+        document.getElementById('fontPanel').classList.remove('active');
+    }
+}
+
 function closeMusicPanel() {
-    document.getElementById('musicPanel').classList.remove('active');
+    document.getElementById('musicPanel').style.display = 'none';
 }
 
 function hideFontPanel() {
