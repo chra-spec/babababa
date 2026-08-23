@@ -2504,8 +2504,8 @@ function displayMusicResults(items) {
 }
 
 function selectMusic(videoId, title, channel) {
-    if (hasMusicPermission) {
-        // İzin varsa direkt çal
+    if (hasMusicPermission && socket) {
+        // İzin varsa ve odaya gönder
         socket.emit('music-play', {
             videoId: videoId,
             title: title,
@@ -2521,25 +2521,29 @@ function selectMusic(videoId, title, channel) {
 function playMusic(videoId, title, channel, requesterId) {
     currentMusicVideoId = videoId;
     musicRequesterId = requesterId;
-    isMusicController = (socket.id === requesterId);
+    
+    // Kontrol yetkisi
+    isMusicController = (socket.id === requesterId || requesterId === undefined);
     
     document.getElementById('musicPlayerTitle').textContent = title;
     document.getElementById('musicPlayerChannel').textContent = channel;
     document.getElementById('musicPlayer').classList.add('active');
-    document.getElementById('musicPlayerContent').innerHTML = '';
+    
+    const container = document.getElementById('musicPlayerContent');
+    
+    // Önce eski player'ı temizle
+    container.innerHTML = '';
     
     const toggleBtn = document.getElementById('musicToggleBtn');
     const muteBtn = document.getElementById('musicMuteBtn');
     
-    if (isMusicController) {
-        toggleBtn.style.display = 'flex';
-    } else {
-        toggleBtn.style.display = 'none';
-    }
+    // Kontrol butonlarını göster (kendi kendine dinlerken de açık olsun)
+    toggleBtn.style.display = 'flex';
     muteBtn.style.display = 'flex';
     
+    // Yeni player oluştur
     if (typeof YT !== 'undefined' && YT.Player) {
-        youtubePlayer = new YT.Player('musicPlayerContent', {
+        youtubePlayer = new YT.Player(container, {
             height: '70',
             width: '100',
             videoId: videoId,
@@ -2565,7 +2569,6 @@ function playMusic(videoId, title, channel, requesterId) {
 
 function updateMusicToggleIcon() {
     const btn = document.getElementById('musicToggleBtn');
-    if (!isMusicController) return;
     if (isMusicPlaying) {
         btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
     } else {
@@ -2574,18 +2577,26 @@ function updateMusicToggleIcon() {
 }
 
 function toggleMusicPlayback() {
-    if (!youtubePlayer || !isMusicController) return;
+    if (!youtubePlayer) return;
+    
+    // Kontrol yetkisi kontrolü kaldırıldı
+    // Kendi kendine dinlerken de çalışsın
     if (isMusicPlaying) {
         youtubePlayer.pauseVideo();
-        socket.emit('music-control', { action: 'pause', requesterId: musicRequesterId });
+        if (socket && musicRequesterId) {
+            socket.emit('music-control', { action: 'pause', requesterId: musicRequesterId });
+        }
     } else {
         youtubePlayer.playVideo();
-        socket.emit('music-control', { action: 'play', requesterId: musicRequesterId });
+        if (socket && musicRequesterId) {
+            socket.emit('music-control', { action: 'play', requesterId: musicRequesterId });
+        }
     }
 }
 
 function toggleMusicMute() {
     if (!youtubePlayer) return;
+    
     isMusicMuted = !isMusicMuted;
     if (isMusicMuted) {
         youtubePlayer.mute();
