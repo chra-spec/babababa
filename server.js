@@ -518,8 +518,10 @@ socket.on('dm-edit', async (data) => {
 });
 
   socket.on('request-music', (data) => {
-  try {
-    if (!currentUser) return;
+  if (!currentUser || !currentUser.name) {
+  socket.emit('music-status', { status: 'error' });
+  return;
+}
     
     data.requester = currentUser.name;
     data.requesterId = socket.id;
@@ -534,12 +536,14 @@ socket.on('dm-edit', async (data) => {
     }
     
     targetUsers.forEach(user => {
-      const targetSocketId = Array.from(rooms.get(ROOM_CODE).users.entries())
-        .find(([id, u]) => u.userName === user.userName)?.[0];
-      if (targetSocketId) {
-        io.to(targetSocketId).emit('music-request', data);
-      }
-    });
+  const targetSocketId = Array.from(rooms.get(ROOM_CODE).users.entries())
+    .find(([id, u]) => u.userName === user.userName)?.[0];
+  
+  // Kendine gönderme
+  if (targetSocketId && targetSocketId !== socket.id) {
+    io.to(targetSocketId).emit('music-request', data);
+  }
+});
     
     // İstek atan kişiye "gönderildi" bildirimi
     socket.emit('music-status', { status: 'sent' });
