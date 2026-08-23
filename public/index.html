@@ -2087,6 +2087,7 @@ body.dark-mode .message-avatar {
     <button class="btn-full" onclick="requestMusicPermission()" style="margin-bottom:8px;">
         🎧 Müzik İzni İste
     </button>
+        </div>
     <input type="text" id="musicSearchInput" class="music-search-input" placeholder="Müzik ara..." onkeypress="if(event.key==='Enter') searchMusic()">
     <button class="btn-full" onclick="searchMusic()" style="margin-top:8px;">🔍 Ara</button>
     <div id="musicResults" style="margin-top:10px; max-height:300px; overflow-y:auto;"></div>
@@ -2660,70 +2661,6 @@ function setupMusicSocketEvents() {
         }
     });
 }
-
-// ============ MÜZİK İZİN İSTE ============
-socket.on('request-music-permission', (data) => {
-  try {
-    if (!currentUser) return;
-    
-    data.requester = currentUser.name;
-    data.requesterId = socket.id;
-    
-    const targetUsers = Array.from(rooms.get(ROOM_CODE)?.users.values() || [])
-      .filter(u => u.userName !== currentUser.name);
-    
-    if (targetUsers.length === 0) {
-      socket.emit('music-permission-status', { status: 'no-users' });
-      return;
-    }
-    
-    targetUsers.forEach(user => {
-      const targetSocketId = Array.from(rooms.get(ROOM_CODE).users.entries())
-        .find(([id, u]) => u.userName === user.userName)?.[0];
-      
-      if (targetSocketId && targetSocketId !== socket.id) {
-        io.to(targetSocketId).emit('music-permission-request', data);
-      }
-    });
-    
-    socket.emit('music-permission-status', { status: 'sent' });
-  } catch (error) {
-    console.error('Müzik izin istek hatası:', error);
-  }
-});
-
-socket.on('accept-music-permission', (data) => {
-  try {
-    const requesterId = data.requesterId;
-    if (requesterId) {
-      io.to(requesterId).emit('music-permission-status', { status: 'accepted', listenerName: currentUser.name });
-    }
-  } catch (error) {
-    console.error('Müzik izin kabul hatası:', error);
-  }
-});
-
-socket.on('reject-music-permission', (data) => {
-  try {
-    const requesterId = data.requesterId;
-    if (requesterId) {
-      io.to(requesterId).emit('music-permission-status', { status: 'rejected' });
-    }
-  } catch (error) {
-    console.error('Müzik izin reddetme hatası:', error);
-  }
-});
-
-socket.on('revoke-music-permission', (data) => {
-  try {
-    const requesterId = data.requesterId;
-    if (requesterId) {
-      io.to(requesterId).emit('music-permission-status', { status: 'revoked', listenerName: currentUser.name });
-    }
-  } catch (error) {
-    console.error('Müzik izin iptal hatası:', error);
-  }
-});
 
     // ============ YILAN OYUNU ============
     const canvas = document.getElementById('gameCanvas');
