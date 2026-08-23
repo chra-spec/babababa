@@ -2610,6 +2610,8 @@ function setupMusicSocketEvents() {
         const accept = confirm(`${data.requester} birlikte "${data.title}" dinlemek istiyor. Kabul edilsin mi?`);
         if (accept) {
             socket.emit('music-accept', data);
+        } else {
+            socket.emit('reject-music', data);
         }
     });
 
@@ -2625,6 +2627,19 @@ function setupMusicSocketEvents() {
             youtubePlayer.pauseVideo();
         } else if (data.action === 'stop') {
             closeMusicPlayer();
+        }
+    });
+
+    // YENİ: Müzik durum bildirimleri
+    socket.on('music-status', (data) => {
+        if (data.status === 'sent') {
+            alert('✅ Müzik isteği gönderildi');
+        } else if (data.status === 'no-users') {
+            alert('❌ Odada kimse yok, istek gönderilemedi');
+        } else if (data.status === 'accepted') {
+            alert('✅ Müzik isteği kabul edildi');
+        } else if (data.status === 'rejected') {
+            alert('❌ Müzik isteği reddedildi');
         }
     });
 }
