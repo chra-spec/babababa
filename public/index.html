@@ -4748,15 +4748,6 @@ function toggleFontPanel() {
     } else {
         showMainMenu();
         panel.classList.add('active');
-    }
-}
-function toggleFontPanel() {
-    const panel = document.getElementById('fontPanel');
-    if (panel.classList.contains('active')) {
-        panel.classList.remove('active');
-    } else {
-        showMainMenu();
-        panel.classList.add('active');
         document.getElementById('musicPanel').classList.remove('active'); // Müzik panelini kapat
     }
 }
