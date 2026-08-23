@@ -122,26 +122,6 @@ io.on('connection', (socket) => {
       console.error('❌ Abonelik hatası:', error);
     }
   });
-
-// ============ MÜZİK OLAYLARI ============
-socket.on('request-music', (data) => {
-  const targetUsers = Array.from(rooms.get(ROOM_CODE)?.users.values() || []).filter(u => u.userName !== currentUser?.userName);
-  targetUsers.forEach(user => {
-    const targetSocketId = Array.from(rooms.get(ROOM_CODE).users.entries())
-      .find(([id, u]) => u.userName === user.userName)?.[0];
-    if (targetSocketId) {
-      io.to(targetSocketId).emit('music-request', data);
-    }
-  });
-});
-
-socket.on('music-accept', (data) => {
-  io.to(ROOM_CODE).emit('music-play', data);
-});
-
-socket.on('music-control', (data) => {
-  socket.to(ROOM_CODE).emit('music-control', data);
-});
   
   // ============ MESAJ GÖNDER ============
   socket.on('message', async (data) => {
@@ -600,29 +580,35 @@ socket.on('music-control', (data) => {
     console.error('Müzik kontrol hatası:', error);
   }
 });
+  
+// ============ MÜZİK SİSTEMİ (TEMİZ) ============
 
-// ============ MÜZİK İZİN İSTE ============
+// İzin isteği gönder
 socket.on('request-music-permission', (data) => {
   try {
     if (!currentUser) return;
     
-    data.requester = currentUser.name;
-    data.requesterId = socket.id;
+    const requesterId = socket.id;
+    const requesterName = currentUser.name;
     
     const targetUsers = Array.from(rooms.get(ROOM_CODE)?.users.values() || [])
-      .filter(u => u.userName !== currentUser.name);
+      .filter(u => u.userName !== requesterName);
     
     if (targetUsers.length === 0) {
       socket.emit('music-permission-status', { status: 'no-users' });
       return;
     }
     
+    // Her hedef kullanıcıya istek gönder
     targetUsers.forEach(user => {
       const targetSocketId = Array.from(rooms.get(ROOM_CODE).users.entries())
         .find(([id, u]) => u.userName === user.userName)?.[0];
       
       if (targetSocketId && targetSocketId !== socket.id) {
-        io.to(targetSocketId).emit('music-permission-request', data);
+        io.to(targetSocketId).emit('music-permission-request', {
+          requesterId: requesterId,
+          requester: requesterName
+        });
       }
     });
     
@@ -632,17 +618,22 @@ socket.on('request-music-permission', (data) => {
   }
 });
 
+// İzin kabul edildi
 socket.on('accept-music-permission', (data) => {
   try {
     const requesterId = data.requesterId;
     if (requesterId) {
-      io.to(requesterId).emit('music-permission-status', { status: 'accepted', listenerName: currentUser.name });
+      io.to(requesterId).emit('music-permission-status', { 
+        status: 'accepted', 
+        listenerName: currentUser.name 
+      });
     }
   } catch (error) {
     console.error('Müzik izin kabul hatası:', error);
   }
 });
 
+// İzin reddedildi
 socket.on('reject-music-permission', (data) => {
   try {
     const requesterId = data.requesterId;
@@ -654,14 +645,48 @@ socket.on('reject-music-permission', (data) => {
   }
 });
 
+// İzin iptal edildi
 socket.on('revoke-music-permission', (data) => {
   try {
     const requesterId = data.requesterId;
     if (requesterId) {
-      io.to(requesterId).emit('music-permission-status', { status: 'revoked', listenerName: currentUser.name });
+      io.to(requesterId).emit('music-permission-status', { 
+        status: 'revoked', 
+        listenerName: currentUser.name 
+      });
     }
   } catch (error) {
     console.error('Müzik izin iptal hatası:', error);
+  }
+});
+
+// Müzik çal (kontrolcü gönderir)
+socket.on('music-play', (data) => {
+  try {
+    if (!currentUser) return;
+    
+    // Sadece izinli kontrolcü gönderebilir, ama biz yine de kontrol edelim
+    // Burada basitçe odaya yayınlıyoruz
+    io.to(ROOM_CODE).emit('music-play', {
+      videoId: data.videoId,
+      title: data.title,
+      channel: data.channel,
+      requesterId: data.requesterId || socket.id
+    });
+  } catch (error) {
+    console.error('Müzik çalma hatası:', error);
+  }
+});
+
+// Müzik kontrolü (play/pause/mute/unmute/stop)
+socket.on('music-control', (data) => {
+  try {
+    // Sadece istekte bulunan kişi (kontrolcü) kontrol edebilir
+    if (data.requesterId === socket.id) {
+      socket.to(ROOM_CODE).emit('music-control', data);
+    }
+  } catch (error) {
+    console.error('Müzik kontrol hatası:', error);
   }
 });
   
