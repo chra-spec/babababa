@@ -2117,20 +2117,6 @@ body.dark-mode .message-avatar {
     </div>
 </div>
 
-<!-- MÜZİK PANELİ (AYRI PANEL) -->
-<div id="musicPanel" class="music-panel" style="display:none;">
-    <div class="menu-header-row">
-        <button class="menu-back-btn" onclick="closeMusicPanel()">←</button>
-        <div class="font-panel-title">🎵 Müzik</div>
-    </div>
-    <button class="btn-full" onclick="requestMusicPermission()" style="margin-bottom:8px;">
-        🎧 Müzik İzni İste
-    </button>
-    <input type="text" id="musicSearchInput" class="music-search-input" placeholder="Müzik ara..." onkeypress="if(event.key==='Enter') searchMusic()">
-    <button class="btn-full" onclick="searchMusic()" style="margin-top:8px;">🔍 Ara</button>
-    <div id="musicResults" style="margin-top:10px; max-height:250px; overflow-y:auto;"></div>
-</div>
-
 <!-- PANKART MENÜSÜ -->
 <div id="menuBanner" class="menu-section" style="display:none;">
     <div class="menu-header-row">
@@ -2150,6 +2136,20 @@ body.dark-mode .message-avatar {
         </div>
         <div id="fontOptions"></div>
     </div>
+</div>
+
+    <!-- MÜZİK PANELİ (AYRI PANEL) -->
+<div id="musicPanel" class="music-panel" style="display:none;">
+    <div class="menu-header-row">
+        <button class="menu-back-btn" onclick="closeMusicPanel()">←</button>
+        <div class="font-panel-title">🎵 Müzik</div>
+    </div>
+    <button class="btn-full" onclick="requestMusicPermission()" style="margin-bottom:8px;">
+        🎧 Müzik İzni İste
+    </button>
+    <input type="text" id="musicSearchInput" class="music-search-input" placeholder="Müzik ara..." onkeypress="if(event.key==='Enter') searchMusic()">
+    <button class="btn-full" onclick="searchMusic()" style="margin-top:8px;">🔍 Ara</button>
+    <div id="musicResults" style="margin-top:10px; max-height:250px; overflow-y:auto;"></div>
 </div>
 
     <!-- STICKER PANELİ -->
