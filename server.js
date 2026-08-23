@@ -517,6 +517,65 @@ socket.on('dm-edit', async (data) => {
   }
 });
 
+  // ============ MÜZİK OLAYLARI ============
+socket.on('request-music', (data) => {
+  try {
+    if (!currentUser) return;
+    
+    data.requester = currentUser.name;
+    data.requesterId = socket.id;
+    
+    const targetUsers = Array.from(rooms.get(ROOM_CODE)?.users.values() || [])
+      .filter(u => u.userName !== currentUser.name);
+    
+    targetUsers.forEach(user => {
+      const targetSocketId = Array.from(rooms.get(ROOM_CODE).users.entries())
+        .find(([id, u]) => u.userName === user.userName)?.[0];
+      if (targetSocketId) {
+        io.to(targetSocketId).emit('music-request', data);
+      }
+    });
+  } catch (error) {
+    console.error('Müzik istek hatası:', error);
+  }
+});
+
+socket.on('music-accept', (data) => {
+  try {
+    // Kabul eden kişiye müziği çal (kontrol yetkisi YOK)
+    socket.emit('music-play', {
+      videoId: data.videoId,
+      title: data.title,
+      channel: data.channel,
+      requesterId: data.requesterId
+    });
+    
+    // İstek atan kişiye de çal (kontrol yetkisi VAR)
+    const requesterId = data.requesterId;
+    if (requesterId) {
+      io.to(requesterId).emit('music-play', {
+        videoId: data.videoId,
+        title: data.title,
+        channel: data.channel,
+        requesterId: data.requesterId
+      });
+    }
+  } catch (error) {
+    console.error('Müzik kabul hatası:', error);
+  }
+});
+
+socket.on('music-control', (data) => {
+  try {
+    // Sadece teklif eden kişi kontrol edebilir
+    if (data.requesterId === socket.id) {
+      socket.to(ROOM_CODE).emit('music-control', data);
+    }
+  } catch (error) {
+    console.error('Müzik kontrol hatası:', error);
+  }
+});
+
   // ============ BAĞLANTI KOPTU ============
   socket.on('disconnect', () => {
     console.log('🔌 Ayrıldı:', socket.id);
