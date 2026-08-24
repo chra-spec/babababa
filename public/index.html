@@ -4864,33 +4864,35 @@ async function toggleNotifications() {
         let callTimerInterval = null;
         let callSeconds = 0;
 
-        const rtcConfig = {
+let rtcConfig = {
     iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun1.l.google.com:19302" },
-        { urls: "stun:stun.relay.metered.ca:80" },
-        {
-            urls: "turn:europe.relay.metered.ca:80",
-            username: "ad220e01a09e747e07691d03",
-            credential: "v6pogJkl1odEH+ND"
-        },
-        {
-            urls: "turn:europe.relay.metered.ca:80?transport=tcp",
-            username: "ad220e01a09e747e07691d03",
-            credential: "v6pogJkl1odEH+ND"
-        },
-        {
-            urls: "turn:europe.relay.metered.ca:443",
-            username: "ad220e01a09e747e07691d03",
-            credential: "v6pogJkl1odEH+ND"
-        },
-        {
-            urls: "turns:europe.relay.metered.ca:443?transport=tcp",
-            username: "ad220e01a09e747e07691d03",
-            credential: "v6pogJkl1odEH+ND"
-        }
+        { urls: "stun:stun1.l.google.com:19302" }
     ]
 };
+
+// Cloudflare TURN kimliklerini otomatik getir
+async function fetchTurnConfig() {
+    try {
+        const response = await fetch('/api/turn-config');
+        const data = await response.json();
+        
+        if (data.iceServers && data.iceServers.length > 0) {
+            // Mevcut STUN'lara Cloudflare TURN'ü de ekle
+            rtcConfig.iceServers = [
+                { urls: "stun:stun.l.google.com:19302" },
+                { urls: "stun:stun1.l.google.com:19302" },
+                ...data.iceServers
+            ];
+            console.log('✅ Cloudflare TURN kimlikleri yüklendi');
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('❌ TURN kimlik alınamadı:', error);
+        return false;
+    }
+}
     
 function getOtherUsers() {
     if (!currentUser) return [];
@@ -4947,7 +4949,8 @@ async function startAudioCall() {
     }
 }
 async function initCall() {
-    try {
+   await fetchTurnConfig();
+     try {   
         const constraints = callType === 'video'
             ? { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: { echoCancellation: true, noiseSuppression: true } }
 : { 
@@ -5181,6 +5184,7 @@ socket.on('incoming-call', async (data) => {
     if (accept) {
         callTarget = data.callerName;
         callType = data.type;
+        await fetchTurnConfig();
         try {
             const constraints = data.type === 'video'
                 ? { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: { echoCancellation: true, noiseSuppression: true } }
