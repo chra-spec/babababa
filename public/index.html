@@ -1,1 +1,5709 @@
 
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <link rel="manifest" href="/manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Varela+Round&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Destek Merkezi</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <style>
+        * { 
+            margin: 0; padding: 0; box-sizing: border-box; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+        }
+
+        :root {
+            --message-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body { 
+            background: #1a1a2e; 
+            color: #fff; 
+            height: 100dvh;
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            padding-top: 50px;
+        }
+
+.banner-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 15px;
+    cursor: pointer;
+    background: #e67e22; /* turuncu */
+    border: 3px solid #fff; /* beyaz kenarlık */
+    border-radius: 50%; /* tam daire */
+    width: 130px;
+    height: 130px;
+    margin: 0 auto;
+    box-shadow: 0 0 0 3px #e67e22, 0 0 0 5px #fff; /* çift çizgi efekti */
+}
+
+.banner-exploding {
+    animation: bannerExplode 0.6s ease forwards;
+}
+
+@keyframes bannerExplode {
+    0% {
+        transform: scale(0.5);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+    70% {
+        transform: scale(1.5);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(3);
+        opacity: 0;
+    }
+}
+
+        /* ÜST BAR - SABİT */
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: #2d2d44;
+            padding: 0 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #444;
+            z-index: 9000;
+        }
+
+        .top-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .logo-text {
+            font-weight: 600;
+            font-size: 15px;
+            color: #667eea;
+            white-space: nowrap;
+        }
+
+        .search-container {
+            flex: 1;
+            max-width: 400px;
+            margin: 0 5px;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 8px 30px 8px 12px;
+            border: 1px solid #444;
+            border-radius: 20px;
+            background: #1a1a2e;
+            color: #fff;
+            font-size: 13px;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 13px;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .online-indicator {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: #27ae60;
+            white-space: nowrap;
+        }
+
+        .online-dot {
+            width: 7px;
+            height: 7px;
+            background: #27ae60;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        /* Dark Mode */
+body.dark-mode {
+    background: #000;
+}
+
+body.dark-mode .chat-header,
+body.dark-mode .input-area,
+body.dark-mode .font-panel,
+body.dark-mode .modal-content {
+    background: #111;
+    border-color: #27ae60;
+}
+
+body.dark-mode .message-content {
+    background: #333;
+    border: 1px solid #27ae60;
+}
+
+body.dark-mode .message.own .message-content {
+    background: #1e5631;
+    border-color: #27ae60;
+}
+
+body.dark-mode .chat-avatar,
+body.dark-mode .message-avatar {
+    border: 1px solid #27ae60;
+}
+
+/* Müzik Menü */
+.music-search-input {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #444;
+    border-radius: 8px;
+    background: #1a1a2e;
+    color: #fff;
+    font-size: 12px;
+    outline: none;
+    margin-bottom: 5px;
+}
+
+.music-menu-btn {
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+.music-menu-btn:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+/* MÜZİK PANELİ */
+.music-panel {
+    position: fixed;
+    top: 55px;
+    left: 10px;
+    background: #2d2d44;
+    border: 1px solid #444;
+    border-radius: 12px;
+    padding: 10px;
+    z-index: 9900;
+    max-height: 50vh;
+    overflow-y: auto;
+    min-width: 120px;
+    max-width: 180px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+}
+
+.music-panel.active {
+    display: block;
+}
+
+.music-result-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 5px;
+    transition: background 0.2s;
+}
+
+.music-result-item:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.music-result-thumb {
+    width: 50px;
+    height: 50px;
+    border-radius: 4px;
+    object-fit: cover;
+}
+
+.music-result-title {
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.music-result-channel {
+    font-size: 10px;
+    color: #aaa;
+}
+
+/* Müzik Oynatıcı */
+.music-player {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2d2d44;
+    border: 1px solid #444;
+    border-radius: 10px;
+    padding: 10px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    z-index: 35000;
+    max-width: 90%;
+}
+
+.music-player-btn {
+    background: transparent;
+    border: none;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    transition: background 0.2s;
+}
+
+.music-player-btn:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.music-player.active {
+    display: flex;
+}
+
+.music-player-close {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: #e74c3c;
+    border: none;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.music-player-info {
+    flex: 1;
+    min-width: 0;
+}
+
+#musicPlayerTitle {
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#musicPlayerChannel {
+    font-size: 10px;
+    color: #aaa;
+}
+
+.music-player-toggle {
+    background: #667eea;
+    border: none;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+        /* YILAN OYUNU */
+        .game-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+            position: relative;
+            overflow-y: auto;
+        }
+
+        .game-header {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .score-display { color: #667eea; }
+        .best-score-display { color: #f39c12; }
+
+        .canvas-wrapper {
+            position: relative;
+            background: #000;
+            border-radius: 10px;
+            border: 2px solid #333;
+            overflow: hidden;
+            max-width: 100%;
+            max-height: 60dvh;
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-width: 400px;
+            max-height: 60dvh;
+        }
+
+        .game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .game-overlay.hidden { display: none; }
+
+        .overlay-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #667eea;
+        }
+
+        .overlay-subtitle {
+            font-size: 14px;
+            color: #ccc;
+            margin-bottom: 15px;
+        }
+
+        .overlay-score {
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary { background: #667eea; color: #fff; }
+        .btn-primary:hover { background: #5568d3; transform: translateY(-1px); }
+        .btn-primary:active { transform: translateY(0); }
+
+        .game-hint {
+            margin-top: 10px;
+            color: #666;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .mobile-controls {
+            display: none;
+            margin-top: 10px;
+            gap: 5px;
+        }
+
+        .mobile-btn {
+            width: 45px;
+            height: 45px;
+            background: #2d2d44;
+            border: 1px solid #444;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mobile-btn:active { background: #667eea; }
+
+        .mobile-row {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-controls { display: flex; flex-direction: column; align-items: center; }
+        }
+
+        /* PROFİL MODAL */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.active { display: flex; }
+
+        .modal-content {
+            background: #2d2d44;
+            padding: 20px;
+            border-radius: 15px;
+            width: 100%;
+            max-width: 350px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            border: 1px solid #444;
+            max-height: 80dvh;
+            overflow-y: auto;
+        }
+
+        .modal h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 18px;
+        }
+
+        .form-group { margin-bottom: 12px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #ccc;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            background: #1a1a2e;
+            color: #fff;
+            font-size: 13px;
+            outline: none;
+        }
+        .form-input:focus { border-color: #667eea; }
+
+        .photo-preview {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            margin: 0 auto 8px;
+            display: block;
+            object-fit: cover;
+            border: 2px solid #667eea;
+            cursor: pointer;
+            background: #1a1a2e;
+        }
+
+        .photo-btn {
+            width: 100%;
+            padding: 7px;
+            background: #1a1a2e;
+            border: 1px dashed #444;
+            border-radius: 8px;
+            color: #ccc;
+            cursor: pointer;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .btn-full {
+            width: 100%;
+            padding: 8px;
+            background: #667eea;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-full:disabled { background: #444; cursor: not-allowed; }
+
+        /* SOHBET ARAYÜZÜ */
+        .chat-interface {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            height: calc(100dvh - 50px);
+            min-height: 0;
+        }
+
+        .chat-interface.active { display: flex; }
+
+        .chat-header {
+            background: #2d2d44;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #444;
+            min-height: 45px;
+            flex-shrink: 0;
+        }
+
+        .chat-header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .chat-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .chat-user-info {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .chat-user-name {
+            font-weight: 600;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chat-online-count {
+            font-size: 11px;
+            color: #27ae60;
+        }
+
+        /* ARAMA BUTONLARI */
+        .call-buttons {
+            display: flex;
+            gap: 5px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .call-btn {
+            background: transparent;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+
+        .call-btn:hover { background: rgba(255,255,255,0.1); }
+        .call-btn.video-call { color: #27ae60; }
+        .call-btn.audio-call { color: #3498db; }
+        .call-btn.end-call { color: #e74c3c; }
+
+        .font-menu-btn {
+            background: transparent;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .font-menu-btn:hover { background: rgba(255,255,255,0.1); }
+
+        .chat-exit-btn {
+            background: #e74c3c;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.utility-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid #666;
+    background: transparent;
+    color: #666;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.utility-btn.active {
+    background: #27ae60;
+    border-color: #27ae60;
+    color: #fff;
+}
+
+        /* FONT PANELİ */
+        .font-panel {
+            display: none;
+            position: fixed;
+            top: 55px;
+            left: 10px;
+            background: #2d2d44;
+            border: 1px solid #444;
+            border-radius: 12px;
+            padding: 8px;
+            z-index: 9800;
+            max-height: 50vh;
+            overflow-y: auto;
+            min-width: 120px;
+            max-width: 180px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+        }
+        
+
+        .font-panel.active { display: block; }
+
+        .font-panel-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 6px;
+            text-align: center;
+        }
+
+        .font-option {
+            padding: 8px 12px;
+            font-size: 18px;
+            color: #fff;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.2s;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        .font-option:hover { background: rgba(255,255,255,0.1); }
+        .font-option.selected {
+            background: rgba(102,126,234,0.3);
+            border: 1px solid #667eea;
+        }
+        
+        .menu-section {
+    min-width: 200px;
+}
+
+.menu-header-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.menu-back-btn {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.menu-back-btn:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.menu-item {
+    padding: 6px 10px;
+    font-size: 13px;
+    color: #fff;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.2s;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.menu-item:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+        .messages-container {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-height: 0;
+        }
+
+        .message {
+            display: flex;
+            gap: 7px;
+            max-width: 85%;
+            animation: msgAppear 0.3s ease;
+            position: relative;
+        }
+        .message.banner-mode {
+    align-self: center;
+    flex-direction: column;
+    max-width: 100%;
+}
+
+        @keyframes msgAppear {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.own {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+
+        .message-body {
+            max-width: 100%;
+            min-width: 0;
+        }
+
+        .message-content {
+            padding: 12px 16px;
+            border-radius: 14px;
+            background: #2d2d44;
+            word-wrap: break-word;
+            position: relative;
+        }
+        
+        /* Video mesaj baloncuğu */
+.message-content.video-message {
+    background: #27ae60;
+    border: 2px solid #fff;
+}
+
+/* Video kartı */
+.message-video-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px;
+    cursor: pointer;
+}
+
+.message-video-card svg {
+    width: 48px;
+    height: 48px;
+}
+
+.message-video-card span {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+}
+
+        .message.own .message-content { background: #667eea; }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 2px;
+            flex-wrap: wrap;
+        }
+
+        .message-sender {
+            font-size: 11px;
+            font-weight: 600;
+            color: #667eea;
+            cursor: pointer;
+        }
+
+        .message.own .message-sender { color: #fff; }
+
+        .message-time {
+            font-size: 9px;
+            color: rgba(255,255,255,0.5);
+        }
+
+.message-text {
+    font-size: 19px;
+    line-height: 1.6;
+    font-family: 'Segoe UI', sans-serif;
+    letter-spacing: 1px;
+    color: #fff;
+    white-space: pre-wrap;
+}
+
+        .message-image {
+            max-width: 180px;
+            max-height: 250px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: block;
+            margin-top: 4px;
+            pointer-events: auto;
+            -webkit-user-drag: none;
+            user-drag: none;
+            object-fit: cover;
+            display: block;
+        }
+
+        .message-video {
+            max-width: 200px;
+            max-height: 250px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: block;
+            margin-top: 4px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .message-sticker {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-top: 4px;
+            cursor: pointer;
+            pointer-events: auto;
+            -webkit-user-drag: none;
+            user-drag: none;
+        }
+
+        .message-audio audio {
+            width: 180px;
+            height: 30px;
+            margin-top: 4px;
+        }
+
+        .message-audio audio::-webkit-media-controls-download-button,
+        .message-video::-webkit-media-controls-download-button {
+            display: none !important;
+        }
+
+        .message-reactions {
+            display: flex;
+            gap: 3px;
+            margin-top: 3px;
+            flex-wrap: wrap;
+        }
+
+.reaction-badge {
+    background: rgba(255,255,255,0.15);
+    border-radius: 14px;
+    padding: 4px 12px;
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+        .message-reply-preview {
+            border-left: 2px solid #667eea;
+            padding-left: 6px;
+            margin-bottom: 4px;
+            font-size: 11px;
+            color: #aaa;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+            padding: 3px 6px;
+            cursor: pointer;
+        }
+
+        .system-message {
+            align-self: center;
+            background: rgba(255,255,255,0.1);
+            padding: 5px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            color: #ccc;
+            font-style: italic;
+        }
+
+        /* Mesaj Context Menü */
+        .context-menu {
+            display: none;
+            position: fixed;
+            background: #2d2d44;
+            border: 1px solid #444;
+            border-radius: 10px;
+            padding: 5px 0;
+            z-index: 11000;
+            min-width: 150px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+        }
+
+        .context-menu.active { display: block; }
+
+        .context-item {
+            padding: 8px 15px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        .context-item:hover { background: rgba(255,255,255,0.1); }
+        .context-item.danger { color: #e74c3c; }
+
+        /* Emoji Seçici */
+        .reaction-picker {
+            display: none;
+            position: fixed;
+            background: #2d2d44;
+            border: 1px solid #444;
+            border-radius: 20px;
+            padding: 8px 12px;
+            z-index: 12000;
+            gap: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+        }
+
+        .reaction-picker.active { display: flex; }
+
+.reaction-emoji {
+    font-size: 32px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+        .reaction-emoji:hover { transform: scale(1.3); }
+
+        /* Input Alanı */
+        .input-area {
+            padding: 8px 10px;
+            background: #2d2d44;
+            display: flex;
+            gap: 6px;
+            align-items: flex-end;
+            border-top: 1px solid #444;
+            flex-shrink: 0;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+        }
+
+        .input-buttons {
+            display: flex;
+            gap: 3px;
+            margin-bottom: 2px;
+            flex-shrink: 0;
+        }
+
+        .input-btn {
+            background: transparent;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+
+        .input-btn:hover { background: rgba(255,255,255,0.1); }
+        .input-btn.recording {
+            background: #e74c3c;
+            animation: recPulse 1s infinite;
+        }
+
+        @keyframes recPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #444;
+            border-radius: 18px;
+            background: #1a1a2e;
+            color: #fff;
+            outline: none;
+            resize: none;
+            max-height: 80px;
+            font-size: 13px;
+            line-height: 1.3;
+            min-width: 0;
+        }
+
+        .message-input::placeholder { color: #666; }
+
+        .send-btn {
+            background: #667eea;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 14px;
+        }
+
+        .send-btn:disabled { background: #444; cursor: not-allowed; }
+
+        /* Sticker Paneli */
+        .sticker-panel {
+            display: none;
+            position: fixed;
+            bottom: 60px;
+            left: 10px;
+            right: 10px;
+            background: #2d2d44;
+            border: 1px solid #444;
+            border-radius: 12px;
+            padding: 10px;
+            z-index: 9500;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .sticker-panel.active { display: block; }
+
+        .sticker-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .sticker-panel-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .sticker-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 8px;
+        }
+
+        .sticker-item {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border 0.2s;
+            background: #1a1a2e;
+        }
+
+        .sticker-item:hover { border-color: #667eea; }
+        .sticker-item.video-sticker { background: #000; }
+
+        .sticker-create-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #1a1a2e;
+            border: 2px dashed #667eea;
+            color: #667eea;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Sticker Oluşturma Modal */
+        .sticker-modal .modal-content {
+            max-width: 400px;
+        }
+
+        .sticker-preview {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 10px;
+            display: block;
+            border: 2px solid #667eea;
+            background: #1a1a2e;
+        }
+
+        .sticker-preview-video {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 10px;
+            display: block;
+            border: 2px solid #667eea;
+            background: #000;
+        }
+
+        /* Tam Ekran Medya */
+        .fullscreen-media {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 13000;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .fullscreen-media.active { display: flex; }
+
+        .fullscreen-media img,
+        .fullscreen-media video {
+            max-width: 95%;
+            max-height: 85%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .fullscreen-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: #fff;
+            font-size: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Profil Görüntüleme Modal */
+        .profile-view-modal .modal-content {
+            text-align: center;
+        }
+
+        .profile-view-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 10px;
+            border: 2px solid #667eea;
+            cursor: pointer;
+        }
+
+        .profile-view-avatar.large {
+            width: 200px;
+            height: 200px;
+        }
+
+        .profile-view-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        /* Blur Overlay + Şifre */
+        .blur-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 20000;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .blur-overlay.active { display: flex; }
+
+        .blur-password-input {
+            background: #1a1a2e;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 10px 15px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            width: 200px;
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .blur-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .blur-subtitle {
+            font-size: 13px;
+            color: #ccc;
+            margin-top: 5px;
+        }
+        
+        /* Özel Video Oynatıcı */
+.video-player-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.95);
+    z-index: 40000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-player-overlay.active {
+    display: flex;
+}
+
+.video-player-container {
+    position: absolute;
+    width: 80%;
+    height: 80%;
+    transition: width 0.3s ease, height 0.3s ease, left 0.3s ease, top 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-player-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.video-player-close {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.6);
+    border: none;
+    color: #fff;
+    font-size: 22px;
+    cursor: pointer;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-player-fullscreen {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.6);
+    border: none;
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ============ KAMERA SİSTEMİ STİLLERİ ============ */
+.camera-overlay,
+.gallery-overlay,
+.media-preview-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    z-index: 30000;
+    display: none;
+    flex-direction: column;
+}
+
+.camera-overlay.active,
+.gallery-overlay.active,
+.media-preview-overlay.active {
+    display: flex;
+}
+
+/* Üst bar */
+.camera-top {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+}
+
+.camera-top-btn {
+    background: rgba(0,0,0,0.5);
+    border: none;
+    color: #fff;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.camera-top-btn:hover {
+    background: rgba(0,0,0,0.7);
+}
+
+/* Kamera önizleme */
+#cameraPreview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1); /* Ön kamera ayna modu */
+    background: #000;
+}
+
+#cameraPreview.rear {
+    transform: scaleX(-1); /* Arka kamerada ayna modu */
+}
+
+#cameraPreview.rear.zoom {
+    transform: scaleX(-1) scale(1.15);
+}
+
+#cameraPreview.rear.zoom {
+    transform: scaleX(1) scale(1.15);
+}
+
+/* Mod seçici */
+.camera-mode-selector {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 15px;
+    z-index: 5;
+}
+
+.camera-mode-btn {
+    background: rgba(0,0,0,0.4);
+    border: 2px solid transparent;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.camera-mode-btn.active {
+    background: #667eea;
+    border-color: #fff;
+}
+
+/* Alt bar */
+.camera-bottom {
+    position: absolute;
+    bottom: 40px;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    z-index: 10;
+}
+
+.camera-bottom-left,
+.camera-bottom-right {
+    flex: 1;
+}
+
+.camera-bottom-left {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.camera-bottom-right {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.camera-bottom-center {
+    flex: 0 0 auto;
+}
+
+.camera-icon-btn {
+    background: rgba(0,0,0,0.5);
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.camera-icon-btn:hover {
+    background: rgba(0,0,0,0.7);
+}
+
+.camera-capture-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    transition: transform 0.2s;
+}
+
+.camera-capture-btn:active {
+    transform: scale(0.9);
+}
+
+/* Galeri seçim ekranı */
+.gallery-top {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+}
+
+.gallery-options {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+.gallery-option-btn {
+    background: #2d2d44;
+    border: 2px solid #444;
+    color: #fff;
+    padding: 20px 30px;
+    border-radius: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 18px;
+    font-weight: 600;
+    width: 250px;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+.gallery-option-btn:hover {
+    background: #3d3d54;
+    border-color: #667eea;
+}
+
+/* Medya önizleme / kırpma */
+.preview-top {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+}
+
+.preview-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 60px 20px 100px;
+}
+
+.preview-content img,
+.preview-content video {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.preview-actions {
+    position: absolute;
+    bottom: 40px;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    z-index: 10;
+}
+
+.preview-action-btn {
+    background: rgba(0,0,0,0.5);
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.preview-send-btn {
+    background: #667eea;
+    border: none;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.preview-send-btn:hover {
+    background: #5568d3;
+}
+
+.banner-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.9);
+    z-index: 50000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.banner-overlay.active { display: flex; }
+
+.banner-fullscreen {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.banner-fullscreen-text {
+    font-size: 28px;
+    color: #fff;
+    text-align: center;
+    padding: 20px;
+    animation: bannerTextFade 0.5s ease;
+}
+
+.banner-animated-emojis span {
+    position: absolute;
+    font-size: 40px;
+    animation: bannerEmojiFloat 2.5s ease forwards;
+}
+
+.banner-emoji-left { left: 10%; top: 50%; }
+.banner-emoji-right { right: 10%; top: 50%; }
+.banner-emoji-bottom { bottom: 20%; left: 50%; }
+
+@keyframes bannerEmojiFloat {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-200px) scale(2); }
+}
+
+@keyframes bannerTextFade {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* Kırpma overlay */
+.crop-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.crop-box {
+    border: 2px dashed #fff;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
+    pointer-events: auto;
+    position: relative;
+}
+
+@media (max-width: 768px) {
+    .camera-bottom {
+        padding: 0 20px;
+    }
+    
+    .camera-capture-btn img {
+        width: 65px !important;
+        height: 65px !important;
+    }
+    
+    .camera-icon-btn {
+        width: 45px;
+        height: 45px;
+    }
+    
+    .preview-actions {
+        padding: 0 20px;
+    }
+}
+
+        /* ÇAĞRI ARAYÜZÜ */
+        .call-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #1a1a2e;
+            z-index: 25000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .call-overlay.active { display: flex; }
+
+        .call-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 20px;
+            border: 3px solid #667eea;
+        }
+
+        .call-name {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .call-status {
+            font-size: 14px;
+            color: #ccc;
+            margin-bottom: 30px;
+        }
+
+        .call-timer {
+            font-size: 18px;
+            font-weight: 600;
+            color: #27ae60;
+            margin-bottom: 30px;
+        }
+
+.call-controls {
+    display: flex;
+    gap: 20px;
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+}
+
+        .call-control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .call-control-btn.mute { background: #2d2d44; color: #fff; }
+        .call-control-btn.mute.active { background: #667eea; }
+        .call-control-btn.end { background: #e74c3c; color: #fff; width: 70px; height: 70px; }
+
+.call-remote-video {
+    width: 100%;
+    height: calc(100vh - 150px);
+    border-radius: 0;
+    object-fit: cover;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    transform: scaleX(-1); /* AYNA MODU - uzak görüntü */
+}
+
+.call-local-video {
+    position: fixed;
+    top: 60px;
+    right: 20px;
+    width: 100px;
+    height: 140px;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 2px solid #667eea;
+    z-index: 10;
+    transform: scaleX(-1); /* AYNA MODU */
+}
+
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 4px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 2px;
+        }
+        
+        /* DM Stilleri */
+.dm-modal .modal-content {
+    max-width: 400px;
+}
+
+.dm-user-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    background: #1a1a2e;
+    margin-bottom: 5px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.dm-user-item:hover {
+    background: #2d2d44;
+}
+
+.dm-user-avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.dm-user-name {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* EKRAN PAYLAŞIMI STİLLERİ */
+.screen-share-btn {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+.screen-share-btn:hover { background: rgba(255,255,255,0.1); }
+
+/* Ekran paylaşımı aktifken sohbet alanı alta iner ve %55 yer kaplar */
+.chat-interface.screen-sharing {
+    height: 55% !important;
+    margin-top: 45% !important;
+}
+
+/* Ekran paylaşımındaki kontrol butonları */
+.screen-control-btn {
+    background: #2d2d44;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: background 0.2s;
+}
+.screen-control-btn.end-call { background: #e74c3c; }
+.screen-control-btn.close-all { background: #e74c3c; }
+    </style>
+</head>
+<body>
+
+    <!-- ÜST BAR -->
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <span class="logo-text">Destek</span>
+            <div class="search-container">
+                <input type="text" class="search-input" id="searchInput" placeholder="Yardım ara..." autocomplete="off">
+                <span class="search-icon">🔍</span>
+            </div>
+            <span class="online-indicator">
+                <span class="online-dot"></span>
+                <span id="onlineCount">0</span>
+            </span>
+        </div>
+    </div>
+
+<!-- PANKART TAM EKRAN -->
+<div class="banner-overlay" id="bannerOverlay">
+    <button class="video-player-close" onclick="closeBanner()">←</button>
+    <div class="banner-fullscreen">
+        <div class="banner-animated-emojis">
+            <span class="banner-emoji-left">🐰</span>
+            <span class="banner-emoji-right">🧡</span>
+            <span class="banner-emoji-bottom">🤍</span>
+        </div>
+        <div class="banner-fullscreen-text" id="bannerFullscreenText"></div>
+    </div>
+</div>    
+
+<div class="game-container" id="gameContainer">
+    <!-- Oyun Değiştirme Butonu -->
+    <button class="btn btn-secondary" id="gameToggleBtn" onclick="toggleGame()" style="margin-top:10px;">
+        🧟 Zombie Games
+    </button>
+
+    <!-- Yılan Alanı -->
+    <div id="snakeGameArea" style="width:100%; display:block;">
+        <div class="game-header">
+            <span class="score-display">Skor: <span id="score">0</span></span>
+            <span class="best-score-display">Rekor: <span id="bestScore">0</span></span>
+        </div>
+        <div class="canvas-wrapper">
+            <canvas id="gameCanvas" width="400" height="400"></canvas>
+            <div class="game-overlay" id="startOverlay">
+                <div class="overlay-title">🐍 Yılan Oyunu</div>
+                <div class="overlay-subtitle">Hazır olduğunda başlat</div>
+                <button class="btn btn-primary" onclick="startGame()">Başlat</button>
+            </div>
+            <div class="game-overlay hidden" id="gameOverOverlay">
+                <div class="overlay-title" style="color:#e74c3c;">Oyun Bitti</div>
+                <div class="overlay-score">Skor: <span id="finalScore">0</span></div>
+                <button class="btn btn-primary" onclick="restartGame()">Tekrar Başlat</button>
+            </div>
+        </div>
+        <div class="game-hint">Yön tuşları veya WASD ile oyna</div>
+        <div class="mobile-controls">
+            <div class="mobile-row">
+                <button class="mobile-btn" onclick="changeDirection('up')">↑</button>
+            </div>
+            <div class="mobile-row">
+                <button class="mobile-btn" onclick="changeDirection('left')">←</button>
+                <button class="mobile-btn" onclick="changeDirection('down')">↓</button>
+                <button class="mobile-btn" onclick="changeDirection('right')">→</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zombie Alanı -->
+    <div id="zombieGameArea" style="display:none; width:100%; height:60vh;">
+        <iframe id="zombieFrame" src="" style="width:100%; height:100%; border:none;"></iframe>
+    </div>
+</div>
+
+    <!-- PROFİL MODAL -->
+    <div class="modal" id="profileModal">
+        <div class="modal-content">
+            <h2>Profil Oluştur</h2>
+            <div class="form-group">
+                <label>Profil Fotoğrafı</label>
+                <img src="" class="photo-preview" id="photoPreview" alt="Profil" style="display: none;">
+                <input type="file" id="photoInput" accept="image/*" style="display: none;">
+                <button class="photo-btn" onclick="document.getElementById('photoInput').click()">📷 Galeriden Seç</button>
+            </div>
+            <div class="form-group">
+                <label>İsmin</label>
+                <input type="text" class="form-input" id="nameInput" placeholder="İsmini gir..." maxlength="20">
+            </div>
+            <button class="btn-full" id="saveProfileBtn" onclick="saveProfile()">Tamam</button>
+        </div>
+    </div>
+
+    <!-- SOHBET ARAYÜZÜ -->
+    <div class="chat-interface" id="chatInterface">
+<div class="chat-header">
+    <div class="chat-header-left">
+    <img src="" class="chat-avatar" id="chatAvatar" alt="Avatar" onclick="showProfileFromHeader()">
+    <div class="chat-user-info">
+        <div class="chat-user-name" id="chatUserName" onclick="showProfileFromHeader()">Kullanıcı</div>
+        <div class="chat-online-count" id="chatOnlineCount">Çevrimiçi: 0</div>
+    </div>
+    <button class="screen-share-btn" onclick="startScreenShare()" title="Ekran Paylaş">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="3" width="20" height="14" rx="2"/>
+        <line x1="8" y1="21" x2="16" y2="21"/>
+        <line x1="12" y1="17" x2="12" y2="21"/>
+    </svg>
+</button>
+    <button class="music-menu-btn" onclick="toggleMusicPanel()" title="Müzik">🎵</button>
+    <button class="font-menu-btn" onclick="toggleFontPanel()" title="Menü">☰</button>
+</div>
+    <div class="header-right">        
+        <button id="notifBtn" class="utility-btn" onclick="toggleNotifications()" title="Bildirimleri aç/kapat">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+        </button>
+        <button class="chat-exit-btn" onclick="exitChat()">Çıkış</button>
+    </div>
+</div>
+
+        <div class="messages-container scrollbar-thin" id="messagesContainer"></div>
+
+        <div class="input-area">
+            <div class="input-buttons">
+    <button class="input-btn" onclick="openCamera()" title="Kamera">📷</button>
+    <button class="input-btn" onclick="openCameraGallery()" title="Galeri">🖼️</button>
+    <button class="input-btn" onclick="toggleStickerPanel()" title="Çıkartma">🐰</button>
+    <button class="input-btn" id="recordBtn" onclick="toggleRecording()" title="Ses Kaydı">🎤</button>
+    <input type="file" id="imageInput" accept="image/*" multiple style="display: none;">
+    <input type="file" id="videoInput" accept="video/*" multiple style="display: none;">
+</div>
+            <textarea class="message-input" id="messageInput" placeholder="Mesaj yaz..." rows="1"></textarea>
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+        </div>
+    </div>
+
+   <!-- HAMBURGER MENÜ -->
+<div class="font-panel" id="fontPanel">
+    <!-- ANA MENÜ -->
+<div id="menuMain" class="menu-section">
+    <div class="font-panel-title">Menü</div>
+    <div class="menu-item" onclick="showCallMenu()">
+        📞 Aramalar
+    </div>
+    <div class="menu-item" onclick="showDMMenu()">
+        💬 DM
+    </div>
+    <div class="menu-item" onclick="showFontMenu()">
+        ✍️ Yazı Tipi
+    </div>
+    <div class="menu-item" onclick="showSettingsMenu()">
+    ⚙️ Ayarlar
+</div>
+<div class="menu-item" onclick="showBannerMenu()">
+    🐰 Pankart
+</div>
+</div>
+    
+    <!-- ARAMA MENÜSÜ -->
+    <div id="menuCalls" class="menu-section" style="display:none;">
+        <div class="menu-header-row">
+            <button class="menu-back-btn" onclick="showMainMenu()">←</button>
+            <div class="font-panel-title">Aramalar</div>
+        </div>
+        <div class="menu-item" onclick="hideFontPanel(); startVideoCall();">
+            📹 Görüntülü Ara
+        </div>
+        <div class="menu-item" onclick="hideFontPanel(); startAudioCall();">
+            📞 Sesli Ara
+        </div>
+    </div>
+    
+    <!-- DM MENÜSÜ -->
+<div id="menuDM" class="menu-section" style="display:none;">
+    <div class="menu-header-row">
+        <button class="menu-back-btn" onclick="showMainMenu()">←</button>
+        <div class="font-panel-title">DM</div>
+    </div>
+    <div id="dmListContainer"></div>
+</div>
+
+<!-- AYARLAR MENÜSÜ -->
+<div id="menuSettings" class="menu-section" style="display:none;">
+    <div class="menu-header-row">
+        <button class="menu-back-btn" onclick="showMainMenu()">←</button>
+        <div class="font-panel-title">Ayarlar</div>
+    </div>
+    <div class="menu-item" onclick="toggleDarkMode()">
+        🌙 Dark Mode <span id="darkModeStatus">Kapalı</span>
+    </div>
+</div>
+
+<!-- PANKART MENÜSÜ -->
+<div id="menuBanner" class="menu-section" style="display:none;">
+    <div class="menu-header-row">
+        <button class="menu-back-btn" onclick="showMainMenu()">←</button>
+        <div class="font-panel-title">Pankart</div>
+    </div>
+    <div class="menu-item" onclick="toggleBannerMode()">
+        🐰 Pankart Modu <span id="bannerModeStatus">Kapalı</span>
+    </div>
+</div>
+    
+    <!-- FONT MENÜSÜ -->
+    <div id="menuFonts" class="menu-section" style="display:none;">
+        <div class="menu-header-row">
+            <button class="menu-back-btn" onclick="showMainMenu()">←</button>
+            <div class="font-panel-title">Yazı Tipi</div>
+        </div>
+        <div id="fontOptions"></div>
+    </div>
+</div>
+
+    <!-- MÜZİK PANELİ (AYRI PANEL) -->
+<div id="musicPanel" class="music-panel" style="display:none;">
+    <div class="menu-header-row">
+        <button class="menu-back-btn" onclick="closeMusicPanel()">←</button>
+        <div class="font-panel-title">🎵 Müzik</div>
+    </div>
+    <button class="btn-full" onclick="requestMusicPermission()" style="margin-bottom:8px;">
+        🎧 Müzik İzni İste
+    </button>
+    <input type="text" id="musicSearchInput" class="music-search-input" placeholder="Müzik ara..." onkeypress="if(event.key==='Enter') searchMusic()">
+    <button class="btn-full" onclick="searchMusic()" style="margin-top:8px;">🔍 Ara</button>
+    <div id="musicResults" style="margin-top:10px; max-height:250px; overflow-y:auto;"></div>
+</div>
+
+    <!-- STICKER PANELİ -->
+    <div class="sticker-panel" id="stickerPanel">
+        <div class="sticker-panel-header">
+            <span class="sticker-panel-title">🐰 Çıkartmalar</span>
+            <button class="input-btn" onclick="toggleStickerPanel()" style="font-size:16px;">✕</button>
+        </div>
+        <div class="sticker-grid" id="stickerGrid">
+            <button class="sticker-create-btn" onclick="openStickerModal()">+</button>
+        </div>
+    </div>
+
+<!-- STICKER OLUŞTURMA MODAL -->
+<div class="modal sticker-modal" id="stickerModal">
+    <div class="modal-content" style="max-width: 500px;">
+        <h2>🐰 Çıkartma Oluştur</h2>
+        
+        <!-- ADIM 1: Dosya Seç -->
+        <div id="stickerStep1">
+            <div class="form-group">
+                <label>Fotoğraf veya Video Seç</label>
+                <input type="file" id="stickerFileInput" accept="video/*,image/*" style="display:none;" onchange="handleStickerFile(this.files[0])">
+                <button class="photo-btn" onclick="document.getElementById('stickerFileInput').click()">📁 Dosya Seç</button>
+            </div>
+        </div>
+        
+        <!-- ADIM 2: Video Kesit Seçme -->
+<!-- ADIM 2: Video Önizleme -->
+<div id="stickerStep2" style="display:none;">
+    <div class="form-group">
+        <label>Önizleme (İlk 3 Saniye)</label>
+        <video id="stickerVideoPreview" style="width:100%; height:200px; border-radius:10px; background:#000; object-fit:cover;" muted playsinline loop></video>
+        <button class="btn-full" onclick="confirmVideoSticker()" style="margin-top:10px;">✅ Kesiti Onayla</button>
+    </div>
+</div>
+        
+        <!-- ADIM 3: Önizleme + Kaydet -->
+        <div id="stickerStep3" style="display:none;">
+            <div class="form-group">
+                <label>Önizleme</label>
+                <div id="stickerPreviewArea" style="text-align:center;"></div>
+            </div>
+            <button class="btn-full" onclick="saveSticker()">💾 Kaydet</button>
+        </div>
+        
+        <button class="btn-full" style="margin-top:8px; background:#e74c3c;" onclick="closeStickerModal()">İptal</button>
+    </div>
+</div>
+
+<div class="modal profile-view-modal" id="profileViewModal">
+    <div class="modal-content">
+        <h2>Profil</h2>
+        <img src="" class="profile-view-avatar" id="profileViewAvatar" alt="Avatar" onclick="toggleAvatarSize()">
+        <div class="profile-view-name" id="profileViewName"></div>
+        <button class="btn-full" style="margin-top:10px; background:#27ae60;" onclick="addCurrentToDM()">➕ DM Ekle</button>
+        <button class="btn-full" style="margin-top:8px; background:#e74c3c;" onclick="closeProfileView()">Kapat</button>
+    </div>
+</div>
+
+<!-- ÖZEL VİDEO OYNATICI -->
+<div class="video-player-overlay" id="videoPlayerOverlay">
+    <div class="video-player-container" id="videoPlayerContainer">
+        <video id="videoPlayer" playsinline preload="metadata" tabindex="-1"></video>
+        <img id="imagePlayer" style="display:none; width:100%; height:100%; object-fit:contain;" alt="Fotoğraf">
+    </div>
+    <button class="video-player-close" id="videoPlayerClose" onclick="closeVideoPlayer()">←</button>
+    <button class="video-player-fullscreen" id="videoPlayerFullscreen" onclick="toggleVideoPlayerZoom()">⛶</button>
+</div>
+
+<!-- MÜZİK OYNATICI -->
+<div class="music-player" id="musicPlayer">
+    <button class="music-player-close" onclick="closeMusicPlayer()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+    </button>
+    <div id="musicPlayerContent" style="width:100px; height:70px; overflow:hidden; border-radius:5px;"></div>
+    <div class="music-player-info">
+        <div id="musicPlayerTitle">Şarkı adı</div>
+        <div id="musicPlayerChannel">Kanal</div>
+    </div>
+    <button class="music-player-btn" id="musicMuteBtn" onclick="toggleMusicMute()" title="Sessize Al">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+        </svg>
+    </button>
+    <button class="music-player-btn" id="musicToggleBtn" onclick="toggleMusicPlayback()" title="Oynat/Duraklat">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+            <path d="M8 5v14l11-7z"/>
+        </svg>
+    </button>
+</div>
+
+    <!-- CONTEXT MENÜ -->
+    <div class="context-menu" id="contextMenu">
+        <div class="context-item" onclick="contextReply()">∞ Yanıtla</div>
+        <div class="context-item" onclick="contextReact()">🐼 İfade Bırak</div>
+        <div class="context-item danger" onclick="contextDelete()">🗑️ Sil</div>
+    </div>
+    
+    <!-- DM CONTEXT MENÜ -->
+<div class="context-menu" id="dmContextMenu">
+    <div class="context-item" onclick="dmReplyToMessage()">∞ Yanıtla</div>
+    <div class="context-item" onclick="dmEditMessage()">‡ Düzenle</div>
+    <div class="context-item" onclick="dmReactToMessage()"> 🐼 İfade Bırak</div>
+</div>
+
+    <!-- EMOJİ SEÇİCİ -->
+    <div class="reaction-picker" id="reactionPicker">
+        <span class="reaction-emoji" onclick="addReaction('🖕')">🖕</span>
+        <span class="reaction-emoji" onclick="addReaction('❤️')">❤️</span>
+        <span class="reaction-emoji" onclick="addReaction('😜')">😜</span>
+        <span class="reaction-emoji" onclick="addReaction('🤍')">🤍</span>
+    </div>
+
+    <!-- BLUR OVERLAY + ŞİFRE -->
+    <div class="blur-overlay" id="blurOverlay">
+        <div class="blur-title">⚙️ Ekran Kilitli</div>
+        <div class="blur-subtitle">Devam etmek için şifreyi gir</div>
+        <input type="password" class="blur-password-input" id="blurPassword" placeholder="Şifre" autocomplete="off">
+    </div>
+    
+    <!-- DM SOHBET MODAL -->
+<div class="modal dm-modal" id="dmModal">
+    <div class="modal-content">
+        <h2 id="dmModalTitle">🧸DM</h2>
+        <div class="messages-container scrollbar-thin" id="dmMessagesContainer" style="height:300px;"></div>
+        <div class="input-area" style="margin-top:10px;">
+            <textarea class="message-input" id="dmMessageInput" placeholder="Mesaj yaz..." rows="1"></textarea>
+            <button class="send-btn" onclick="sendDMMessage()">➤</button>
+        </div>
+        <button class="btn-full" style="margin-top:10px; background:#e74c3c;" onclick="closeDM()">Kapat</button>
+    </div>
+</div>
+
+
+<!-- KAMERA SİSTEMİ -->
+<div class="camera-overlay" id="cameraOverlay">
+    <div class="camera-top">
+        <button class="camera-top-btn" onclick="closeCamera()">✕</button>
+    </div>
+    
+  <video id="cameraPreview" autoplay playsinline muted style="display:none;"></video>
+<canvas id="cameraCanvas" style="width:100%;height:100%;object-fit:contain;"></canvas>
+    
+    <!-- Mod Seçici -->
+    <div class="camera-mode-selector">
+        <button class="camera-mode-btn active" id="photoModeBtn" onclick="setCameraMode('photo')">
+    Fotoğraf
+</button>
+<button class="camera-mode-btn" id="videoModeBtn" onclick="setCameraMode('video')">
+    Video
+</button>
+    </div>
+    
+    <!-- Alt Kontroller -->
+    <div class="camera-bottom">
+        <div class="camera-bottom-left">
+            <button class="camera-icon-btn" onclick="openCameraGallery()" title="Galeri">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21,15 16,10 5,21"/>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="camera-bottom-center">
+            <button class="camera-capture-btn" id="captureBtn" onclick="handleCapture()">
+                <img src="https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAEZnjVqiNcypAY9RPOqIiCfIwkYE0S-EQACHiEAAgK8SFT-tAhBtaDTQT0E.png" alt="Çekim" style="width:70px;height:70px;border-radius:50%;">
+            </button>
+        </div>
+        
+        <div class="camera-bottom-right">
+            <button class="camera-icon-btn" onclick="switchCamera()" title="Kamera Çevir">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                    <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9h3m-3 0a9 9 0 0 1-9 9M3 12a9 9 0 0 1 9-9m-9 9a9 9 0 0 0 9 9m-9-9H0m3 0a9 9 0 0 1 9-9"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- GALERİ SEÇİM SİSTEMİ -->
+<div class="gallery-overlay" id="galleryOverlay">
+    <div class="gallery-top">
+        <button class="camera-top-btn" onclick="closeGallery()">✕</button>
+    </div>
+    <div class="gallery-options">
+        <button class="gallery-option-btn" onclick="selectGalleryMedia('image')">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21,15 16,10 5,21"/>
+            </svg>
+            <span>Fotoğraf Seç</span>
+        </button>
+        <button class="gallery-option-btn" onclick="selectGalleryMedia('video')">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                <polygon points="23,7 16,12 23,17"/>
+                <rect x="1" y="5" width="15" height="14" rx="2"/>
+            </svg>
+            <span>Video Seç</span>
+        </button>
+    </div>
+    <input type="file" id="galleryInput" accept="image/*" multiple style="display:none;" onchange="handleGallerySelection(this.files)">
+    <input type="file" id="galleryVideoInput" accept="video/*" style="display:none;" onchange="handleGallerySelection(this.files)">
+</div>
+
+<!-- MEDYA ÖNİZLEME / KIRPMA -->
+<div class="media-preview-overlay" id="mediaPreviewOverlay">
+    <div class="preview-top">
+        <button class="camera-top-btn" onclick="closeMediaPreview()">←</button>
+    </div>
+    <div class="preview-content" id="previewContent">
+        <!-- Önizleme buraya gelecek -->
+    </div>
+    <div class="preview-actions">
+        <button class="preview-action-btn" id="previewActionBtn" onclick="handlePreviewAction()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                <path d="M22 2L11 13"/>
+                <path d="M22 2l-7 20-4-9-9-4z"/>
+            </svg>
+        </button>
+        <button class="preview-send-btn" onclick="sendMediaFromPreview()">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="white">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+        </button>
+    </div>
+</div>
+
+<!-- EKRAN PAYLAŞIMI ALANI (Ekranın Üst %45'i) -->
+<div id="screenShareArea" style="display:none; position:fixed; top:0; left:0; width:100%; height:45%; background:#000; z-index:26000;">
+    <video id="screenShareVideo" autoplay playsinline style="width:100%; height:100%; object-fit:contain;"></video>
+    
+    <!-- Sağ Üstteki Kontrol Butonları -->
+    <div style="position:absolute; top:10px; right:10px; display:flex; gap:8px;">
+        <!-- 1. Cihaz (Sistem) Sesi Aç/Kapat -->
+        <button id="screenShareAudioToggle" onclick="toggleScreenAudio()" class="screen-control-btn" style="display:none;" title="Cihaz Sesi">🔊</button>
+        
+        <!-- 2. Kendi Mikrofon Sesini Aç/Kapat (Sesli Aramadakine benzer) -->
+        <button id="screenShareMicToggle" onclick="toggleScreenMic()" class="screen-control-btn" style="display:none;" title="Mikrofon">🎤</button>
+        
+        <!-- 3. Sadece Sesli Aramayı Sonlandır (Ekran paylaşımı devam eder) -->
+        <button id="screenShareEndCall" onclick="endScreenCall()" class="screen-control-btn end-call" style="display:none;" title="Aramayı Sonlandır">📞</button>
+        
+        <!-- 4. Her Şeyi Kapat (Hem ekranı hem aramayı) -->
+        <button onclick="stopScreenShare()" class="screen-control-btn close-all" title="Her şeyi kapat">✕</button>
+    </div>
+</div>
+
+<!-- Ekran Paylaşımı Seçim Modalı -->
+<div id="screenShareModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:27000; align-items:center; justify-content:center; flex-direction:column; gap:20px;">
+    <div style="background:#2d2d44; padding:30px; border-radius:20px; text-align:center;">
+        <h3 style="margin-bottom:20px; color:#fff;">Ekran Paylaşımı Modu</h3>
+        <button id="btnScreenOnly" style="display:block; width:100%; margin-bottom:10px; padding:15px; background:#667eea; color:#fff; border:none; border-radius:10px; font-size:16px; cursor:pointer;">
+            Sadece Ekran Paylaşımı
+        </button>
+        <button id="btnScreenWithCall" style="display:block; width:100%; padding:15px; background:#27ae60; color:#fff; border:none; border-radius:10px; font-size:16px; cursor:pointer;">
+            Ekran + Sesli Arama
+        </button>
+    </div>
+</div>
+
+    <!-- ÇAĞRI OVERLAY -->
+    <div class="call-overlay" id="callOverlay">
+        <audio id="callRemoteAudio" autoplay playsinline style="display:none;"></audio>
+        <video id="callLocalVideo" class="call-local-video" autoplay muted playsinline style="display:none;"></video>
+        <video id="callRemoteVideo" class="call-remote-video" autoplay playsinline style="display:none;"></video>
+        <img src="" class="call-avatar" id="callAvatar" alt="Avatar" style="display:none;">
+        <div class="call-name" id="callName">Kullanıcı</div>
+        <div class="call-status" id="callStatus">Aranıyor...</div>
+        <div class="call-timer" id="callTimer" style="display:none;">00:00</div>
+<div class="call-controls">
+    <button class="call-control-btn mute" id="callMuteBtn" onclick="toggleCallMute()">🎤</button>
+    <button class="call-control-btn mute" id="callVideoBtn" onclick="toggleCallVideo()" style="display:none;">📹</button>
+    <button class="call-control-btn end" onclick="endCall()">📞</button>
+        </div>
+    </div>
+<script>
+    // ============ SABİTLER ============
+    const ROOM_CODE = 'efkaza7634';
+    const LOCK_PASSWORD = 'efkaza7634';
+
+    // ============ GLOBAL DEĞİŞKENLER ============
+    let socket = null;
+    let currentUser = null;
+    let isInChat = false;
+    let activeContextMessageId = null;
+    let activeContextMessageElement = null;
+    let replyToMessage = null;
+    let onlineUsers = [];
+    let darkModeEnabled = localStorage.getItem('darkModeEnabled') === 'true';
+let bannerModeEnabled = localStorage.getItem('bannerModeEnabled') === 'true';
+let notificationsEnabled = localStorage.getItem('notificationsEnabled') === 'true';
+
+function openBanner(text, messageId) {
+    text = decodeURIComponent(text);
+    document.getElementById('bannerFullscreenText').textContent = text;
+    document.getElementById('bannerOverlay').classList.add('active');
+    
+    // Otomatik kapanma YOK, kullanıcı geri tuşuyla kapatacak
+    // mesajId'yi sakla
+    window.currentBannerMessageId = messageId;
+    
+    const emojis = document.querySelectorAll('.banner-animated-emojis span');
+    emojis.forEach(emoji => {
+        emoji.style.animation = 'none';
+        void emoji.offsetWidth;
+        emoji.style.animation = 'bannerEmojiFloat 2.5s ease forwards';
+    });
+}
+
+function closeBanner() {
+    document.getElementById('bannerOverlay').classList.remove('active');
+    
+    const messageId = window.currentBannerMessageId;
+    if (!messageId) return;
+    
+    const bannerElement = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (bannerElement) {
+        bannerElement.classList.add('banner-exploding');
+        
+        // Animasyon bitince DOM'dan kaldır ve sunucuya silme isteği gönder
+        setTimeout(() => {
+            bannerElement.remove();
+            if (socket) {
+                socket.emit('delete-message', { messageId: messageId });
+            }
+        }, 600);
+    }
+    
+    window.currentBannerMessageId = null;
+}
+
+function toggleGame() {
+  const snakeArea = document.getElementById('snakeGameArea');
+  const zombieArea = document.getElementById('zombieGameArea');
+  const toggleBtn = document.getElementById('gameToggleBtn');
+
+  if (snakeArea.style.display === 'none') {
+    // Zombie kapalı, yılanı aç
+    snakeArea.style.display = 'block';
+    zombieArea.style.display = 'none';
+    toggleBtn.textContent = '🧟 Zombie Games';
+    
+    // Zombie iframe'i temizle (arka planda çalışmasın)
+    document.getElementById('zombieFrame').src = '';
+  } else {
+    // Yılanı kapat, Zombie'yi aç
+    snakeArea.style.display = 'none';
+    zombieArea.style.display = 'block';
+    toggleBtn.textContent = '🐍 Snake Games';
+    
+    // Zombie oyununu yükle
+    document.getElementById('zombieFrame').src = '/zombie';
+  }
+}
+
+// ============ YOUTUBE MÜZİK SİSTEMİ ============
+const YOUTUBE_API_KEY = 'AIzaSyD6Jp8nyJ_p5MUaCnnn8BFh7pxpPMiMorc';
+let youtubePlayer = null;
+let currentMusicVideoId = null;
+let isMusicPlaying = false;
+let isMusicMuted = false;
+let isMusicController = false;
+let musicRequesterId = null;
+let hasMusicPermission = false;
+
+function showMusicMenu() {
+    document.getElementById('menuMain').style.display = 'none';
+    document.getElementById('menuCalls').style.display = 'none';
+    document.getElementById('menuFonts').style.display = 'none';
+    document.getElementById('menuDM').style.display = 'none';
+    document.getElementById('menuSettings').style.display = 'none';
+    document.getElementById('menuBanner').style.display = 'none';
+    document.getElementById('menuMusic').style.display = 'block';
+}
+
+function requestMusicPermission() {
+    if (!socket) return;
+    
+    // Odada başka kullanıcı var mı kontrol et
+    const otherUsers = onlineUsers.filter(u => u.userName !== currentUser?.name);
+    if (otherUsers.length === 0) {
+        alert('❌ Odada müzik izni isteyecek başka kullanıcı yok!');
+        return;
+    }
+    
+    socket.emit('request-music-permission', {
+        requesterId: socket.id,
+        requester: currentUser?.name || 'Bilinmeyen Kullanıcı'
+    });
+}
+
+async function searchMusic() {
+    const query = document.getElementById('musicSearchInput').value.trim();
+    if (!query) return;
+
+    try {
+        const response = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=15&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`);
+        const data = await response.json();
+        if (data.items && data.items.length > 0) {
+            displayMusicResults(data.items);
+        } else {
+            document.getElementById('musicResults').innerHTML = '<div style="color:#666; padding:10px;">Sonuç bulunamadı</div>';
+        }
+    } catch (error) {
+        console.error('Müzik arama hatası:', error);
+        alert('Müzik arama hatası!');
+    }
+}
+
+function displayMusicResults(items) {
+    const container = document.getElementById('musicResults');
+    container.innerHTML = '';
+    items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'music-result-item';
+        div.innerHTML = `
+            <img src="${item.snippet.thumbnails.default.url}" class="music-result-thumb" alt="${item.snippet.title}">
+            <div>
+                <div class="music-result-title">${item.snippet.title}</div>
+                <div class="music-result-channel">${item.snippet.channelTitle}</div>
+            </div>
+        `;
+        div.onclick = () => selectMusic(item.id.videoId, item.snippet.title, item.snippet.channelTitle);
+        container.appendChild(div);
+    });
+}
+
+function selectMusic(videoId, title, channel) {
+    if (hasMusicPermission && socket) {
+        // İzin varsa ve biz kontrolcüyüz - herkese gönder
+        socket.emit('music-play', {
+            videoId: videoId,
+            title: title,
+            channel: channel,
+            requesterId: socket.id
+        });
+        // Kendi oynatıcımızda da başlat
+        playMusic(videoId, title, channel, socket.id);
+    } else {
+        // İzin yoksa sadece kendimiz için oynat
+        playMusic(videoId, title, channel, socket.id);
+    }
+}
+
+function playMusic(videoId, title, channel, requesterId) {
+    // Mikrofonu kapat (müzik dinlerken ses kısılmasın)
+    if (typeof localStream !== 'undefined' && localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+        console.log('🎤 Müzik için mikrofon kapatıldı');
+    }
+    // Eski oynatıcıyı temizle ve yok et
+    if (youtubePlayer && typeof youtubePlayer.destroy === 'function') {
+        try {
+            youtubePlayer.destroy();
+        } catch (e) {
+            console.warn('Player destroy hatası:', e);
+        }
+    }
+    youtubePlayer = null;
+
+    currentMusicVideoId = videoId;
+    musicRequesterId = requesterId;
+    isMusicController = (socket && requesterId === socket.id) || (!socket && requesterId === undefined);
+
+    document.getElementById('musicPlayerTitle').textContent = title;
+    document.getElementById('musicPlayerChannel').textContent = channel;
+    document.getElementById('musicPlayer').classList.add('active');
+
+    const container = document.getElementById('musicPlayerContent');
+    container.innerHTML = '';
+
+    document.getElementById('musicToggleBtn').style.display = 'flex';
+    document.getElementById('musicMuteBtn').style.display = 'flex';
+
+    // Yeni oynatıcı oluştur
+    if (typeof YT !== 'undefined' && YT.Player) {
+        youtubePlayer = new YT.Player(container, {
+            height: '70',
+            width: '100%',
+            videoId: videoId,
+            playerVars: {
+                autoplay: 1,
+                controls: 0,
+                modestbranding: 1,
+                rel: 0,
+                playsinline: 1
+            },
+            events: {
+                onReady: (event) => {
+                    // Sadece videoyu oynat ve sesin açık olduğundan emin ol
+                    event.target.playVideo();
+                    event.target.unMute();
+                    isMusicPlaying = true;
+                    updateMusicToggleIcon();
+                    updateMusicMuteIcon();
+                },
+                onStateChange: (event) => {
+                    if (event.data === YT.PlayerState.PLAYING) {
+                        isMusicPlaying = true;
+                        updateMusicToggleIcon();
+                    } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+                        isMusicPlaying = false;
+                        updateMusicToggleIcon();
+                    }
+                }
+            }
+        });
+    } else {
+        console.error('YouTube IFrame API yüklenmemiş!');
+    }
+}
+
+function updateMusicToggleIcon() {
+    const btn = document.getElementById('musicToggleBtn');
+    if (isMusicPlaying) {
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+    } else {
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>';
+    }
+}
+
+function updateMusicMuteIcon() {
+    const btn = document.getElementById('musicMuteBtn');
+    if (isMusicMuted) {
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
+    } else {
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+    }
+}
+
+function toggleMusicPlayback() {
+    if (!youtubePlayer) return;
+
+    if (isMusicPlaying) {
+        youtubePlayer.pauseVideo();
+        if (socket && isMusicController) {
+            socket.emit('music-control', { action: 'pause', requesterId: socket.id });
+        }
+    } else {
+        youtubePlayer.playVideo();
+        if (socket && isMusicController) {
+            socket.emit('music-control', { action: 'play', requesterId: socket.id });
+        }
+    }
+}
+
+function toggleMusicMute() {
+    if (!youtubePlayer) return;
+
+    isMusicMuted = !isMusicMuted;
+    if (isMusicMuted) {
+        youtubePlayer.mute();
+    } else {
+        youtubePlayer.unMute();
+    }
+    updateMusicMuteIcon();
+
+    // Eğer kontrolcü biz isek, bu değişikliği diğerlerine de gönder
+    if (socket && isMusicController) {
+        socket.emit('music-control', {
+            action: isMusicMuted ? 'mute' : 'unmute',
+            requesterId: socket.id
+        });
+    }
+}
+
+function closeMusicPlayer() {
+    document.getElementById('musicPlayer').classList.remove('active');
+
+    if (youtubePlayer && typeof youtubePlayer.destroy === 'function') {
+        youtubePlayer.destroy();
+    }
+    youtubePlayer = null;
+    currentMusicVideoId = null;
+    isMusicPlaying = false;
+    isMusicMuted = false;
+    isMusicController = false;
+    musicRequesterId = null;
+
+    // Sadece kontrolcü ve izinli ise iptal et, döngüyü önlemek için bayrak kullan
+    if (socket && hasMusicPermission && isMusicController) {
+        hasMusicPermission = false;
+        socket.emit('revoke-music-permission', { requesterId: socket.id });
+    }
+}
+
+function setupMusicSocketEvents() {
+    if (!socket) return;
+
+    // Gelen izin isteği
+    socket.on('music-permission-request', (data) => {
+        // Kendi isteğimizi yok say
+        if (data.requesterId === socket.id) return;
+
+        const accept = confirm(`${data.requester || 'Bilinmeyen Kullanıcı'} müzik izni istiyor. Kabul edilsin mi?`);
+        if (accept) {
+            hasMusicPermission = true;
+            socket.emit('accept-music-permission', data);
+            alert('✅ Müzik izni verdiniz');
+        } else {
+            socket.emit('reject-music-permission', data);
+        }
+    });
+
+    // İzin durumu
+    socket.on('music-permission-status', (data) => {
+        if (data.status === 'sent') {
+            alert('✅ Müzik izni isteği gönderildi');
+        } else if (data.status === 'no-users') {
+            alert('❌ Odada kimse yok');
+        } else if (data.status === 'accepted') {
+            hasMusicPermission = true;
+            alert(`✅ ${data.listenerName || 'Kullanıcı'} müzik iznini kabul etti`);
+        } else if (data.status === 'rejected') {
+            alert('❌ Müzik izni reddedildi');
+        } else if (data.status === 'revoked') {
+            // Eğer iptal eden biz değilsek, oynatıcıyı kapat
+            if (data.requesterId !== socket.id) {
+                hasMusicPermission = false;
+                alert(`❌ ${data.listenerName || 'Kullanıcı'} müzik iznini iptal etti`);
+                closeMusicPlayer();
+            }
+        }
+    });
+
+    // Müzik çalma komutu (başkasından gelir)
+    socket.on('music-play', (data) => {
+        playMusic(data.videoId, data.title, data.channel, data.requesterId);
+    });
+
+    // Oynatma kontrolü komutu
+    socket.on('music-control', (data) => {
+        if (!youtubePlayer) return;
+
+        if (data.action === 'play') {
+            youtubePlayer.playVideo();
+        } else if (data.action === 'pause') {
+            youtubePlayer.pauseVideo();
+        } else if (data.action === 'mute') {
+            youtubePlayer.mute();
+            isMusicMuted = true;
+            updateMusicMuteIcon();
+        } else if (data.action === 'unmute') {
+            youtubePlayer.unMute();
+            isMusicMuted = false;
+            updateMusicMuteIcon();
+        } else if (data.action === 'stop') {
+            closeMusicPlayer();
+        }
+    });
+}
+
+    // ============ YILAN OYUNU ============
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const gridSize = 20;
+    const tileCount = canvas.width / gridSize;
+
+    let snake = [{ x: 10, y: 10 }];
+    let direction = { x: 0, y: 0 };
+    let nextDirection = { x: 0, y: 0 };
+    let food = { x: 15, y: 15 };
+    let score = 0;
+    let bestScore = parseInt(localStorage.getItem('snakeBestScore')) || 0;
+    let gameRunning = false;
+    let gamePaused = false;
+    let gameLoop = null;
+    let gameSpeed = 150;
+    let hasStartedMoving = false;
+    let particles = [];
+    let foodPulse = 0;
+
+    document.getElementById('bestScore').textContent = bestScore;
+
+    function generateFood() {
+        do {
+            food = {
+                x: Math.floor(Math.random() * tileCount),
+                y: Math.floor(Math.random() * tileCount)
+            };
+        } while (snake.some(s => s.x === food.x && s.y === food.y));
+    }
+
+    function spawnParticles(x, y, color) {
+        for (let i = 0; i < 6; i++) {
+            particles.push({
+                x: x * gridSize + gridSize/2,
+                y: y * gridSize + gridSize/2,
+                vx: (Math.random() - 0.5) * 3,
+                vy: (Math.random() - 0.5) * 3,
+                life: 15,
+                maxLife: 15,
+                color: color,
+                size: 2 + Math.random() * 2
+            });
+        }
+    }
+
+    function updateParticles() {
+        particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life--;
+        });
+        particles = particles.filter(p => p.life > 0);
+    }
+
+    function drawParticles() {
+        particles.forEach(p => {
+            ctx.globalAlpha = p.life / p.maxLife;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+    }
+
+    function drawGame() {
+        // Temiz arkaplan
+        ctx.fillStyle = '#0d0d1a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Yılan
+        snake.forEach((seg, i) => {
+            const x = seg.x * gridSize;
+            const y = seg.y * gridSize;
+            const size = gridSize - 2;
+            
+            if (i === 0) {
+                // Baş
+                ctx.fillStyle = '#667eea';
+                ctx.shadowColor = '#667eea';
+                ctx.shadowBlur = 6;
+                ctx.beginPath();
+                ctx.arc(x + gridSize/2, y + gridSize/2, size/2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                
+                // Gözler
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                if (direction.x === 1) {
+                    ctx.arc(x + 14, y + 6, 2.5, 0, Math.PI * 2);
+                    ctx.arc(x + 14, y + 14, 2.5, 0, Math.PI * 2);
+                } else if (direction.x === -1) {
+                    ctx.arc(x + 5, y + 6, 2.5, 0, Math.PI * 2);
+                    ctx.arc(x + 5, y + 14, 2.5, 0, Math.PI * 2);
+                } else if (direction.y === 1) {
+                    ctx.arc(x + 6, y + 14, 2.5, 0, Math.PI * 2);
+                    ctx.arc(x + 14, y + 14, 2.5, 0, Math.PI * 2);
+                } else {
+                    ctx.arc(x + 6, y + 5, 2.5, 0, Math.PI * 2);
+                    ctx.arc(x + 14, y + 5, 2.5, 0, Math.PI * 2);
+                }
+                ctx.fill();
+                
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                if (direction.x === 1) {
+                    ctx.arc(x + 15, y + 6, 1.2, 0, Math.PI * 2);
+                    ctx.arc(x + 15, y + 14, 1.2, 0, Math.PI * 2);
+                } else if (direction.x === -1) {
+                    ctx.arc(x + 4, y + 6, 1.2, 0, Math.PI * 2);
+                    ctx.arc(x + 4, y + 14, 1.2, 0, Math.PI * 2);
+                } else if (direction.y === 1) {
+                    ctx.arc(x + 6, y + 15, 1.2, 0, Math.PI * 2);
+                    ctx.arc(x + 14, y + 15, 1.2, 0, Math.PI * 2);
+                } else {
+                    ctx.arc(x + 6, y + 4, 1.2, 0, Math.PI * 2);
+                    ctx.arc(x + 14, y + 4, 1.2, 0, Math.PI * 2);
+                }
+                ctx.fill();
+            } else {
+                // Gövde
+                const alpha = 1 - (i / snake.length) * 0.6;
+                ctx.fillStyle = `rgba(85, 104, 211, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(x + gridSize/2, y + gridSize/2, size/2 - 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
+
+        // Elma
+        foodPulse += 0.05;
+        const pulseSize = Math.sin(foodPulse) * 1.5;
+        
+        ctx.shadowColor = '#e74c3c';
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = '#e74c3c';
+        ctx.beginPath();
+        ctx.arc(
+            food.x * gridSize + gridSize/2,
+            food.y * gridSize + gridSize/2,
+            gridSize/2 - 3 + pulseSize,
+            0, Math.PI * 2
+        );
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        
+        // Sap
+        ctx.strokeStyle = '#27ae60';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(food.x * gridSize + gridSize/2, food.y * gridSize + 3);
+        ctx.lineTo(food.x * gridSize + gridSize/2 + 2, food.y * gridSize - 3);
+        ctx.stroke();
+
+        // Parçacıklar
+        drawParticles();
+    }
+
+    function updateGame() {
+        if (!gameRunning || gamePaused) return;
+        if (!hasStartedMoving || (direction.x === 0 && direction.y === 0)) return;
+
+        direction = { ...nextDirection };
+
+        const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+        
+        if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+            spawnParticles(snake[0].x, snake[0].y, '#e74c3c');
+            endGame();
+            return;
+        }
+
+        if (snake.some((seg, index) => index > 0 && seg.x === head.x && seg.y === head.y)) {
+            spawnParticles(head.x, head.y, '#e74c3c');
+            endGame();
+            return;
+        }
+
+        snake.unshift(head);
+
+        if (head.x === food.x && head.y === food.y) {
+            score += 10;
+            document.getElementById('score').textContent = score;
+            spawnParticles(food.x, food.y, '#e74c3c');
+            generateFood();
+            if (gameSpeed > 60) {
+                gameSpeed = Math.max(60, gameSpeed - 3);
+            }
+        } else {
+            snake.pop();
+        }
+
+        updateParticles();
+        drawGame();
+    }
+
+    function startGame() {
+        document.getElementById('startOverlay').classList.add('hidden');
+        document.getElementById('gameOverOverlay').classList.add('hidden');
+        
+        snake = [{ x: 10, y: 10 }];
+        direction = { x: 0, y: 0 };
+        nextDirection = { x: 0, y: 0 };
+        score = 0;
+        gameSpeed = 150;
+        hasStartedMoving = false;
+        gamePaused = false;
+        particles = [];
+        
+        document.getElementById('score').textContent = score;
+        generateFood();
+        drawGame();
+        
+        if (gameLoop) clearInterval(gameLoop);
+        gameRunning = true;
+    }
+
+    function pauseGame() {
+        if (!gameRunning || !hasStartedMoving) return;
+        gamePaused = !gamePaused;
+    }
+
+    function restartGame() {
+        startGame();
+    }
+
+    function endGame() {
+        gameRunning = false;
+        clearInterval(gameLoop);
+        
+        if (score > bestScore) {
+            bestScore = score;
+            localStorage.setItem('snakeBestScore', bestScore);
+            document.getElementById('bestScore').textContent = bestScore;
+        }
+        document.getElementById('finalScore').textContent = score;
+        document.getElementById('gameOverOverlay').classList.remove('hidden');
+    }
+
+    function startMoving(newDir) {
+        if (hasStartedMoving) return;
+        direction = { ...newDir };
+        nextDirection = { ...newDir };
+        hasStartedMoving = true;
+        if (gameLoop) clearInterval(gameLoop);
+        gameLoop = setInterval(updateGame, gameSpeed);
+    }
+
+    function changeDirection(newDir) {
+        if (!hasStartedMoving) return;
+        
+        const dirMap = {
+            up: {x:0, y:-1}, down: {x:0, y:1},
+            left: {x:-1, y:0}, right: {x:1, y:0}
+        };
+        const nd = dirMap[newDir];
+        if (!nd) return;
+        if (direction.x + nd.x === 0 && direction.y + nd.y === 0) return;
+        nextDirection = nd;
+    }
+
+    // Klavye dinleyici
+    document.addEventListener('keydown', (e) => {
+        if (!gameRunning) return;
+        
+        const keyMap = {
+            'ArrowUp': {x:0, y:-1}, 'w': {x:0, y:-1}, 'W': {x:0, y:-1},
+            'ArrowDown': {x:0, y:1}, 's': {x:0, y:1}, 'S': {x:0, y:1},
+            'ArrowLeft': {x:-1, y:0}, 'a': {x:-1, y:0}, 'A': {x:-1, y:0},
+            'ArrowRight': {x:1, y:0}, 'd': {x:1, y:0}, 'D': {x:1, y:0}
+        };
+        
+        const newDir = keyMap[e.key];
+        if (!newDir) return;
+        e.preventDefault();
+        
+        if (!hasStartedMoving) {
+            startMoving(newDir);
+        } else {
+            if (direction.x + newDir.x === 0 && direction.y + newDir.y === 0) return;
+            nextDirection = newDir;
+        }
+    });
+
+    // Dokunmatik
+    let touchStartX = null, touchStartY = null;
+
+    canvas.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        e.preventDefault();
+    });
+
+    canvas.addEventListener('touchmove', (e) => {
+        if (!touchStartX || !touchStartY) return;
+        const dx = e.touches[0].clientX - touchStartX;
+        const dy = e.touches[0].clientY - touchStartY;
+        
+        if (Math.abs(dx) > 15 || Math.abs(dy) > 15) {
+            const newDir = Math.abs(dx) > Math.abs(dy)
+                ? (dx > 0 ? {x:1, y:0} : {x:-1, y:0})
+                : (dy > 0 ? {x:0, y:1} : {x:0, y:-1});
+            
+            if (!hasStartedMoving) {
+                startMoving(newDir);
+            } else {
+                if (direction.x + newDir.x === 0 && direction.y + newDir.y === 0) return;
+                nextDirection = newDir;
+            }
+            touchStartX = null;
+            touchStartY = null;
+        }
+        e.preventDefault();
+    });
+
+    canvas.addEventListener('touchend', () => {
+        touchStartX = null;
+        touchStartY = null;
+    });
+    
+// ============ EKRAN PAYLAŞIMI SİSTEMİ (GÜNCELLENMİŞ) ============
+let screenStream = null;
+let screenPeer = null;
+let isScreenSharing = false;
+let isScreenCallActive = false;
+let screenShareRequesterId = null;
+let selectedScreenShareMode = 'screen-only';
+
+function startScreenShare() {
+    const otherUsers = onlineUsers.filter(u => u.userName !== currentUser?.name);
+    if (otherUsers.length === 0) {
+        alert('Odada başka kullanıcı yok!');
+        return;
+    }
+    
+    const targetUserName = otherUsers[0].userName;
+    console.log('Hedef kullanıcı:', targetUserName);
+    
+    const modal = document.getElementById('screenShareModal');
+    if (!modal) {
+        alert('Seçim modalı bulunamadı! HTML eksik olabilir.');
+        return;
+    }
+    modal.style.display = 'flex';
+    
+    document.getElementById('btnScreenOnly').onclick = () => {
+        selectedScreenShareMode = 'screen-only';
+        modal.style.display = 'none';
+        socket.emit('screen-share-request', {
+            targetUserName: targetUserName,
+            requesterId: socket.id,
+            requesterName: currentUser?.name || 'Bilinmeyen',
+            mode: 'screen-only'
+        });
+        console.log('📤 Sadece ekran isteği gönderildi');
+    };
+    
+    document.getElementById('btnScreenWithCall').onclick = () => {
+        selectedScreenShareMode = 'screen-call';
+        modal.style.display = 'none';
+        socket.emit('screen-share-request', {
+            targetUserName: targetUserName,
+            requesterId: socket.id,
+            requesterName: currentUser?.name || 'Bilinmeyen',
+            mode: 'screen-call'
+        });
+        console.log('📤 Ekran + sesli istek gönderildi');
+    };
+}
+
+async function initScreenShare(requesterId, includeMic = true) {
+    // Tarayıcı desteği kontrolü
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        alert('Tarayıcınız ekran paylaşımını desteklemiyor. Lütfen Chrome veya Edge kullanın.');
+        return;
+    }
+
+    try {
+        // Ekran ve sistem sesini al
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+
+        // Sesli arama seçilmişse mikrofonu ekle
+        if (includeMic) {
+            const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            screenStream.addTrack(micStream.getAudioTracks()[0]);
+            isScreenCallActive = true;
+            document.getElementById('screenShareMicToggle').style.display = 'flex';
+            document.getElementById('screenShareEndCall').style.display = 'flex';
+        } else {
+            isScreenCallActive = false;
+            document.getElementById('screenShareMicToggle').style.display = 'none';
+            document.getElementById('screenShareEndCall').style.display = 'none';
+        }
+
+        // Arayüzü güncelle: Üstte %45 ekran, altta %55 sohbet
+        document.getElementById('screenShareArea').style.display = 'block';
+        document.getElementById('chatInterface').classList.add('screen-sharing');
+        document.getElementById('screenShareVideo').srcObject = screenStream;
+
+        // Cihaz sesi butonunu göster (sadece paylaşan tarafta)
+        document.getElementById('screenShareAudioToggle').style.display = 'flex';
+
+        // Cloudflare TURN kullanarak bağlantı kur
+        screenPeer = new RTCPeerConnection(rtcConfig);
+
+        // Tüm izleri bağla
+        screenStream.getTracks().forEach(track => {
+            screenPeer.addTrack(track, screenStream);
+        });
+
+        // Karşı taraftan gelen videoyu göster
+        screenPeer.ontrack = (event) => {
+            if (event.track.kind === 'video') {
+                document.getElementById('screenShareVideo').srcObject = event.streams[0];
+            }
+        };
+
+        // Bağlantı adaylarını gönder
+        screenPeer.onicecandidate = (event) => {
+            if (event.candidate) {
+                socket.emit('screen-share-ice', { candidate: event.candidate, targetUserId: requesterId });
+            }
+        };
+
+        // Teklif oluştur ve gönder
+        const offer = await screenPeer.createOffer();
+        await screenPeer.setLocalDescription(offer);
+        socket.emit('screen-share-offer', { targetUserId: requesterId, offer: offer });
+
+        isScreenSharing = true;
+
+    } catch (error) {
+        console.error('Ekran paylaşımı başlatılamadı:', error);
+        alert('Ekran paylaşımı başlatılamadı: ' + error.message);
+    }
+}
+
+// Cihaz (sistem) sesini aç/kapat
+function toggleScreenAudio() {
+    if (!screenStream) return;
+    const audioTrack = screenStream.getAudioTracks().find(track => track.label.toLowerCase().includes('system') || track.label.toLowerCase().includes('screen'));
+    if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        document.getElementById('screenShareAudioToggle').textContent = audioTrack.enabled ? '🔊' : '🔇';
+    }
+}
+
+// Kendi mikrofon sesini aç/kapat (sesli aramada)
+function toggleScreenMic() {
+    if (!screenStream) return;
+    const micTrack = screenStream.getAudioTracks().find(track => !track.label.toLowerCase().includes('system') && !track.label.toLowerCase().includes('screen'));
+    if (micTrack) {
+        micTrack.enabled = !micTrack.enabled;
+        document.getElementById('screenShareMicToggle').textContent = micTrack.enabled ? '🎤' : '🔇';
+    }
+}
+
+// Sadece sesli aramayı sonlandır (Ekran paylaşımı devam eder)
+function endScreenCall() {
+    if (screenStream) {
+        const micTrack = screenStream.getAudioTracks().find(track => !track.label.toLowerCase().includes('system') && !track.label.toLowerCase().includes('screen'));
+        if (micTrack) micTrack.stop();
+    }
+    document.getElementById('screenShareMicToggle').style.display = 'none';
+    document.getElementById('screenShareEndCall').style.display = 'none';
+    isScreenCallActive = false;
+    socket.emit('screen-share-call-ended', { targetUserId: screenShareRequesterId });
+}
+
+// Her şeyi kapat (Hem ekranı hem aramayı) ve sohbeti tam ekrana döndür
+function stopScreenShare() {
+    if (screenStream) {
+        screenStream.getTracks().forEach(track => track.stop());
+        screenStream = null;
+    }
+    if (screenPeer) {
+        screenPeer.close();
+        screenPeer = null;
+    }
+    // Arayüzü tamamen normale döndür
+    document.getElementById('screenShareArea').style.display = 'none';
+    document.getElementById('chatInterface').classList.remove('screen-sharing');
+    document.getElementById('screenShareAudioToggle').style.display = 'none';
+    document.getElementById('screenShareMicToggle').style.display = 'flex';
+    document.getElementById('screenShareEndCall').style.display = 'flex';
+    isScreenSharing = false;
+    isScreenCallActive = false;
+    socket.emit('screen-share-stopped', { targetUserId: screenShareRequesterId });
+}
+
+function setupScreenShareSocketEvents() {
+    if (!socket) return;
+
+    // Karşı taraftan istek geldiğinde (İSTEMCİ)
+    socket.on('screen-share-request', (data) => {
+        const acceptShare = confirm(`${data.requesterName} ekranını paylaşmak istiyor.\nMod: ${data.mode === 'screen-call' ? 'Ekran + Sesli Arama' : 'Sadece Ekran Paylaşımı'}\nKabul edilsin mi?`);
+        if (acceptShare) {
+            screenShareRequesterId = data.requesterId;
+            socket.emit('screen-share-accept', data);
+            
+            const includeMic = (data.mode === 'screen-call');
+            initScreenShare(data.requesterId, includeMic);
+        } else {
+            socket.emit('screen-share-reject', data);
+        }
+    });
+
+socket.on('screen-share-accepted', async (data) => {
+    screenShareRequesterId = data.requesterId;
+    console.log('✅ İstek kabul edildi, seçilen mod:', selectedScreenShareMode);
+    await initScreenShare(data.requesterId, selectedScreenShareMode === 'screen-call');
+});
+
+    // Teklif geldi (Cevap veren tarafta)
+    socket.on('screen-share-offer', async (data) => {
+        if (!screenPeer) {
+            screenPeer = new RTCPeerConnection(rtcConfig);
+            screenPeer.ontrack = (event) => {
+                if (event.track.kind === 'video') {
+                    document.getElementById('screenShareVideo').srcObject = event.streams[0];
+                }
+            };
+            screenPeer.onicecandidate = (event) => {
+                if (event.candidate) socket.emit('screen-share-ice', { candidate: event.candidate, targetUserId: data.targetUserId });
+            };
+        }
+        await screenPeer.setRemoteDescription(data.offer);
+        const answer = await screenPeer.createAnswer();
+        await screenPeer.setLocalDescription(answer);
+        socket.emit('screen-share-answer', { targetUserId: data.targetUserId, answer: answer });
+    });
+
+    // Cevap geldi (İstek gönderen tarafta)
+    socket.on('screen-share-answer', async (data) => {
+        if (screenPeer) await screenPeer.setRemoteDescription(data.answer);
+    });
+
+    // Bağlantı adayı geldi
+    socket.on('screen-share-ice', async (data) => {
+        if (screenPeer) await screenPeer.addIceCandidate(data.candidate);
+    });
+
+    // Reddedildi
+    socket.on('screen-share-rejected', () => {
+        alert('Ekran paylaşımı reddedildi.');
+    });
+
+    // Karşı taraf durdurdu
+    socket.on('screen-share-stopped', () => {
+        stopScreenShare();
+    });
+
+    // Karşı taraf sadece aramayı sonlandırdı
+    socket.on('screen-share-call-ended', () => {
+        isScreenCallActive = false;
+        document.getElementById('screenShareMicToggle').style.display = 'none';
+        document.getElementById('screenShareEndCall').style.display = 'none';
+    });
+}
+
+ // ============ ARKA PLAN KİLİDİ ============
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && isInChat) {
+        showBlurLock();
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = null;
+        }
+    }
+});
+
+function showBlurLock() {
+    document.getElementById('blurOverlay').classList.add('active');
+    document.getElementById('blurPassword').value = '';
+    document.getElementById('blurPassword').focus();
+}
+
+document.getElementById('blurPassword').addEventListener('keydown', async (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        if (e.target.value === LOCK_PASSWORD) {
+            document.getElementById('blurOverlay').classList.remove('active');
+            // Şifre doğruysa mikrofon iznini tekrar al
+            try {
+                await navigator.mediaDevices.getUserMedia({ audio: true });
+            } catch (error) {
+                console.log('Mikrofon izni alınamadı:', error);
+            }
+        } else {
+            e.target.value = '';
+        }
+    }
+});
+
+// ============ PROFİL YÖNETİMİ ============
+function checkProfile() {
+    const saved = localStorage.getItem('chatProfile');
+    if (saved) {
+        currentUser = JSON.parse(saved);
+        showChat();
+    } else {
+        showProfileModal();
+    }
+}
+
+function showProfileModal() {
+    document.getElementById('profileModal').classList.add('active');
+    document.getElementById('nameInput').focus();
+}
+
+function saveProfile() {
+    const name = document.getElementById('nameInput').value.trim();
+    if (!name) { alert('İsim gerekli'); return; }
+    const photo = document.getElementById('photoPreview').src || '';
+    currentUser = { name, photo };
+    localStorage.setItem('chatProfile', JSON.stringify(currentUser));
+    document.getElementById('profileModal').classList.remove('active');
+    showChat();
+}
+
+document.getElementById('photoInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { alert('Fotoğraf 5MB altı olmalı'); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        document.getElementById('photoPreview').src = ev.target.result;
+        document.getElementById('photoPreview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+});
+
+// ============ SOHBET ============
+function connectSocket() {
+    const url = window.location.hostname === 'localhost' ? 'http://localhost:10000' : window.location.origin;
+    socket = io(url, { transports: ['websocket','polling'], timeout: 30000, reconnectionAttempts: 5 });
+
+    socket.on('connect', () => { console.log('✅ Bağlandı'); joinChatRoom(); });
+socket.on('message', (msg) => { 
+    displayMessage(msg);
+});
+    socket.on('message-deleted', (data) => { removeMessageFromDOM(data.messageId); });
+    socket.on('message-reaction', (data) => { updateMessageReaction(data.messageId, data.emoji, data.userName); });
+    socket.on('user-list-update', (users) => {
+       onlineUsers = users; // Kullanıcı listesini sakla
+        document.getElementById('onlineCount').textContent = users.length;
+        document.getElementById('chatOnlineCount').textContent = `Çevrimiçi: ${users.length}`;
+    });
+    socket.on('user-joined', (d) => addSystemMessage(`${d.userName} sohbete katıldı`));
+    socket.on('user-left', (d) => addSystemMessage(`${d.userName} sohbetten ayrıldı`));
+    socket.on('disconnect', () => console.log('🔌 Koptu'));
+}
+
+function joinChatRoom() {
+    if (!socket || !currentUser) return;
+    socket.emit('join-chat', { roomCode: ROOM_CODE, userName: currentUser.name, userPhoto: currentUser.photo });
+    registerPush();
+}
+
+async function registerPush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        console.log('Push desteklenmiyor');
+        return;
+    }
+    
+    try {
+        const registration = await navigator.serviceWorker.register('/sw.js');
+        const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array('BGi5YzcNdxf0cwoOedi2_IHJ3dQ8R6gzqSu-WmDUM9C0cldXbtjkoOZcQirdT-Pb3GVelT3G206tIAyaDu59m_0')
+        });
+        socket.emit('save-subscription', { subscription });
+        console.log('✅ Push aboneliği başarılı');
+    } catch (error) {
+        console.error('❌ Push kaydı hatası:', error);
+    }
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+async function showChat() {
+    isInChat = true;
+    document.getElementById('gameContainer').style.display = 'none';
+    document.getElementById('chatInterface').classList.add('active');
+    document.getElementById('chatAvatar').src = currentUser.photo || '';
+    document.getElementById('chatUserName').textContent = currentUser.name;
+    if (!socket) connectSocket(); else if (socket.connected) joinChatRoom();
+    document.getElementById('messageInput').focus();
+ /*   
+    // Mikrofonu otomatik aç (önceden izin verilmişse sormaz)
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        console.log('🎤 Mikrofon otomatik açıldı');
+    } catch (error) {
+        console.log('❌ Mikrofon açılamadı:', error);
+    } */
+}
+
+function exitChat() {
+    isInChat = false;
+    document.getElementById('chatInterface').classList.remove('active');
+    document.getElementById('gameContainer').style.display = 'flex';
+    if (socket) { socket.disconnect(); socket = null; }
+    
+    // Mikrofonu kapat
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+    }
+}
+
+function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const text = input.value.trim();
+    if (!text || !socket) return;
+    
+    // O anki seçili fontu al
+    const currentFont = getComputedStyle(document.documentElement).getPropertyValue('--message-font').trim();
+    
+    const payload = { type: 'text', text, font: currentFont, bannerMode: bannerModeEnabled };
+    if (replyToMessage) {
+        payload.replyTo = replyToMessage.id;
+        payload.replyToUserName = replyToMessage.userName;
+        payload.replyToText = replyToMessage.text;
+    }
+    socket.emit('message', payload);
+    input.value = '';
+    input.style.height = 'auto';
+    replyToMessage = null;
+    input.focus();
+}
+
+function displayMessage(msg) {
+    const container = document.getElementById('messagesContainer');
+    const isOwn = msg.userName === currentUser?.name;
+    const div = document.createElement('div');
+    div.className = `message ${isOwn ? 'own' : ''}`;
+    div.dataset.messageId = msg.id;
+
+let content = '';
+if (msg.replyTo) {
+    content += `<div class="message-reply-preview" onclick="scrollToMessage('${msg.replyTo}')">↩️ ${escapeHtml(msg.replyToUserName)}: ${escapeHtml(msg.replyToText || '')}</div>`;
+}
+if (msg.type === 'text') {
+if (msg.bannerMode) {
+    const bannerText = encodeURIComponent(msg.text);
+    content += `
+    <div class="banner-message" data-message-id="${msg.id}" onclick="openBanner('${bannerText}', '${msg.id}')">
+        <span style="font-size: 45px;">🐰</span>
+        <span style="font-size: 13px; font-weight: bold;">Pankartı Aç</span>
+    </div>`;
+} else {
+        const msgFont = msg.font || "'Segoe UI', sans-serif";
+        content += `<div class="message-text" style="font-family: ${msgFont};">${escapeHtml(msg.text)}</div>`;
+    }
+} else if (msg.type === 'image') {
+    content += `<div class="message-text">${msg.text ? escapeHtml(msg.text) : ''}</div>
+    <img src="${msg.fileData}" class="message-image" alt="Fotoğraf" onclick="openFullscreenImage('${msg.fileData}')">`;
+} else if (msg.type === 'video') {
+    content += `<div class="message-video-card" onclick="openFullscreenVideo('${msg.fileData}')">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polygon points="10,8 16,12 10,16" fill="white"/>
+        </svg>
+        <span>Videoyu Aç</span>
+    </div>`;
+} else if (msg.type === 'sticker') {
+    if (msg.stickerType === 'video') {
+        content += `<video src="${msg.fileData}" class="message-sticker" autoplay muted loop playsinline style="transform: rotate(90deg);" onloadedmetadata="setupStickerVideo(this)"></video>`;
+    } else {
+        content += `<img src="${msg.fileData}" class="message-sticker" alt="Sticker">`;
+    }
+} else if (msg.type === 'audio') {
+    content += `<div class="message-audio"><audio controls controlsList="nodownload" preload="metadata"><source src="${msg.fileData}" type="${msg.mimeType || 'audio/webm'}"></audio></div>`;
+}
+
+    if (msg.reactions && msg.reactions.length > 0) {
+        content += `<div class="message-reactions">`;
+        msg.reactions.forEach(r => {
+            content += `<span class="reaction-badge">${r.emoji} ${r.count > 1 ? r.count : ''}</span>`;
+        });
+        content += `</div>`;
+    }
+
+    div.innerHTML = `
+        <img src="${msg.userPhoto || ''}" class="message-avatar" alt="${msg.userName}" onclick="showProfile('${msg.userName}', '${msg.userPhoto}')">
+        <div class="message-body">
+            <div class="message-content">
+                <div class="message-header">
+                    <span class="message-sender" onclick="showProfile('${msg.userName}', '${msg.userPhoto}')">${escapeHtml(msg.userName)}</span>
+                    <span class="message-time">${msg.time}</span>
+                </div>
+                ${content}
+            </div>
+        </div>
+    `;
+    
+    if (msg.bannerMode) {
+    div.classList.add('banner-mode');
+}
+
+if (msg.type === 'video') {
+    const contentEl = div.querySelector('.message-content');
+    if (contentEl) contentEl.classList.add('video-message');
+}
+
+    // Uzun basma - context menü
+    div.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        showContextMenu(e.clientX, e.clientY, msg.id, div);
+    });
+    let longPressTimer;
+    div.addEventListener('touchstart', (e) => {
+        longPressTimer = setTimeout(() => {
+            showContextMenu(e.touches[0].clientX, e.touches[0].clientY, msg.id, div);
+        }, 500);
+    });
+    div.addEventListener('touchend', () => clearTimeout(longPressTimer));
+    div.addEventListener('touchmove', () => clearTimeout(longPressTimer));
+
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+function removeMessageFromDOM(messageId) {
+    const el = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (el) el.remove();
+}
+
+function updateMessageReaction(messageId, emoji, userName) {
+    const el = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (!el) return;
+    const contentEl = el.querySelector('.message-content');
+    let reactionsDiv = contentEl.querySelector('.message-reactions');
+    if (!reactionsDiv) {
+        reactionsDiv = document.createElement('div');
+        reactionsDiv.className = 'message-reactions';
+        contentEl.appendChild(reactionsDiv);
+    }
+    let badge = reactionsDiv.querySelector(`[data-emoji="${emoji}"]`);
+    if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'reaction-badge';
+        badge.dataset.emoji = emoji;
+        badge.textContent = emoji;
+        reactionsDiv.appendChild(badge);
+    } else {
+        badge.textContent = `${emoji} ${parseInt(badge.textContent.slice(emoji.length) || 1) + 1}`;
+    }
+}
+
+function addSystemMessage(text) {
+    const container = document.getElementById('messagesContainer');
+    const d = document.createElement('div');
+    d.className = 'system-message';
+    d.textContent = text;
+    container.appendChild(d);
+    container.scrollTop = container.scrollHeight;
+}
+
+function escapeHtml(t) {
+    const d = document.createElement('div');
+    d.textContent = t;
+    return d.innerHTML;
+}
+
+function setupStickerVideo(video) {
+    video.addEventListener('timeupdate', function() {
+        if (this.currentTime >= 3) {
+            this.currentTime = 0;
+        }
+    });
+}
+
+// ============ CONTEXT MENÜ ============
+function showContextMenu(x, y, msgId, element) {
+    activeDMMessageId = null; // DM id'sini sıfırla
+    activeContextMessageId = msgId;
+    activeContextMessageElement = element;
+    const menu = document.getElementById('contextMenu');
+    menu.style.left = Math.min(x, window.innerWidth - 160) + 'px';
+    menu.style.top = Math.min(y, window.innerHeight - 120) + 'px';
+    menu.classList.add('active');
+}
+
+document.addEventListener('click', () => {
+    document.getElementById('contextMenu').classList.remove('active');
+    document.getElementById('reactionPicker').classList.remove('active');
+});
+
+document.getElementById('contextMenu').addEventListener('click', (e) => e.stopPropagation());
+
+function contextReply() {
+    const msg = findMessageById(activeContextMessageId);
+    if (msg) {
+        replyToMessage = msg;
+        document.getElementById('messageInput').focus();
+    }
+    document.getElementById('contextMenu').classList.remove('active');
+}
+
+function contextReact() {
+    const menu = document.getElementById('contextMenu');
+    const rect = menu.getBoundingClientRect();
+    const picker = document.getElementById('reactionPicker');
+    
+    // Picker genişliği yaklaşık 180-200px
+    const pickerWidth = 200; 
+    let leftPos = rect.left;
+    
+    // Sağa taşarsa sola kaydır
+    if (leftPos + pickerWidth > window.innerWidth) {
+        leftPos = window.innerWidth - pickerWidth - 10;
+    }
+    
+    // Sola çok yaklaşırsa sağa al
+    if (leftPos < 10) {
+        leftPos = 10;
+    }
+    
+    picker.style.left = leftPos + 'px';
+    picker.style.top = Math.max(10, rect.top - 60) + 'px';
+    picker.classList.add('active');
+    menu.classList.remove('active');
+}
+
+function contextDelete() {
+    if (activeContextMessageId && socket) {
+        socket.emit('delete-message', { messageId: activeContextMessageId });
+    }
+    document.getElementById('contextMenu').classList.remove('active');
+}
+
+function findMessageById(id) {
+    const el = document.querySelector(`[data-message-id="${id}"]`);
+    if (!el) return null;
+    const sender = el.querySelector('.message-sender')?.textContent;
+    const text = el.querySelector('.message-text')?.textContent;
+    return { id, userName: sender, text };
+}
+
+function addReaction(emoji) {
+    if (activeDMMessageId && socket) {
+        socket.emit('dm-react', { messageId: activeDMMessageId, emoji });
+        activeDMMessageId = null; // Temizle
+    } else if (activeContextMessageId && socket) {
+        socket.emit('react-message', { messageId: activeContextMessageId, emoji });
+        activeContextMessageId = null; // Temizle
+    }
+    document.getElementById('reactionPicker').classList.remove('active');
+}
+
+function scrollToMessage(messageId) {
+    const el = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ============ DOSYA GÖNDERME ============
+document.getElementById('imageInput').addEventListener('change', function(e) {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+        if (file.size > 5 * 1024 * 1024) { alert('Fotoğraf 5MB altı olmalı'); return; }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            socket.emit('message', { type: 'image', fileData: ev.target.result });
+        };
+        reader.readAsDataURL(file);
+    });
+    this.value = '';
+});
+
+document.getElementById('videoInput').addEventListener('change', function(e) {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+        if (file.size > 50 * 1024 * 1024) { alert('Video 50MB altı olmalı'); return; }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            socket.emit('message', { type: 'video', fileData: ev.target.result, mimeType: file.type });
+        };
+        reader.readAsDataURL(file);
+    });
+    this.value = '';
+});
+
+// ============ SES KAYDI ============
+let mediaRecorder = null, audioChunks = [], isRecording = false;
+
+async function toggleRecording() {
+    const btn = document.getElementById('recordBtn');
+    if (isRecording) { stopRecording(); return; }
+    try {
+        // Ses filtrelerini ayarla
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+        // BURAYA mimeType seçimi gelecek
+        let mimeType = 'audio/webm;codecs=opus';
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+            mimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+            mimeType = 'audio/mp4';
+        } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+            mimeType = 'audio/ogg;codecs=opus';
+        }
+
+        mediaRecorder = new MediaRecorder(stream, {
+            mimeType: mimeType,
+            audioBitsPerSecond: 320000
+        });
+        
+        audioChunks = [];
+        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(audioChunks, { type: mimeType });
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                socket.emit('message', { type: 'audio', fileData: ev.target.result, mimeType });
+            };
+            reader.readAsDataURL(blob);
+            stream.getTracks().forEach(t => t.stop());
+        };
+        mediaRecorder.start(100);
+        isRecording = true;
+        btn.classList.add('recording');
+        btn.textContent = '⏹';
+    } catch(e) { 
+        console.error(e); 
+        alert('Mikrofon erişimi reddedildi'); 
+    }
+}
+
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        isRecording = false;
+        const btn = document.getElementById('recordBtn');
+        btn.classList.remove('recording');
+        btn.textContent = '🎤';
+    }
+}
+
+// ============ STICKER ============
+// ============ STICKER ============
+let stickerFile = null;
+let stickerPreviewData = null;
+let stickerPreviewType = null;
+let stickerVideoElement = null;
+let stickerVideoDuration = 0;
+let trimStart = 0;
+let trimEnd = 3;
+let stickerFrames = [];
+
+function toggleStickerPanel() {
+    const panel = document.getElementById('stickerPanel');
+    panel.classList.toggle('active');
+    if (panel.classList.contains('active')) loadStickers();
+}
+
+function loadStickers() {
+    const grid = document.getElementById('stickerGrid');
+    grid.innerHTML = '<button class="sticker-create-btn" onclick="openStickerModal()">+</button>';
+    const stickers = JSON.parse(localStorage.getItem('stickers') || '[]');
+    stickers.forEach(s => {
+        const el = document.createElement(s.type === 'video' ? 'video' : 'img');
+        el.src = s.data;
+        el.className = 'sticker-item';
+        if (s.type === 'video') { 
+    el.autoplay = true; el.muted = true; el.loop = true;
+    el.style.transform = 'rotate(90deg)';
+}
+        el.onclick = () => sendSticker(s);
+        grid.appendChild(el);
+    });
+}
+
+function openStickerModal() {
+    document.getElementById('stickerPanel').classList.remove('active');
+    document.getElementById('stickerModal').classList.add('active');
+    
+    // Adımları sıfırla
+    document.getElementById('stickerStep1').style.display = 'block';
+    document.getElementById('stickerStep2').style.display = 'none';
+    document.getElementById('stickerStep3').style.display = 'none';
+    
+    stickerFile = null;
+    stickerPreviewData = null;
+    stickerPreviewType = null;
+    stickerVideoElement = null;
+    stickerVideoDuration = 0;
+    document.getElementById('stickerPreviewArea').innerHTML = '';
+}
+
+function closeStickerModal() {
+    document.getElementById('stickerModal').classList.remove('active');
+    stickerFile = null;
+    if (stickerVideoElement) {
+        stickerVideoElement.pause();
+        stickerVideoElement = null;
+    }
+}
+
+function handleStickerFile(file) {
+    if (!file) return;
+   // Video boyutu kontrolü
+    if (file.type.startsWith('video') && file.size > 20 * 1024 * 1024) {
+        alert('Video 20MB\'dan küçük olmalı. Daha kısa bir video seçin.');
+        return;
+    }
+    stickerFile = file;
+    
+    if (file.type.startsWith('image')) {
+        // Fotoğraf - direkt önizlemeye geç
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            stickerPreviewData = e.target.result;
+            stickerPreviewType = 'image';
+            document.getElementById('stickerStep1').style.display = 'none';
+            document.getElementById('stickerStep2').style.display = 'none';
+            document.getElementById('stickerStep3').style.display = 'block';
+            document.getElementById('stickerPreviewArea').innerHTML = `<img src="${stickerPreviewData}" class="sticker-preview" alt="Sticker">`;
+        };
+        reader.readAsDataURL(file);
+    } else if (file.type.startsWith('video')) {
+        // Video - kesit seçme adımına geç
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const videoUrl = e.target.result;
+            stickerVideoElement = document.createElement('video');
+            stickerVideoElement.src = videoUrl;
+            stickerVideoElement.muted = true;
+            stickerVideoElement.playsInline = true;
+            
+stickerVideoElement.onloadedmetadata = () => {
+    document.getElementById('stickerStep1').style.display = 'none';
+    document.getElementById('stickerStep2').style.display = 'block';
+    document.getElementById('stickerStep3').style.display = 'none';
+    
+    const videoPreview = document.getElementById('stickerVideoPreview');
+    videoPreview.src = videoUrl;
+    videoPreview.loop = true;
+    videoPreview.muted = true;
+    videoPreview.playsInline = true;
+    videoPreview.currentTime = 0;
+    videoPreview.play();
+    setupStickerVideo(videoPreview);
+};
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function confirmVideoSticker() {
+    if (!stickerVideoElement) return;
+    
+    document.getElementById('stickerStep2').style.display = 'none';
+    document.getElementById('stickerStep3').style.display = 'block';
+    document.getElementById('stickerPreviewArea').innerHTML = '<div style="color:#ccc; padding:20px;">Çıkartma hazırlanıyor...</div>';
+    
+    setTimeout(() => {
+        stickerPreviewData = stickerVideoElement.src;
+        stickerPreviewType = 'video';
+        
+        document.getElementById('stickerPreviewArea').innerHTML = `
+            <video src="${stickerPreviewData}" style="width:120px; height:120px; border-radius:50%; object-fit:cover; border:2px solid #667eea;" autoplay muted loop playsinline></video>
+        `;
+    }, 500);
+}
+
+
+function saveSticker() {
+    if (!stickerPreviewData) { 
+        alert('Önce dosya seç'); 
+        return; 
+    }
+    
+    try {
+        const stickers = JSON.parse(localStorage.getItem('stickers') || '[]');
+        stickers.push({ 
+            id: Date.now().toString(), 
+            type: stickerPreviewType, 
+            data: stickerPreviewData 
+        });
+        localStorage.setItem('stickers', JSON.stringify(stickers));
+        
+        closeStickerModal();
+        toggleStickerPanel();
+    } catch (error) {
+        console.error('Kaydetme hatası:', error);
+        alert('Çıkartma kaydedilemedi! Video çok büyük olabilir.');
+    }
+}
+
+function sendSticker(sticker) {
+    if (socket) {
+        socket.emit('message', { type: 'sticker', stickerType: sticker.type, fileData: sticker.data });
+    }
+    document.getElementById('stickerPanel').classList.remove('active');
+}
+
+function toggleDarkMode() {
+    darkModeEnabled = !darkModeEnabled;
+    localStorage.setItem('darkModeEnabled', darkModeEnabled);
+    document.body.classList.toggle('dark-mode', darkModeEnabled);
+    document.getElementById('darkModeStatus').textContent = darkModeEnabled ? 'Açık' : 'Kapalı';
+    hideFontPanel();
+}
+
+function toggleBannerMode() {
+    bannerModeEnabled = !bannerModeEnabled;
+    localStorage.setItem('bannerModeEnabled', bannerModeEnabled);
+    document.getElementById('bannerModeStatus').textContent = bannerModeEnabled ? 'Açık' : 'Kapalı';
+    hideFontPanel();
+}
+
+// ============ PROFİL GÖRÜNTÜLEME ============
+function showProfile(userName, userPhoto) {
+    showProfileWithAdd(userName, userPhoto);
+}
+
+function showProfileFromHeader() {
+    showProfile(currentUser.name, currentUser.photo);
+}
+
+function toggleAvatarSize() {
+    document.getElementById('profileViewAvatar').classList.toggle('large');
+}
+
+function closeProfileView() {
+    document.getElementById('profileViewModal').classList.remove('active');
+}
+
+// ============ TAM EKRAN MEDYA ============
+function openFullscreenImage(src) {
+    const overlay = document.getElementById('videoPlayerOverlay');
+    const video = document.getElementById('videoPlayer');
+    const img = document.getElementById('imagePlayer');
+    
+    video.style.display = 'none';
+    video.pause();
+    video.src = '';
+    video.load();
+    
+    img.src = src;
+    img.style.display = 'block';
+    overlay.classList.add('active');
+    
+    videoPlayerZoomLevel = videoPlayerMinZoom;
+    updateVideoPlayerZoom();
+    
+    img.focus({ preventScroll: true });
+}
+
+let videoPlayerZoomLevel = 80; // %80 başlangıç
+let videoPlayerMinZoom = 80; // %80 minimum
+let videoPlayerMaxZoom = 92; // %92 maksimum
+
+function openFullscreenVideo(src) {
+    const overlay = document.getElementById('videoPlayerOverlay');
+    const container = document.getElementById('videoPlayerContainer');
+    const video = document.getElementById('videoPlayer');
+    const img = document.getElementById('imagePlayer');
+    
+    img.style.display = 'none';
+    img.src = '';
+    
+    video.style.display = 'block';
+    video.src = src;
+    video.autoplay = true;
+    video.controls = false;
+    overlay.classList.add('active');
+    
+    videoPlayerZoomLevel = videoPlayerMinZoom;
+    updateVideoPlayerZoom();
+    
+    video.focus({ preventScroll: true });
+}
+
+function closeVideoPlayer() {
+    const overlay = document.getElementById('videoPlayerOverlay');
+    const video = document.getElementById('videoPlayer');
+    const img = document.getElementById('imagePlayer');
+    
+    video.pause();
+    video.src = '';
+    video.load();
+    video.style.display = 'none';
+    
+    img.src = '';
+    img.style.display = 'none';
+    
+    overlay.classList.remove('active');
+}
+
+function toggleVideoPlayerZoom() {
+    if (videoPlayerZoomLevel <= videoPlayerMinZoom) {
+        videoPlayerZoomLevel = videoPlayerMaxZoom;
+    } else {
+        videoPlayerZoomLevel = videoPlayerMinZoom;
+    }
+    updateVideoPlayerZoom();
+}
+
+function updateVideoPlayerZoom() {
+    const container = document.getElementById('videoPlayerContainer');
+    container.style.width = videoPlayerZoomLevel + '%';
+    container.style.height = videoPlayerZoomLevel + '%';
+    container.style.left = ((100 - videoPlayerZoomLevel) / 2) + '%';
+    container.style.top = ((100 - videoPlayerZoomLevel) / 2) + '%';
+}
+
+// Pinch Zoom
+let pinchStartDistance = 0;
+let pinchStartZoomLevel = 80;
+
+document.getElementById('videoPlayerOverlay').addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+        e.preventDefault();
+        pinchStartDistance = getDistance(e.touches[0], e.touches[1]);
+        pinchStartZoomLevel = videoPlayerZoomLevel;
+    }
+}, { passive: false });
+
+document.getElementById('videoPlayerOverlay').addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2) {
+        e.preventDefault();
+        const currentDistance = getDistance(e.touches[0], e.touches[1]);
+        const scale = currentDistance / pinchStartDistance;
+        
+        // Yeni zoom seviyesini hesapla
+        const newZoom = Math.max(videoPlayerMinZoom, Math.min(videoPlayerMaxZoom, pinchStartZoomLevel + (scale - 1) * 100));
+        videoPlayerZoomLevel = newZoom;
+        updateVideoPlayerZoom();
+    }
+}, { passive: false });
+
+function getDistance(touch1, touch2) {
+    const dx = touch1.clientX - touch2.clientX;
+    const dy = touch1.clientY - touch2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+// ============ KAMERA SİSTEMİ ============
+let cameraStream = null;
+let cameraFacing = 'user'; // 'user' = ön, 'environment' = arka
+let cameraMode = 'photo'; // 'photo' veya 'video'
+let isRecordingVideo = false;
+let videoRecorder = null;
+let videoRecordedChunks = [];
+let recordedVideoBlob = null;
+let pendingMediaIsMirrored = false;
+let cameraCanvas = document.getElementById('cameraCanvas');
+let cameraCtx = cameraCanvas.getContext('2d');
+let drawLoop = null;
+
+// Şu an önizlemedeki medya
+let pendingMediaBlob = null;
+let pendingMediaType = null; // 'image' veya 'video'
+let pendingMediaURL = null;
+
+// ============ KAMERA AÇ ============
+async function openCamera() {
+setCameraMode('photo'); // Varsayılan fotoğraf
+    try {
+        const constraints = {
+            video: {
+                facingMode: cameraFacing,
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            },
+            audio: true
+        };
+
+        cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+const video = document.getElementById('cameraPreview');
+video.srcObject = cameraStream;
+video.classList.remove('rear');
+video.classList.add('zoom');
+cameraCanvas.width = 850;
+cameraCanvas.height = 1400;
+startCanvasDraw(video);
+
+        if (cameraFacing === 'environment') {
+            video.classList.add('rear');
+        }
+
+        document.getElementById('cameraOverlay').classList.add('active');
+        document.getElementById('captureBtn').style.display = 'block';
+    } catch (error) {
+        console.error('Kamera açılamadı:', error);
+        alert('Kamera erişimi reddedildi veya bulunamadı!');
+    }
+}
+
+// ============ KAMERA KAPAT ============
+function closeCamera() {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+    }
+    document.getElementById('cameraOverlay').classList.remove('active');
+}
+
+function startCanvasDraw(video) {
+    if (drawLoop) cancelAnimationFrame(drawLoop);
+    function draw() {
+        if (video.readyState >= 2 && video.videoWidth && video.videoHeight) {
+            // Canvas'ı video oranına göre ayarla
+            const vw = video.videoWidth;
+            const vh = video.videoHeight;
+            cameraCanvas.width = vw;
+            cameraCanvas.height = vh;
+
+            cameraCtx.save();
+            cameraCtx.clearRect(0, 0, cameraCanvas.width, cameraCanvas.height);
+            // Ayna modu: sağa göre yansıt
+            cameraCtx.translate(cameraCanvas.width, 0);
+            cameraCtx.scale(-1, 1);
+            cameraCtx.drawImage(video, 0, 0, cameraCanvas.width, cameraCanvas.height);
+            cameraCtx.restore();
+        }
+        drawLoop = requestAnimationFrame(draw);
+    }
+    draw();
+}
+
+// ============ MOD DEĞİŞTİR ============
+function setCameraMode(mode) {
+    cameraMode = mode;
+    document.getElementById('photoModeBtn').classList.remove('active');
+    document.getElementById('videoModeBtn').classList.remove('active');
+
+    if (mode === 'photo') {
+        document.getElementById('photoModeBtn').classList.add('active');
+    } else {
+        document.getElementById('videoModeBtn').classList.add('active');
+    }
+}
+
+// ============ ÇEKİM / KAYIT ============
+function handleCapture() {
+    if (cameraMode === 'photo') {
+        capturePhoto();
+    } else {
+        toggleVideoRecording();
+    }
+}
+
+// Fotoğraf çek
+function capturePhoto() {
+    const video = document.getElementById('cameraPreview');
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const imageDataURL = canvas.toDataURL('image/jpeg', 0.9);
+    canvas.toBlob((blob) => {
+        pendingMediaBlob = blob;
+        pendingMediaType = 'image';
+        pendingMediaURL = imageDataURL;
+        pendingMediaIsMirrored = false;
+        openMediaPreview();
+    }, 'image/jpeg', 0.9);
+}
+
+function toggleVideoRecording() {
+    const captureBtn = document.getElementById('captureBtn');
+    const captureImg = captureBtn.querySelector('img');
+
+    if (!isRecordingVideo) {
+        videoRecordedChunks = [];
+
+        // Canvas stream'i al
+        const canvasStream = cameraCanvas.captureStream(30);
+
+        // Ses track'ini ekle (kamera stream'den)
+        if (cameraStream) {
+            cameraStream.getAudioTracks().forEach(track => {
+                canvasStream.addTrack(track);
+            });
+        }
+
+        videoRecorder = new MediaRecorder(canvasStream, {
+            mimeType: 'video/webm;codecs=vp9'
+        });
+
+        videoRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                videoRecordedChunks.push(event.data);
+            }
+        };
+
+        videoRecorder.onstop = () => {
+            recordedVideoBlob = new Blob(videoRecordedChunks, { type: 'video/webm' });
+            pendingMediaBlob = recordedVideoBlob;
+            pendingMediaType = 'video';
+            pendingMediaURL = URL.createObjectURL(recordedVideoBlob);
+            pendingMediaIsMirrored = false; // Video dosyası ayna modlu
+            openMediaPreview();
+        };
+
+        videoRecorder.start();
+        isRecordingVideo = true;
+        captureImg.src = 'https://cdn.phototourl.com/free/2026-08-22-de5dcf7d-23aa-4f8e-a1eb-fc01e62c2737.png';
+    } else {
+        videoRecorder.stop();
+        isRecordingVideo = false;
+        captureImg.src = 'https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAEZnjVqiNcypAY9RPOqIiCfIwkYE0S-EQACHiEAAgK8SFT-tAhBtaDTQT0E.png';
+    }
+}
+
+// ============ KAMERA ÇEVİR ============
+function switchCamera() {
+    cameraFacing = cameraFacing === 'user' ? 'environment' : 'user';
+
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+    }
+
+    const constraints = {
+        video: {
+            facingMode: cameraFacing,
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+        },
+        audio: true
+    };
+
+    navigator.mediaDevices.getUserMedia(constraints)
+.then((stream) => {
+    cameraStream = stream;
+    const video = document.getElementById('cameraPreview');
+    video.srcObject = stream;
+    video.classList.add('zoom');
+    if (cameraFacing === 'environment') {
+        video.classList.add('rear');
+    } else {
+        video.classList.remove('rear');
+    }
+    startCanvasDraw(video);
+})
+.catch((error) => {
+    console.error('Kamera değiştirme hatası:', error);
+    alert('Kamera değiştirilemedi!');
+});
+}
+
+// ============ GALERİ ============
+function openCameraGallery() {
+    document.getElementById('galleryOverlay').classList.add('active');
+}
+
+function closeGallery() {
+    document.getElementById('galleryOverlay').classList.remove('active');
+}
+
+function selectGalleryMedia(type) {
+    closeGallery();
+    if (type === 'image') {
+        document.getElementById('galleryInput').click();
+    } else {
+        document.getElementById('galleryVideoInput').click();
+    }
+}
+
+function handleGallerySelection(files) {
+    if (!files || files.length === 0) return;
+    const selectedFiles = Array.from(files);
+    const maxPhotos = 10;
+
+    if (selectedFiles[0].type.startsWith('image')) {
+        if (selectedFiles.length > maxPhotos) {
+            alert(`En fazla ${maxPhotos} fotoğraf seçebilirsin.`);
+            return;
+        }
+
+        if (selectedFiles.length === 1) {
+            // Tek fotoğraf → önizleme (kırpma için)
+            const file = selectedFiles[0];
+            pendingMediaBlob = file;
+            pendingMediaType = 'image';
+            pendingMediaURL = URL.createObjectURL(file);
+            pendingMediaIsMirrored = false;
+            openMediaPreview();
+        } else {
+            // Birden fazla fotoğraf → direkt hepsini sırayla gönder
+            selectedFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+socket.emit('message', {
+    type: pendingMediaType,
+    fileData: e.target.result,
+    mimeType: file.type,
+    isMirrored: pendingMediaIsMirrored
+});
+                };
+                reader.readAsDataURL(file);
+            });
+            closeGallery();
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            document.getElementById('cameraOverlay').classList.remove('active');
+        }
+    } else {
+        // Video tek seçilebilir
+        const file = selectedFiles[0];
+        pendingMediaBlob = file;
+        pendingMediaType = 'video';
+        pendingMediaURL = URL.createObjectURL(file);
+        pendingMediaIsMirrored = false;
+        openMediaPreview();
+    }
+}
+
+// ============ MEDYA ÖNİZLEME ============
+function openMediaPreview() {
+    const previewContent = document.getElementById('previewContent');
+    previewContent.innerHTML = '';
+
+    if (pendingMediaType === 'image') {
+        const img = document.createElement('img');
+img.src = pendingMediaURL;
+if (pendingMediaIsMirrored) {
+    img.style.transform = 'scaleX(-1)';
+}
+        previewContent.appendChild(img);
+        document.getElementById('previewActionBtn').style.display = 'flex';
+        document.getElementById('previewActionBtn').innerHTML = `
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                <path d="M14 14l6-6v6h-6z"/>
+                <path d="M14 14l-6 6"/>
+                <path d="M12 2a10 10 0 1 0 10 10"/>
+            </svg>
+        `;
+    } else if (pendingMediaType === 'video') {
+const video = document.createElement('video');
+video.src = pendingMediaURL;
+video.controls = true;
+video.autoplay = true;
+video.loop = true;
+video.muted = false;
+video.style.transform = 'scaleX(1)'; 
+        previewContent.appendChild(video);
+        document.getElementById('previewActionBtn').style.display = 'flex';
+        document.getElementById('previewActionBtn').innerHTML = `
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+        `;
+    }
+    
+if (cropBox) {
+    cropBox.style.display = 'none';
+}
+isCropping = false;
+    document.getElementById('mediaPreviewOverlay').classList.add('active');
+}
+
+function closeMediaPreview() {
+    const previewContent = document.getElementById('previewContent');
+    const video = previewContent.querySelector('video');
+    if (video) {
+        video.pause();
+        video.src = ''; // Kaynağı kaldır, ses tamamen dursun
+        video.load();
+    }
+    previewContent.innerHTML = ''; // İçeriği temizle
+    
+    document.getElementById('mediaPreviewOverlay').classList.remove('active');
+    pendingMediaBlob = null;
+    pendingMediaType = null;
+    pendingMediaURL = null;
+    isCropping = false;
+    if (cropBox) cropBox.style.display = 'none';
+}
+
+function handlePreviewAction() {
+    if (pendingMediaType === 'image') {
+        startCrop();
+    } else if (pendingMediaType === 'video') {
+        const video = document.querySelector('#previewContent video');
+        if (video) {
+            video.muted = !video.muted;
+            const btn = document.getElementById('previewActionBtn');
+            if (video.muted) {
+                btn.innerHTML = `
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                        <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                        <line x1="23" y1="9" x2="17" y2="15"/>
+                        <line x1="17" y1="9" x2="23" y2="15"/>
+                    </svg>
+                `;
+            } else {
+                btn.innerHTML = `
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                        <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                    </svg>
+                `;
+            }
+        }
+    }
+}
+
+let cropBox = null;
+let isCropping = false;
+let cropStartX, cropStartY;
+let cropOrigLeft, cropOrigTop;
+
+function startCrop() {
+    const previewContent = document.getElementById('previewContent');
+    const img = previewContent.querySelector('img');
+    if (!img) return;
+
+    isCropping = true;
+    if (!cropBox) {
+        cropBox = document.createElement('div');
+        cropBox.className = 'crop-box';
+        cropBox.style.width = '200px';
+        cropBox.style.height = '200px';
+        cropBox.style.position = 'absolute';
+        cropBox.style.cursor = 'move';
+        document.querySelector('.media-preview-overlay').appendChild(cropBox);
+
+        cropBox.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            cropStartX = e.clientX;
+            cropStartY = e.clientY;
+            cropOrigLeft = cropBox.offsetLeft;
+            cropOrigTop = cropBox.offsetTop;
+
+            function onMouseMove(e) {
+                const dx = e.clientX - cropStartX;
+                const dy = e.clientY - cropStartY;
+                cropBox.style.left = (cropOrigLeft + dx) + 'px';
+                cropBox.style.top = (cropOrigTop + dy) + 'px';
+            }
+
+            function onMouseUp() {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+
+        cropBox.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            cropStartX = touch.clientX;
+            cropStartY = touch.clientY;
+            cropOrigLeft = cropBox.offsetLeft;
+            cropOrigTop = cropBox.offsetTop;
+
+            function onTouchMove(e) {
+                const touch = e.touches[0];
+                const dx = touch.clientX - cropStartX;
+                const dy = touch.clientY - cropStartY;
+                cropBox.style.left = (cropOrigLeft + dx) + 'px';
+                cropBox.style.top = (cropOrigTop + dy) + 'px';
+            }
+
+            function onTouchEnd() {
+                document.removeEventListener('touchmove', onTouchMove);
+                document.removeEventListener('touchend', onTouchEnd);
+            }
+
+            document.addEventListener('touchmove', onTouchMove, { passive: false });
+            document.addEventListener('touchend', onTouchEnd);
+        });
+    }
+
+    cropBox.style.display = 'block';
+}
+
+function getCroppedImage(image, cropBoxRect, callback) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const previewContent = document.getElementById('previewContent');
+    const imgRect = image.getBoundingClientRect();
+    const boxRect = cropBoxRect;
+
+    const scaleX = image.naturalWidth / imgRect.width;
+    const scaleY = image.naturalHeight / imgRect.height;
+
+    canvas.width = boxRect.width;
+    canvas.height = boxRect.height;
+
+    ctx.drawImage(
+        image,
+        (boxRect.left - imgRect.left) * scaleX,
+        (boxRect.top - imgRect.top) * scaleY,
+        boxRect.width * scaleX,
+        boxRect.height * scaleY,
+        0, 0,
+        canvas.width, canvas.height
+    );
+
+    callback(canvas.toDataURL('image/jpeg', 0.9));
+}
+
+function sendMediaFromPreview() {
+    if (!pendingMediaBlob || !pendingMediaType) return;
+
+    // Yükleme yüzdesi göstergesi oluştur
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'message own';
+    loadingDiv.innerHTML = `
+        <div class="message-body">
+            <div class="message-content">
+                <div class="message-text">📤 Gönderiliyor... %0</div>
+            </div>
+        </div>
+    `;
+    document.getElementById('messagesContainer').appendChild(loadingDiv);
+    document.getElementById('messagesContainer').scrollTop = document.getElementById('messagesContainer').scrollHeight;
+
+    const reader = new FileReader();
+    reader.onprogress = (e) => {
+        if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            loadingDiv.querySelector('.message-text').textContent = `📤 Gönderiliyor... %${percent}`;
+        }
+    };
+
+    reader.onload = (e) => {
+        socket.emit('message', {
+            type: pendingMediaType,
+            fileData: e.target.result,
+            mimeType: pendingMediaType === 'image' ? 'image/jpeg' : 'video/webm'
+        });
+        loadingDiv.remove();
+        finishSending();
+    };
+
+    const file = new File([pendingMediaBlob], pendingMediaType === 'image' ? 'photo.jpg' : 'video.webm', {
+        type: pendingMediaType === 'image' ? 'image/jpeg' : 'video/webm'
+    });
+    reader.readAsDataURL(file);
+}
+
+function finishSending() {
+    const previewContent = document.getElementById('previewContent');
+const video = previewContent.querySelector('video');
+if (video) {
+    video.pause();
+    video.src = '';
+    video.load();
+}
+previewContent.innerHTML = '';
+    closeMediaPreview();
+    isCropping = false;
+    if (cropBox) cropBox.style.display = 'none';
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+    }
+    document.getElementById('cameraOverlay').classList.remove('active');
+    document.getElementById('galleryOverlay').classList.remove('active');
+}
+// ============ DM SİSTEMİ ============
+let dmList = JSON.parse(localStorage.getItem('dmList') || '[]');
+let currentDMUser = null;
+let currentProfileViewUser = null;
+
+function showProfileWithAdd(userName, userPhoto) {
+    currentProfileViewUser = userName;
+    document.getElementById('profileViewAvatar').src = userPhoto || '';
+    document.getElementById('profileViewName').textContent = userName;
+    document.getElementById('profileViewAvatar').classList.remove('large');
+    document.getElementById('profileViewModal').classList.add('active');
+}
+
+function addCurrentToDM() {
+    if (!currentProfileViewUser) return;
+    if (currentProfileViewUser === currentUser?.name) {
+        alert('Kendini ekleyemezsin!');
+        return;
+    }
+    
+    if (!dmList.some(u => u.name === currentProfileViewUser)) {
+        dmList.push({ name: currentProfileViewUser });
+        localStorage.setItem('dmList', JSON.stringify(dmList));
+        alert(`${currentProfileViewUser} DM listesine eklendi!`);
+    } else {
+        alert(`${currentProfileViewUser} zaten ekli.`);
+    }
+    
+    closeProfileView();
+}
+
+function showDMMenu() {
+    document.getElementById('menuMain').style.display = 'none';
+    document.getElementById('menuCalls').style.display = 'none';
+    document.getElementById('menuFonts').style.display = 'none';
+    document.getElementById('menuDM').style.display = 'block';
+    renderDMList();
+}
+
+function renderDMList() {
+    const container = document.getElementById('dmListContainer');
+    container.innerHTML = '';
+    
+    if (dmList.length === 0) {
+        container.innerHTML = '<div style="color:#666; text-align:center; padding:20px;">Henüz DM eklenmedi.</div>';
+        return;
+    }
+    
+    dmList.forEach(user => {
+        const div = document.createElement('div');
+        div.className = 'dm-user-item';
+        div.innerHTML = `
+            <img src="" class="dm-user-avatar" alt="${user.name}">
+            <span class="dm-user-name">${user.name}</span>
+        `;
+        div.onclick = () => openDM(user.name);
+        container.appendChild(div);
+    });
+}
+
+function openDM(userName) {
+    currentDMUser = userName;
+    document.getElementById('dmModalTitle').textContent = `💬 ${userName}`;
+    document.getElementById('dmMessagesContainer').innerHTML = '';
+    document.getElementById('dmModal').classList.add('active');
+    hideFontPanel();
+    loadDMMessages(userName);
+}
+
+function closeDM() {
+    document.getElementById('dmModal').classList.remove('active');
+    currentDMUser = null;
+}
+
+function sendDMMessage() {
+    const input = document.getElementById('dmMessageInput');
+    const text = input.value.trim();
+    if (!text || !currentDMUser || !socket) return;
+    
+    const payload = {
+        receiver: currentDMUser,
+        text: text
+    };
+    
+    if (dmReplyTo) {
+        payload.replyTo = dmReplyTo.text;
+        payload.replyToId = dmReplyTo.id;
+        payload.replyToSender = dmReplyTo.sender;
+    }
+    
+    socket.emit('dm-message', payload);
+    
+    input.value = '';
+    dmReplyTo = null;
+    input.focus();
+}
+
+async function loadDMMessages(userName) {
+    try {
+        const response = await fetch(`/api/dm-messages?sender=${encodeURIComponent(currentUser.name)}&receiver=${encodeURIComponent(userName)}`);
+        const messages = await response.json();
+        messages.forEach(msg => displayDMMessage(msg));
+    } catch (error) {
+        console.error('DM mesajları yüklenemedi:', error);
+    }
+}
+
+function displayDMMessage(msg) {
+    const container = document.getElementById('dmMessagesContainer');
+    const isOwn = msg.sender === currentUser?.name;
+    const div = document.createElement('div');
+    div.className = `message ${isOwn ? 'own' : ''}`;
+    div.dataset.dmId = msg.id;
+
+    let content = '';
+    if (msg.reply_to) {
+        content += `<div class="message-reply-preview">↩️ ${escapeHtml(msg.reply_to)}</div>`;
+    }
+    content += `<div class="message-text">${escapeHtml(msg.message)}${msg.edited ? ' <span style="font-size:10px;opacity:0.6;">(düzenlendi)</span>' : ''}</div>`;
+
+    if (msg.reactions && msg.reactions.length > 0) {
+        content += `<div class="message-reactions">`;
+        msg.reactions.forEach(r => {
+            content += `<span class="reaction-badge">${r.emoji} ${r.count > 1 ? r.count : ''}</span>`;
+        });
+        content += `</div>`;
+    }
+
+    div.innerHTML = `
+        <div class="message-body">
+            <div class="message-content">
+                <div class="message-header">
+                    <span class="message-sender">${isOwn ? 'Sen' : escapeHtml(msg.sender)}</span>
+                    <span class="message-time">${new Date(msg.created_at).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit', timeZone: 'Europe/Istanbul'})}</span>
+                </div>
+                ${content}
+            </div>
+        </div>
+    `;
+
+    // Uzun basma - DM context menu
+    div.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        showDMContextMenu(e.clientX, e.clientY, msg.id, div);
+    });
+    let longPressTimer;
+    div.addEventListener('touchstart', (e) => {
+        longPressTimer = setTimeout(() => {
+            showDMContextMenu(e.touches[0].clientX, e.touches[0].clientY, msg.id, div);
+        }, 500);
+    });
+    div.addEventListener('touchend', () => clearTimeout(longPressTimer));
+    div.addEventListener('touchmove', () => clearTimeout(longPressTimer));
+
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+// Socket DM olayları
+function setupDMSocketEvents() {
+    if (!socket) return;
+    
+    socket.on('dm-message', (msg) => {
+        if (currentDMUser === msg.sender || currentDMUser === msg.receiver) {
+            displayDMMessage(msg);
+        }
+    });    
+socket.on('dm-reaction-updated', (data) => {
+    const el = document.querySelector(`[data-dm-id="${data.messageId}"]`);
+    if (!el) return;
+    const contentEl = el.querySelector('.message-content');
+    let reactionsDiv = contentEl.querySelector('.message-reactions');
+    if (!reactionsDiv) {
+        reactionsDiv = document.createElement('div');
+        reactionsDiv.className = 'message-reactions';
+        contentEl.appendChild(reactionsDiv);
+    }
+    let badge = reactionsDiv.querySelector(`[data-emoji="${data.emoji}"]`);
+    if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'reaction-badge';
+        badge.dataset.emoji = data.emoji;
+        badge.textContent = data.emoji;
+        reactionsDiv.appendChild(badge);
+    } else {
+        const count = badge.textContent.includes(data.emoji) ? parseInt(badge.textContent.slice(data.emoji.length) || 1) : 1;
+        badge.textContent = `${data.emoji} ${count + 1}`;
+    }
+});
+
+socket.on('dm-edited', (data) => {
+    const el = document.querySelector(`[data-dm-id="${data.messageId}"]`);
+    if (el) {
+        const textEl = el.querySelector('.message-text');
+        if (textEl) {
+            textEl.innerHTML = `${escapeHtml(data.newText)} <span style="font-size:10px;opacity:0.6;">(düzenlendi)</span>`;
+        }
+    }
+});
+
+socket.on('dm-deleted', (data) => {
+    const el = document.querySelector(`[data-dm-id="${data.messageId}"]`);
+    if (el) el.remove();
+});
+
+}
+
+// DM Context Menu ve İşlemleri
+let activeDMMessageId = null;
+let activeDMMessageElement = null;
+let dmReplyTo = null;
+
+function showDMContextMenu(x, y, messageId, element) {
+    activeDMMessageId = messageId;
+    activeDMMessageElement = element;
+    const menu = document.getElementById('dmContextMenu');
+    menu.style.left = Math.min(x, window.innerWidth - 160) + 'px';
+    menu.style.top = Math.min(y, window.innerHeight - 120) + 'px';
+    menu.classList.add('active');
+}
+
+document.addEventListener('click', () => {
+    document.getElementById('dmContextMenu').classList.remove('active');
+    document.getElementById('reactionPicker').classList.remove('active');
+});
+
+document.getElementById('dmContextMenu').addEventListener('click', (e) => e.stopPropagation());
+
+function dmReplyToMessage() {
+    if (activeDMMessageId) {
+        // Yanıtlanacak mesajı bul
+        const el = document.querySelector(`[data-dm-id="${activeDMMessageId}"]`);
+        if (el) {
+            const sender = el.querySelector('.message-sender')?.textContent;
+            const text = el.querySelector('.message-text')?.textContent;
+            dmReplyTo = { id: activeDMMessageId, sender: sender, text: text };
+        }
+    }
+    document.getElementById('dmContextMenu').classList.remove('active');
+    document.getElementById('dmMessageInput').focus();
+}
+
+function dmEditMessage() {
+    if (activeDMMessageId) {
+        const el = document.querySelector(`[data-dm-id="${activeDMMessageId}"]`);
+        if (el) {
+            const currentText = el.querySelector('.message-text')?.textContent;
+            const newText = prompt('Mesajı düzenle:', currentText);
+            if (newText && newText.trim() && newText.trim() !== currentText) {
+                socket.emit('dm-edit', { messageId: activeDMMessageId, newText: newText.trim() });
+            }
+        }
+    }
+    document.getElementById('dmContextMenu').classList.remove('active');
+}
+
+function dmReactToMessage() {
+    const menu = document.getElementById('dmContextMenu');
+    const rect = menu.getBoundingClientRect();
+    const picker = document.getElementById('reactionPicker');
+    picker.style.left = rect.left + 'px';
+    picker.style.top = rect.top - 60 + 'px';
+    picker.classList.add('active');
+    menu.classList.remove('active');
+}
+
+        // ============ FONT SEÇİMİ ============
+        const fontList = [
+            { name: 'Varsayılan', css: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" },
+            { name: 'Poppins', css: "'Poppins', sans-serif" },
+            { name: 'Nunito', css: "'Nunito', sans-serif" },
+            { name: 'Quicksand', css: "'Quicksand', sans-serif" },
+            { name: 'Baloo 2', css: "'Baloo 2', cursive" },
+            { name: 'Comfortaa', css: "'Comfortaa', cursive" },
+            { name: 'Inter', css: "'Inter', sans-serif" },
+            { name: 'Roboto', css: "'Roboto', sans-serif" },
+            { name: 'Open Sans', css: "'Open Sans', sans-serif" },
+            { name: 'Varela Round', css: "'Varela Round', sans-serif" },
+            { name: 'Black Ops One', css: "'Black Ops One', cursive" }
+        ];
+
+        function initFontPanel() {
+            const container = document.getElementById('fontOptions');
+            container.innerHTML = '';
+            const savedFont = localStorage.getItem('chatFont') || fontList[0].css;
+            
+            fontList.forEach(font => {
+                const div = document.createElement('div');
+                div.className = 'font-option';
+                div.style.fontFamily = font.css;
+                div.textContent = 'Aa Bb 123';
+                div.dataset.fontCss = font.css;
+                if (font.css === savedFont) div.classList.add('selected');
+                div.onclick = () => selectFont(font.css, div);
+                container.appendChild(div);
+            });
+        }
+
+        function selectFont(fontCss, clickedElement) {
+            localStorage.setItem('chatFont', fontCss);
+            document.querySelectorAll('.font-option').forEach(el => el.classList.remove('selected'));
+            clickedElement.classList.add('selected');
+            document.documentElement.style.setProperty('--message-font', fontCss);
+            document.getElementById('fontPanel').classList.remove('active');
+        }
+
+function applySavedFont() {
+    const savedFont = localStorage.getItem('chatFont') || fontList[0].css;
+    document.documentElement.style.setProperty('--message-font', savedFont);
+}
+function toggleFontPanel() {
+    const panel = document.getElementById('fontPanel');
+    if (panel.classList.contains('active')) {
+        panel.classList.remove('active');
+    } else {
+        showMainMenu();
+        panel.classList.add('active');
+        // Müzik panelini KESİNLİKLE kapat
+        document.getElementById('musicPanel').style.display = 'none';
+    }
+}
+
+function toggleMusicPanel() {
+    const panel = document.getElementById('musicPanel');
+    if (panel.style.display === 'block') {
+        panel.style.display = 'none';
+    } else {
+        panel.style.display = 'block';
+        // Hamburger menüyü KESİNLİKLE kapat
+        document.getElementById('fontPanel').classList.remove('active');
+    }
+}
+
+function closeMusicPanel() {
+    document.getElementById('musicPanel').style.display = 'none';
+}
+
+function hideFontPanel() {
+    document.getElementById('fontPanel').classList.remove('active');
+}
+
+function showMainMenu() {
+    document.getElementById('menuMain').style.display = 'block';
+    document.getElementById('menuCalls').style.display = 'none';
+    document.getElementById('menuFonts').style.display = 'none';
+    document.getElementById('menuDM').style.display = 'none';
+    document.getElementById('menuSettings').style.display = 'none';
+    document.getElementById('menuBanner').style.display = 'none';
+}
+
+function showCallMenu() {
+    document.getElementById('menuMain').style.display = 'none';
+    document.getElementById('menuCalls').style.display = 'block';
+    document.getElementById('menuFonts').style.display = 'none';
+}
+
+function showFontMenu() {
+    document.getElementById('menuMain').style.display = 'none';
+    document.getElementById('menuCalls').style.display = 'none';
+    document.getElementById('menuFonts').style.display = 'block';
+    initFontPanel(); // Font listesini doldur
+}
+function showSettingsMenu() {
+    document.getElementById('menuMain').style.display = 'none';
+    document.getElementById('menuCalls').style.display = 'none';
+    document.getElementById('menuFonts').style.display = 'none';
+    document.getElementById('menuDM').style.display = 'none';
+    document.getElementById('menuBanner').style.display = 'none';
+    document.getElementById('menuSettings').style.display = 'block';
+}
+
+function showBannerMenu() {
+    document.getElementById('menuMain').style.display = 'none';
+    document.getElementById('menuCalls').style.display = 'none';
+    document.getElementById('menuFonts').style.display = 'none';
+    document.getElementById('menuDM').style.display = 'none';
+    document.getElementById('menuSettings').style.display = 'none';
+    document.getElementById('menuBanner').style.display = 'block';
+}
+
+async function toggleNotifications() {
+    if (!notificationsEnabled) {
+        if (Notification.permission === 'default') {
+            const perm = await Notification.requestPermission();
+            if (perm === 'granted') {
+                notificationsEnabled = true;
+                localStorage.setItem('notificationsEnabled', 'true');
+                document.getElementById('notifBtn').classList.add('active');
+                registerPush();
+            } else {
+                alert('Bildirim izni reddedildi.');
+            }
+        } else if (Notification.permission === 'granted') {
+            notificationsEnabled = true;
+            localStorage.setItem('notificationsEnabled', 'true');
+            document.getElementById('notifBtn').classList.add('active');
+            registerPush();
+        } else {
+            alert('Bildirim izni reddedilmiş. Tarayıcı ayarlarından izin verin.');
+        }
+    } else {
+        notificationsEnabled = false;
+        localStorage.setItem('notificationsEnabled', 'false');
+        document.getElementById('notifBtn').classList.remove('active');
+
+        if ('serviceWorker' in navigator) {
+            const reg = await navigator.serviceWorker.getRegistration();
+            if (reg) {
+                const sub = await reg.pushManager.getSubscription();
+                if (sub) await sub.unsubscribe();
+            }
+        }
+    }
+}
+
+        // ============ GİRİŞ ============
+        document.getElementById('searchInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const val = e.target.value.trim().toLowerCase();
+                if (val === ROOM_CODE) {
+                    e.target.value = '';
+                    checkProfile();
+                } else {
+                    e.target.value = '';
+                }
+            }
+        });
+
+        document.getElementById('messageInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+        });
+        document.getElementById('messageInput').addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 80) + 'px';
+        });
+
+        // ============ WEBRTC ARAMA ============
+        let localStream = null;
+        let peerConnection = null;
+        let isInCall = false;
+        let callType = null;
+        let callTarget = null;
+        let callTimerInterval = null;
+        let callSeconds = 0;
+
+let rtcConfig = {
+    iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" }
+    ]
+};
+
+// Cloudflare TURN kimliklerini otomatik getir
+async function fetchTurnConfig() {
+    try {
+        const response = await fetch('/api/turn-config');
+        const data = await response.json();
+        
+        if (data.iceServers && data.iceServers.length > 0) {
+            // Mevcut STUN'lara Cloudflare TURN'ü de ekle
+            rtcConfig.iceServers = [
+                { urls: "stun:stun.l.google.com:19302" },
+                { urls: "stun:stun1.l.google.com:19302" },
+                ...data.iceServers
+            ];
+            console.log('✅ Cloudflare TURN kimlikleri yüklendi');
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('❌ TURN kimlik alınamadı:', error);
+        return false;
+    }
+}
+    
+function getOtherUsers() {
+    if (!currentUser) return [];
+    return onlineUsers
+        .filter(u => u.userName !== currentUser.name)
+        .map(u => u.userName);
+}
+
+async function startVideoCall() {
+    const users = getOtherUsers();
+    if (users.length === 0) {
+        alert('Aranacak başka kullanıcı yok!');
+        return;
+    }
+    
+    // Kullanıcı seçme - eğer 1 kişi varsa direkt onu ara
+    if (users.length === 1) {
+        callTarget = users[0];
+        callType = 'video';
+        await initCall();
+        return;
+    }
+    
+    // Birden fazla kişi varsa basit bir seçim listesi göster
+    const choice = prompt('Kimi aramak istiyorsun?\n' + users.map((u, i) => `${i + 1}. ${u}`).join('\n'));
+    const index = parseInt(choice) - 1;
+    if (index >= 0 && index < users.length) {
+        callTarget = users[index];
+        callType = 'video';
+        await initCall();
+    }
+}
+
+async function startAudioCall() {
+    const users = getOtherUsers();
+    if (users.length === 0) {
+        alert('Aranacak başka kullanıcı yok!');
+        return;
+    }
+    
+    if (users.length === 1) {
+        callTarget = users[0];
+        callType = 'audio';
+        await initCall();
+        return;
+    }
+    
+    const choice = prompt('Kimi aramak istiyorsun?\n' + users.map((u, i) => `${i + 1}. ${u}`).join('\n'));
+    const index = parseInt(choice) - 1;
+    if (index >= 0 && index < users.length) {
+        callTarget = users[index];
+        callType = 'audio';
+        await initCall();
+    }
+}
+async function initCall() {
+   await fetchTurnConfig();
+     try {   
+        const constraints = callType === 'video'
+            ? { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: { echoCancellation: true, noiseSuppression: true } }
+: { 
+    audio: { 
+        echoCancellation: true,
+        noiseSuppression: false,
+        autoGainControl: false,
+        channelCount: 1,
+        sampleRate: 48000,
+        sampleSize: 16
+    } 
+};
+
+        localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        showCallOverlay();
+        document.getElementById('callName').textContent = callTarget;
+        document.getElementById('callStatus').textContent = 'Aranıyor...';
+        document.getElementById('callTimer').style.display = 'none';
+        document.getElementById('callMuteBtn').classList.remove('active');
+        
+        if (callType === 'video') {
+            document.getElementById('callVideoBtn').style.display = 'block';
+            document.getElementById('callLocalVideo').style.display = 'block';
+            document.getElementById('callLocalVideo').srcObject = localStream;
+            document.getElementById('callRemoteVideo').style.display = 'none';
+            document.getElementById('callAvatar').style.display = 'none';
+        } else {
+            document.getElementById('callLocalVideo').style.display = 'none';
+            document.getElementById('callRemoteVideo').style.display = 'none';
+            document.getElementById('callAvatar').style.display = 'block';
+            document.getElementById('callAvatar').src = currentUser?.photo || '';
+                document.getElementById('callVideoBtn').style.display = 'none';
+        }
+
+        peerConnection = new RTCPeerConnection(rtcConfig);
+        
+        localStream.getTracks().forEach(track => {
+            peerConnection.addTrack(track, localStream);
+        });
+
+        // GERÇEK BAĞLANTI KONTROLÜ
+        peerConnection.ontrack = (event) => {
+            const stream = event.streams[0];
+            const remoteAudio = document.getElementById('callRemoteAudio');
+            
+            if (event.track.kind === 'audio') {
+                remoteAudio.srcObject = stream;
+                remoteAudio.play().catch(e => console.error('Ses oynatma:', e));
+            }
+            
+            if (event.track.kind === 'video' && callType === 'video') {
+                document.getElementById('callRemoteVideo').style.display = 'block';
+                document.getElementById('callRemoteVideo').srcObject = stream;
+                document.getElementById('callAvatar').style.display = 'none';
+            }
+        };
+
+        // VANILLA ICE: Adayları topla, hazır olunca toplu gönder
+        let pendingCandidates = [];
+        peerConnection.onicecandidate = (event) => {
+            if (event.candidate) {
+                pendingCandidates.push(event.candidate);
+            }
+        };
+
+        // Sadece GERÇEKTEN bağlanınca "Bağlandı" yaz!
+        peerConnection.onconnectionstatechange = () => {
+            console.log('🔗 Durum:', peerConnection.connectionState);
+            if (peerConnection && peerConnection.connectionState === 'connected') {
+                document.getElementById('callStatus').textContent = 'Bağlandı';
+                startCallTimer();
+            } else if (peerConnection.connectionState === 'failed') {
+                alert('Uzak ağ hatası! Farklı internet ağlarından bağlanılamadı.');
+                cleanupCall();
+            }
+        };
+
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+
+let offerSent = false;
+const sendOfferWithCandidates = () => {
+    if (offerSent) return; // Zaten gönderildiyse tekrar gönderme
+    offerSent = true;
+    socket.emit('webrtc-offer', {
+        targetUserName: callTarget,
+        offer: peerConnection.localDescription,
+        candidates: pendingCandidates,
+        type: callType,
+        callerName: currentUser.name
+    });
+};
+
+// Adaylar tamamlanınca gönder
+peerConnection.onicegatheringstatechange = () => {
+    if (peerConnection.iceGatheringState === 'complete') {
+        sendOfferWithCandidates();
+    }
+};
+
+// Yedek: 3 saniye içinde tamamlanmazsa ne varsa gönder
+const offerTimeout = setTimeout(() => {
+    if (!offerSent) {
+        console.log('⏰ Aday toplama zaman aşımı, mevcut adaylarla gönderiliyor');
+        sendOfferWithCandidates();
+    }
+}, 1500);
+
+// Yüksek kalite ses codec ayarı
+setTimeout(() => {
+    const senders = peerConnection.getSenders();
+    senders.forEach(sender => {
+        if (sender.track && sender.track.kind === 'audio') {
+            const params = sender.getParameters();
+            if (!params.encodings) params.encodings = [{}];
+            params.encodings[0].maxBitrate = 256000;
+            params.encodings[0].minBitrate = 128000;
+            sender.setParameters(params).catch(e => console.log(e));
+        }
+    });
+}, 1000);
+
+// Eğer complete olduysa timeout'u temizle
+peerConnection.onicegatheringstatechange = () => {
+    if (peerConnection.iceGatheringState === 'complete') {
+        clearTimeout(offerTimeout);
+        sendOfferWithCandidates();
+    }
+};
+
+    } catch (error) {
+        console.error('Arama başlatılamadı:', error);
+        alert('Mikrofon/kamera erişimi reddedildi veya hata oluştu!');
+        hideCallOverlay();
+    }
+}
+
+        function showCallOverlay() {
+            document.getElementById('callOverlay').classList.add('active');
+            isInCall = true;
+        }
+
+        function hideCallOverlay() {
+            document.getElementById('callOverlay').classList.remove('active');
+            document.getElementById('callLocalVideo').style.display = 'none';
+            document.getElementById('callRemoteVideo').style.display = 'none';
+            document.getElementById('callAvatar').style.display = 'none';
+            document.getElementById('callTimer').style.display = 'none';
+            document.getElementById('callMuteBtn').classList.remove('active');
+            document.getElementById('callVideoBtn').style.display = 'none';
+            document.getElementById('callVideoBtn').classList.remove('active');
+            isInCall = false;
+        }
+
+function toggleCallMute() {
+    if (!localStream) return;
+    const audioTracks = localStream.getAudioTracks();
+    if (audioTracks.length > 0) {
+        const isCurrentlyMuted = !audioTracks[0].enabled;
+        audioTracks.forEach(track => track.enabled = isCurrentlyMuted);
+        const btn = document.getElementById('callMuteBtn');
+        if (isCurrentlyMuted) {
+            btn.classList.remove('active');
+        } else {
+            btn.classList.add('active');
+        }
+    }
+}
+
+function toggleCallVideo() {
+    if (!localStream) return;
+    const videoTracks = localStream.getVideoTracks();
+    if (videoTracks.length > 0) {
+        const isCurrentlyOff = !videoTracks[0].enabled;
+        videoTracks.forEach(track => track.enabled = isCurrentlyOff);
+        const btn = document.getElementById('callVideoBtn');
+        if (isCurrentlyOff) {
+            btn.classList.remove('active');
+        } else {
+            btn.classList.add('active');
+        }
+    }
+}
+
+        function endCall() {
+            if (socket && callTarget) {
+                socket.emit('end-call', { targetUserName: callTarget });
+            }
+            cleanupCall();
+        }
+
+        function cleanupCall() {
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            if (callTimerInterval) {
+                clearInterval(callTimerInterval);
+                callTimerInterval = null;
+            }
+            callSeconds = 0;
+            hideCallOverlay();
+            callTarget = null;
+            callType = null;
+        }
+
+        function startCallTimer() {
+            const timerEl = document.getElementById('callTimer');
+            timerEl.style.display = 'block';
+            if (callTimerInterval) clearInterval(callTimerInterval);
+            callTimerInterval = setInterval(() => {
+                callSeconds++;
+                const mins = Math.floor(callSeconds / 60);
+                const secs = callSeconds % 60;
+                timerEl.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        // ============ SOCKET ARAMA OLAYLARI ============
+        // Bu olaylar connectSocket içinde değil, global olarak tanımlanmalı
+        function setupCallSocketEvents() {
+            if (!socket) return;
+            
+socket.on('incoming-call', async (data) => {
+    const accept = confirm(`${data.callerName} sizi ${data.type === 'video' ? 'görüntülü' : 'sesli'} arıyor. Kabul edilsin mi?`);
+    if (accept) {
+        callTarget = data.callerName;
+        callType = data.type;
+        await fetchTurnConfig();
+        try {
+            const constraints = data.type === 'video'
+                ? { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: { echoCancellation: true, noiseSuppression: true } }
+                : { 
+    audio: { 
+        channelCount: 1,
+        sampleRate: 48000,
+        sampleSize: 16
+    }
+};
+            
+            localStream = await navigator.mediaDevices.getUserMedia(constraints);
+            showCallOverlay();
+            document.getElementById('callName').textContent = data.callerName;
+            document.getElementById('callStatus').textContent = 'Bağlanıyor...';
+            document.getElementById('callTimer').style.display = 'none';
+            
+            if (data.type === 'video') {
+                document.getElementById('callVideoBtn').style.display = 'block';
+                document.getElementById('callLocalVideo').style.display = 'block';
+                document.getElementById('callLocalVideo').srcObject = localStream;
+                document.getElementById('callAvatar').style.display = 'none';
+            } else {
+                document.getElementById('callVideoBtn').style.display = 'none';
+                document.getElementById('callAvatar').style.display = 'block';
+                document.getElementById('callAvatar').src = data.callerPhoto || '';
+            }
+
+            peerConnection = new RTCPeerConnection(rtcConfig);
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            
+            // UZAK BAĞLANTI KONTROLÜ
+            peerConnection.ontrack = (event) => {
+                const stream = event.streams[0];
+                const remoteAudio = document.getElementById('callRemoteAudio');
+                
+                if (event.track.kind === 'audio') {
+                    remoteAudio.srcObject = stream;
+                    remoteAudio.play().catch(e => console.error('Ses oynatma:', e));
+                }
+                
+                if (event.track.kind === 'video' && data.type === 'video') {
+                    document.getElementById('callRemoteVideo').style.display = 'block';
+                    document.getElementById('callRemoteVideo').srcObject = stream;
+                    document.getElementById('callAvatar').style.display = 'none';
+                }
+            };
+
+            // Gelen offer'ı ve adayları uygula
+            await peerConnection.setRemoteDescription(data.offer);
+            if (data.candidates && data.candidates.length > 0) {
+                for (const candidate of data.candidates) {
+                    await peerConnection.addIceCandidate(candidate);
+                }
+            }
+
+            // Cevap adaylarını topla ve toplu gönder
+            let answerCandidates = [];
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    answerCandidates.push(event.candidate);
+                }
+            };
+
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+let answerSent = false;
+const sendAnswerWithCandidates = () => {
+    if (answerSent) return;
+    answerSent = true;
+    socket.emit('webrtc-answer', {
+        targetUserName: data.callerName,
+        answer: peerConnection.localDescription,
+        candidates: answerCandidates
+    });
+};
+
+// Yüksek kalite ses codec ayarı
+setTimeout(() => {
+    const senders = peerConnection.getSenders();
+    senders.forEach(sender => {
+        if (sender.track && sender.track.kind === 'audio') {
+            const params = sender.getParameters();
+            if (!params.encodings) params.encodings = [{}];
+            params.encodings[0].maxBitrate = 256000;
+            params.encodings[0].minBitrate = 128000;
+            sender.setParameters(params).catch(e => console.log(e));
+        }
+    });
+}, 1000);
+
+// Adaylar tamamlanınca gönder
+const answerTimeout = setTimeout(() => {
+    if (!answerSent) {
+        console.log('⏰ Cevap adayları zaman aşımı, mevcut adaylarla gönderiliyor');
+        sendAnswerWithCandidates();
+    }
+}, 1500);
+
+peerConnection.onicegatheringstatechange = () => {
+    if (peerConnection.iceGatheringState === 'complete') {
+        clearTimeout(answerTimeout);
+        sendAnswerWithCandidates();
+    }
+};
+
+// Eğer zaten complete ise hemen gönder
+if (peerConnection.iceGatheringState === 'complete') {
+    clearTimeout(answerTimeout);
+    sendAnswerWithCandidates();
+}
+            // Sadece GERÇEKTEN bağlanınca "Bağlandı" yaz!
+            peerConnection.onconnectionstatechange = () => {
+                console.log('🔗 Aranan taraf durum:', peerConnection.connectionState);
+                if (peerConnection && peerConnection.connectionState === 'connected') {
+                    document.getElementById('callStatus').textContent = 'Bağlandı';
+                    startCallTimer();
+                } else if (peerConnection.connectionState === 'failed') {
+                    alert('Uzak ağ hatası! Farklı internet ağlarından bağlanılamadı.');
+                    cleanupCall();
+                }
+            };
+
+        } catch (error) {
+            console.error('Çağrı kabul edilemedi:', error);
+            cleanupCall();
+        }
+    } else {
+        socket.emit('reject-call', { targetUserName: data.callerName });
+    }
+});
+
+socket.on('webrtc-answer', async (data) => {
+    if (peerConnection) {
+        try {
+            await peerConnection.setRemoteDescription(data.answer);
+            if (data.candidates && data.candidates.length > 0) {
+                for (const candidate of data.candidates) {
+                    await peerConnection.addIceCandidate(candidate);
+                }
+            }
+            // BAĞLANDI YAZISINI BURADA YAZMA! Bağlantı durumu yukarıda onconnectionstatechange ile hallolacak.
+        } catch (e) {
+            console.error('Answer hatası:', e);
+        }
+    }
+});
+
+            socket.on('webrtc-ice-candidate', async (data) => {
+                if (peerConnection) {
+                    try {
+                        await peerConnection.addIceCandidate(data.candidate);
+                    } catch (e) {
+                        console.error('ICE candidate hatası:', e);
+                    }
+                }
+            });
+
+            socket.on('call-ended', () => {
+                alert('Çağrı sonlandırıldı');
+                cleanupCall();
+            });
+
+            socket.on('call-rejected', () => {
+                alert('Çağrı reddedildi');
+                cleanupCall();
+            });
+        }
+
+        // connectSocket fonksiyonunu güncelle - setupCallSocketEvents'i çağır
+        const originalConnectSocket = connectSocket;
+connectSocket = function() {
+    originalConnectSocket();
+    setupCallSocketEvents();
+    setupDMSocketEvents();
+    setupMusicSocketEvents();
+    setupScreenShareSocketEvents(); 
+};
+
+        // ============ BAŞLANGIÇ ============
+document.addEventListener('DOMContentLoaded', () => {
+if (darkModeEnabled) {
+    document.body.classList.add('dark-mode');
+    document.getElementById('darkModeStatus').textContent = 'Açık';
+}
+if (bannerModeEnabled) {
+    document.getElementById('bannerModeStatus').textContent = 'Açık';
+}
+    applySavedFont();
+    generateFood();
+    drawGame();
+       
+    document.getElementById('notifBtn').classList.toggle('active', notificationsEnabled);
+});
+
+
+    </script>
+</body>
+</html>       
