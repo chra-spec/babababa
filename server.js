@@ -499,24 +499,34 @@ socket.on('dm-edit', async (data) => {
 
 // ============ EKRAN PAYLAŞIMI OLAYLARI (SUNUCU) ============
 socket.on('screen-share-request', (data) => {
-    if (!currentUser) return;
+    console.log('📺 Ekran paylaşımı isteği geldi:', data);
+    if (!currentUser) {
+        console.log('❌ currentUser yok, istek gönderilemedi');
+        return;
+    }
     
     let targetSocketId = null;
     rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
         if (user.userName === data.targetUserName) targetSocketId = socketId;
     });
     
+    console.log('Hedef socket ID:', targetSocketId);
+    
     if (targetSocketId) {
         io.to(targetSocketId).emit('screen-share-request', {
             requesterId: socket.id,
-            requesterName: currentUser.userName || 'Bilinmeyen Kullanıcı',
+            requesterName: currentUser.userName || currentUser.name || 'Bilinmeyen Kullanıcı',
             targetUserName: data.targetUserName,
             mode: data.mode
         });
+        console.log('✅ İstek karşı tarafa iletildi');
+    } else {
+        console.log('❌ Hedef kullanıcı bulunamadı');
     }
 });
 
 socket.on('screen-share-accept', (data) => {
+    console.log('📞 Kabul geldi, gönderen:', data.requesterId);
     io.to(data.requesterId).emit('screen-share-accepted', { requesterId: socket.id });
 });
 
