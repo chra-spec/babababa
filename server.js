@@ -497,6 +497,52 @@ socket.on('dm-edit', async (data) => {
   }
 });
 
+// ============ EKRAN PAYLAŞIMI OLAYLARI ============
+socket.on('screen-share-request', (data) => {
+    let targetSocketId = null;
+    rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
+        if (user.userName === data.targetUserName) targetSocketId = socketId;
+    });
+    if (targetSocketId) {
+        io.to(targetSocketId).emit('screen-share-request', {
+            requesterId: socket.id,
+            requesterName: currentUser?.name,
+            targetUserName: data.targetUserName
+        });
+    }
+});
+
+socket.on('screen-share-accept', (data) => {
+    io.to(data.requesterId).emit('screen-share-accepted', { requesterId: socket.id });
+});
+
+socket.on('screen-share-reject', (data) => {
+    io.to(data.requesterId).emit('screen-share-rejected');
+});
+
+socket.on('screen-share-offer', (data) => {
+    io.to(data.targetUserId).emit('screen-share-offer', {
+        offer: data.offer,
+        targetUserId: socket.id
+    });
+});
+
+socket.on('screen-share-answer', (data) => {
+    io.to(data.targetUserId).emit('screen-share-answer', { answer: data.answer });
+});
+
+socket.on('screen-share-ice', (data) => {
+    io.to(data.targetUserId).emit('screen-share-ice', { candidate: data.candidate });
+});
+
+socket.on('screen-share-stopped', (data) => {
+    io.to(data.targetUserId).emit('screen-share-stopped');
+});
+
+socket.on('screen-share-call-ended', (data) => {
+    io.to(data.targetUserId).emit('screen-share-call-ended');
+});
+
   socket.on('request-music', (data) => {
     try{
   if (!currentUser || !currentUser.name) {
