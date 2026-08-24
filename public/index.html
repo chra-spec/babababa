@@ -3213,7 +3213,7 @@ selectedScreenShareMode = 'screen-only'; // ← BUNU EKLE
         socket.emit('screen-share-request', {
             targetUserName: targetUserName,
             requesterId: socket.id,
-            requesterName: currentUser?.name,
+            requesterName: currentUser ? currentUser.name : 'Bilinmeyen Kullanıcı',
             mode: 'screen-only' // sadece ekran paylaşımı
         });
     };
@@ -3223,15 +3223,19 @@ selectedScreenShareMode = 'screen-only'; // ← BUNU EKLE
         socket.emit('screen-share-request', {
             targetUserName: targetUserName,
             requesterId: socket.id,
-            requesterName: currentUser?.name,
+            requesterName: currentUser ? currentUser.name : 'Bilinmeyen Kullanıcı',
             mode: 'screen-call' // ekran + sesli arama
         });
     };
 }
 
-// Ekran paylaşımını başlat (istek kabul edilince her iki taraf da çağırır)
-// includeMic: true ise sesli arama da eklenir, false ise sadece ekran
 async function initScreenShare(requesterId, includeMic = true) {
+    // Tarayıcı desteği kontrolü
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        alert('Tarayıcınız ekran paylaşımını desteklemiyor. Lütfen Chrome veya Edge kullanın.');
+        return;
+    }
+
     try {
         // Ekran ve sistem sesini al
         screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
@@ -3241,12 +3245,10 @@ async function initScreenShare(requesterId, includeMic = true) {
             const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             screenStream.addTrack(micStream.getAudioTracks()[0]);
             isScreenCallActive = true;
-            // Mikrofon ve arama sonlandır butonlarını göster
             document.getElementById('screenShareMicToggle').style.display = 'flex';
             document.getElementById('screenShareEndCall').style.display = 'flex';
         } else {
             isScreenCallActive = false;
-            // Mikrofon ve arama sonlandır butonlarını gizle
             document.getElementById('screenShareMicToggle').style.display = 'none';
             document.getElementById('screenShareEndCall').style.display = 'none';
         }
@@ -3290,7 +3292,7 @@ async function initScreenShare(requesterId, includeMic = true) {
 
     } catch (error) {
         console.error('Ekran paylaşımı başlatılamadı:', error);
-        alert('Ekran paylaşımı başlatılamadı!');
+        alert('Ekran paylaşımı başlatılamadı: ' + error.message);
     }
 }
 
@@ -3351,20 +3353,23 @@ function stopScreenShare() {
 function setupScreenShareSocketEvents() {
     if (!socket) return;
 
-    // Karşı taraftan istek geldiğinde
-    socket.on('screen-share-request', (data) => {
-        const acceptShare = confirm(`${data.requesterName} ekranını paylaşmak istiyor.\nMod: ${data.mode === 'screen-call' ? 'Ekran + Sesli Arama' : 'Sadece Ekran Paylaşımı'}\nKabul edilsin mi?`);
-        if (acceptShare) {
-            screenShareRequesterId = data.requesterId;
-            socket.emit('screen-share-accept', data);
-
-            // İstekteki moda göre sesli arama dahil mi?
-            const includeMic = (data.mode === 'screen-call');
-            initScreenShare(data.requesterId, includeMic);
-        } else {
-            socket.emit('screen-share-reject', data);
-        }
+socket.on('screen-share-request', (data) => {
+    if (!currentUser) return;
+    
+    let targetSocketId = null;
+    rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
+        if (user.userName === data.targetUserName) targetSocketId = socketId;
     });
+    
+    if (targetSocketId) {
+        io.to(targetSocketId).emit('screen-share-request', {
+            requesterId: socket.id,
+            requesterName: currentUser.userName || 'Bilinmeyen Kullanıcı', // DÜZELTME
+            targetUserName: data.targetUserName,
+            mode: data.mode
+        });
+    }
+});
 
     // İstek kabul edildi (istek gönderen tarafta)
     socket.on('screen-share-accepted', async (data) => {
