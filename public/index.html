@@ -3188,7 +3188,7 @@ let screenPeer = null;
 let isScreenSharing = false;
 let isScreenCallActive = false;
 let screenShareRequesterId = null;
-
+let selectedScreenShareMode = 'screen-only'; // varsayılan: sadece ekran
 // Butona tıklayınca seçim menüsünü göster
 function startScreenShare() {
     // Çevrimiçi diğer kullanıcıyı bul
@@ -3197,6 +3197,8 @@ function startScreenShare() {
         alert('Odada başka kullanıcı yok!');
         return;
     }
+
+selectedScreenShareMode = 'screen-only'; // ← BUNU EKLE
 
     // Hedefi ilk çevrimiçi kullanıcıya ata (ileride çoklu seçim yapılabilir)
     const targetUserName = otherUsers[0].userName;
@@ -3367,11 +3369,8 @@ function setupScreenShareSocketEvents() {
     // İstek kabul edildi (istek gönderen tarafta)
     socket.on('screen-share-accepted', async (data) => {
         screenShareRequesterId = data.requesterId;
-        // İstek gönderen taraf kendi seçtiği modu bilir; burada da mode bilgisini tutmak gerekir
-        // Basitlik için: istek gönderen her zaman sesli arama istediğini varsayalım.
-        // Ancak daha doğrusu, istek gönderirken seçilen modu bir değişkende saklamak.
-        // Biz burada varsayılan olarak true kullanıyoruz; siz isterseniz bu kısmı düzenleyin.
         await initScreenShare(data.requesterId, true);
+        await initScreenShare(data.requesterId, selectedScreenShareMode === 'screen-call');
     });
 
     // Teklif geldi (Cevap veren tarafta)
