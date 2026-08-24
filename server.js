@@ -713,6 +713,26 @@ socket.on('music-control', (data) => {
   });
 });
 
+// ============ CLOUDFLARE TURN KİMLİK ÜRETME ============
+app.get('/api/turn-config', async (req, res) => {
+    try {
+        const response = await fetch('https://rtc.live.cloudflare.com/v1/turn/keys/b7ae356ddfbcf724dbf0a80bbcffe1d3/credentials/generate-ice-servers', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer 66db5c5d5686c1ad66857a565f3d777997379f46d1b5370e0544d4d7f858a2f7',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ ttl: 86400 })
+        });
+        
+        const data = await response.json();
+        res.json(data);
+    } catch (error) {
+        console.error('TURN kimlik üretme hatası:', error);
+        res.status(500).json({ error: 'TURN kimlik üretilemedi' });
+    }
+});
+
       app.get('/zombie', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'zombie.html'));
 });
@@ -723,6 +743,7 @@ app.get('/api/dm-messages', async (req, res) => {
     if (!sender || !receiver) {
       return res.status(400).json({ error: 'sender ve receiver gerekli' });
     }
+    
 
     const { data, error } = await supabase
       .from('dm_messages')
