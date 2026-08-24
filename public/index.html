@@ -1928,6 +1928,48 @@ body.dark-mode .message-avatar {
     font-size: 14px;
     font-weight: 600;
 }
+
+/* EKRAN PAYLAŞIMI STİLLERİ */
+.screen-share-btn {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+.screen-share-btn:hover { background: rgba(255,255,255,0.1); }
+
+/* Ekran paylaşımı aktifken sohbet alanı alta iner ve %55 yer kaplar */
+.chat-interface.screen-sharing {
+    height: 55% !important;
+    margin-top: 45% !important;
+}
+
+/* Ekran paylaşımındaki kontrol butonları */
+.screen-control-btn {
+    background: #2d2d44;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: background 0.2s;
+}
+.screen-control-btn.end-call { background: #e74c3c; }
+.screen-control-btn.close-all { background: #e74c3c; }
     </style>
 </head>
 <body>
@@ -2031,6 +2073,13 @@ body.dark-mode .message-avatar {
         <div class="chat-user-name" id="chatUserName" onclick="showProfileFromHeader()">Kullanıcı</div>
         <div class="chat-online-count" id="chatOnlineCount">Çevrimiçi: 0</div>
     </div>
+    <button class="screen-share-btn" onclick="startScreenShare()" title="Ekran Paylaş">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="3" width="20" height="14" rx="2"/>
+        <line x1="8" y1="21" x2="16" y2="21"/>
+        <line x1="12" y1="17" x2="12" y2="21"/>
+    </svg>
+</button>
     <button class="music-menu-btn" onclick="toggleMusicPanel()" title="Müzik">🎵</button>
     <button class="font-menu-btn" onclick="toggleFontPanel()" title="Menü">☰</button>
 </div>
@@ -2382,6 +2431,26 @@ body.dark-mode .message-avatar {
                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
             </svg>
         </button>
+    </div>
+</div>
+
+<!-- EKRAN PAYLAŞIMI ALANI (Ekranın Üst %45'i) -->
+<div id="screenShareArea" style="display:none; position:fixed; top:0; left:0; width:100%; height:45%; background:#000; z-index:26000;">
+    <video id="screenShareVideo" autoplay playsinline style="width:100%; height:100%; object-fit:contain;"></video>
+    
+    <!-- Sağ Üstteki Kontrol Butonları -->
+    <div style="position:absolute; top:10px; right:10px; display:flex; gap:8px;">
+        <!-- 1. Cihaz (Sistem) Sesi Aç/Kapat -->
+        <button id="screenShareAudioToggle" onclick="toggleScreenAudio()" class="screen-control-btn" style="display:none;" title="Cihaz Sesi">🔊</button>
+        
+        <!-- 2. Kendi Mikrofon Sesini Aç/Kapat (Sesli Aramadakine benzer) -->
+        <button id="screenShareMicToggle" onclick="toggleScreenMic()" class="screen-control-btn" style="display:none;" title="Mikrofon">🎤</button>
+        
+        <!-- 3. Sadece Sesli Aramayı Sonlandır (Ekran paylaşımı devam eder) -->
+        <button id="screenShareEndCall" onclick="endScreenCall()" class="screen-control-btn end-call" style="display:none;" title="Aramayı Sonlandır">📞</button>
+        
+        <!-- 4. Her Şeyi Kapat (Hem ekranı hem aramayı) -->
+        <button onclick="stopScreenShare()" class="screen-control-btn close-all" title="Her şeyi kapat">✕</button>
     </div>
 </div>
 
@@ -3099,6 +3168,216 @@ function setupMusicSocketEvents() {
         touchStartX = null;
         touchStartY = null;
     });
+    
+// ============ EKRAN PAYLAŞIMI SİSTEMİ ============
+let screenStream = null;
+let screenPeer = null;
+let isScreenSharing = false;
+let isScreenCallActive = false;
+let screenShareRequesterId = null;
+
+// Ekran paylaşımı isteği gönder (Butona basınca çalışır)
+function startScreenShare() {
+    if (!socket || !callTarget) {
+        alert('Önce bir sesli arama başlatmalısınız.');
+        return;
+    }
+    socket.emit('screen-share-request', {
+        targetUserName: callTarget,
+        requesterId: socket.id,
+        requesterName: currentUser?.name
+    });
+}
+
+// Ekran paylaşımını başlat (İstek kabul edilince her iki tarafta da çalışır)
+// includeMic: true ise sesli arama da başlar, false ise sadece ekran paylaşımı olur
+async function initScreenShare(requesterId, includeMic = true) {
+    try {
+        // Ekranı ve sistem sesini al (Cloudflare TURN üzerinden akacak)
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+
+        // Eğer sesli arama seçeneği seçildiyse mikrofonu ekle
+        if (includeMic) {
+            const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            screenStream.addTrack(micStream.getAudioTracks()[0]);
+            isScreenCallActive = true;
+            // Sesli arama butonlarını göster
+            document.getElementById('screenShareMicToggle').style.display = 'flex';
+            document.getElementById('screenShareEndCall').style.display = 'flex';
+        } else {
+            isScreenCallActive = false;
+            // Sesli arama butonlarını gizle
+            document.getElementById('screenShareMicToggle').style.display = 'none';
+            document.getElementById('screenShareEndCall').style.display = 'none';
+        }
+
+        // Arayüzü güncelle: Üstte %45 ekran, altta %55 sohbet
+        document.getElementById('screenShareArea').style.display = 'block';
+        document.getElementById('chatInterface').classList.add('screen-sharing');
+        document.getElementById('screenShareVideo').srcObject = screenStream;
+
+        // Cihaz sesi butonunu göster (sadece paylaşan tarafta)
+        document.getElementById('screenShareAudioToggle').style.display = 'flex';
+
+        // Cloudflare TURN kullanarak bağlantı kur
+        screenPeer = new RTCPeerConnection(rtcConfig);
+
+        // Tüm izleri (ekran + ses) bağla
+        screenStream.getTracks().forEach(track => {
+            screenPeer.addTrack(track, screenStream);
+        });
+
+        // Karşı taraftan gelen videoyu göster
+        screenPeer.ontrack = (event) => {
+            if (event.track.kind === 'video') {
+                document.getElementById('screenShareVideo').srcObject = event.streams[0];
+            }
+        };
+
+        // Bağlantı adaylarını gönder
+        screenPeer.onicecandidate = (event) => {
+            if (event.candidate) {
+                socket.emit('screen-share-ice', { candidate: event.candidate, targetUserId: requesterId });
+            }
+        };
+
+        // Teklif oluştur ve gönder
+        const offer = await screenPeer.createOffer();
+        await screenPeer.setLocalDescription(offer);
+        socket.emit('screen-share-offer', { targetUserId: requesterId, offer: offer });
+
+        isScreenSharing = true;
+
+    } catch (error) {
+        console.error('Ekran paylaşımı başlatılamadı:', error);
+        alert('Ekran paylaşımı başlatılamadı!');
+    }
+}
+
+// Cihaz (sistem) sesini aç/kapat
+function toggleScreenAudio() {
+    if (!screenStream) return;
+    const audioTrack = screenStream.getAudioTracks().find(track => track.label.toLowerCase().includes('system') || track.label.toLowerCase().includes('screen'));
+    if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        document.getElementById('screenShareAudioToggle').textContent = audioTrack.enabled ? '🔊' : '🔇';
+    }
+}
+
+// Kendi mikrofon sesini aç/kapat (sesli aramada)
+function toggleScreenMic() {
+    if (!screenStream) return;
+    const micTrack = screenStream.getAudioTracks().find(track => !track.label.toLowerCase().includes('system') && !track.label.toLowerCase().includes('screen'));
+    if (micTrack) {
+        micTrack.enabled = !micTrack.enabled;
+        document.getElementById('screenShareMicToggle').textContent = micTrack.enabled ? '🎤' : '🔇';
+    }
+}
+
+// Sadece sesli aramayı sonlandır (Ekran paylaşımı devam eder)
+function endScreenCall() {
+    if (screenStream) {
+        const micTrack = screenStream.getAudioTracks().find(track => !track.label.toLowerCase().includes('system') && !track.label.toLowerCase().includes('screen'));
+        if (micTrack) micTrack.stop();
+    }
+    document.getElementById('screenShareMicToggle').style.display = 'none';
+    document.getElementById('screenShareEndCall').style.display = 'none';
+    isScreenCallActive = false;
+    socket.emit('screen-share-call-ended', { targetUserId: screenShareRequesterId });
+}
+
+// Her şeyi kapat (Hem ekranı hem aramayı) ve sohbeti tam ekrana döndür
+function stopScreenShare() {
+    if (screenStream) {
+        screenStream.getTracks().forEach(track => track.stop());
+        screenStream = null;
+    }
+    if (screenPeer) {
+        screenPeer.close();
+        screenPeer = null;
+    }
+    // Arayüzü tamamen normale döndür
+    document.getElementById('screenShareArea').style.display = 'none';
+    document.getElementById('chatInterface').classList.remove('screen-sharing');
+    document.getElementById('screenShareAudioToggle').style.display = 'none';
+    document.getElementById('screenShareMicToggle').style.display = 'flex';
+    document.getElementById('screenShareEndCall').style.display = 'flex';
+    isScreenSharing = false;
+    isScreenCallActive = false;
+    socket.emit('screen-share-stopped', { targetUserId: screenShareRequesterId });
+}
+
+// ============ EKRAN PAYLAŞIMI SOCKET OLAYLARI ============
+function setupScreenShareSocketEvents() {
+    if (!socket) return;
+
+    // Karşı taraftan istek geldiğinde
+    socket.on('screen-share-request', (data) => {
+        const acceptShare = confirm(`${data.requesterName} ekranını paylaşmak istiyor. Kabul edilsin mi?`);
+        if (acceptShare) {
+            screenShareRequesterId = data.requesterId;
+            socket.emit('screen-share-accept', data);
+
+            // İkinci seçim: Sesli arama da başlatılsın mı?
+            const wantCall = confirm('Sesli arama da başlatılsın mı?\n\n"Tamam" = Evet\n"İptal" = Hayır');
+            initScreenShare(data.requesterId, wantCall);
+        } else {
+            socket.emit('screen-share-reject', data);
+        }
+    });
+
+    // İstek kabul edildi (istek gönderen tarafta)
+    socket.on('screen-share-accepted', async (data) => {
+        screenShareRequesterId = data.requesterId;
+        await initScreenShare(data.requesterId, true); // İstek gönderen taraf sesli arama ister
+    });
+
+    // Teklif geldi (Cevap veren tarafta)
+    socket.on('screen-share-offer', async (data) => {
+        if (!screenPeer) {
+            screenPeer = new RTCPeerConnection(rtcConfig);
+            screenPeer.ontrack = (event) => {
+                if (event.track.kind === 'video') {
+                    document.getElementById('screenShareVideo').srcObject = event.streams[0];
+                }
+            };
+            screenPeer.onicecandidate = (event) => {
+                if (event.candidate) socket.emit('screen-share-ice', { candidate: event.candidate, targetUserId: data.targetUserId });
+            };
+        }
+        await screenPeer.setRemoteDescription(data.offer);
+        const answer = await screenPeer.createAnswer();
+        await screenPeer.setLocalDescription(answer);
+        socket.emit('screen-share-answer', { targetUserId: data.targetUserId, answer: answer });
+    });
+
+    // Cevap geldi (İstek gönderen tarafta)
+    socket.on('screen-share-answer', async (data) => {
+        if (screenPeer) await screenPeer.setRemoteDescription(data.answer);
+    });
+
+    // Bağlantı adayı geldi
+    socket.on('screen-share-ice', async (data) => {
+        if (screenPeer) await screenPeer.addIceCandidate(data.candidate);
+    });
+
+    // Reddedildi
+    socket.on('screen-share-rejected', () => {
+        alert('Ekran paylaşımı reddedildi.');
+    });
+
+    // Karşı taraf durdurdu
+    socket.on('screen-share-stopped', () => {
+        stopScreenShare();
+    });
+
+    // Karşı taraf sadece aramayı sonlandırdı
+    socket.on('screen-share-call-ended', () => {
+        isScreenCallActive = false;
+        document.getElementById('screenShareMicToggle').style.display = 'none';
+        document.getElementById('screenShareEndCall').style.display = 'none';
+    });
+}    
  // ============ ARKA PLAN KİLİDİ ============
 document.addEventListener('visibilitychange', () => {
     if (document.hidden && isInChat) {
@@ -5361,6 +5640,7 @@ connectSocket = function() {
     setupCallSocketEvents();
     setupDMSocketEvents();
     setupMusicSocketEvents();
+    setupScreenShareSocketEvents(); 
 };
 
         // ============ BAŞLANGIÇ ============
@@ -5378,6 +5658,8 @@ if (bannerModeEnabled) {
        
     document.getElementById('notifBtn').classList.toggle('active', notificationsEnabled);
 });
+
+
     </script>
 </body>
 </html>       
