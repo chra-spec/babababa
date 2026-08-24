@@ -497,17 +497,21 @@ socket.on('dm-edit', async (data) => {
   }
 });
 
-// ============ EKRAN PAYLAŞIMI OLAYLARI ============
+// ============ EKRAN PAYLAŞIMI OLAYLARI (SUNUCU) ============
 socket.on('screen-share-request', (data) => {
+    if (!currentUser) return;
+    
     let targetSocketId = null;
     rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
         if (user.userName === data.targetUserName) targetSocketId = socketId;
     });
+    
     if (targetSocketId) {
         io.to(targetSocketId).emit('screen-share-request', {
             requesterId: socket.id,
-            requesterName: currentUser?.name,
-            targetUserName: data.targetUserName
+            requesterName: currentUser.userName || 'Bilinmeyen Kullanıcı',
+            targetUserName: data.targetUserName,
+            mode: data.mode
         });
     }
 });
