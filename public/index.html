@@ -2582,8 +2582,6 @@ function playMusic(videoId, title, channel, requesterId) {
 
     currentMusicVideoId = videoId;
     musicRequesterId = requesterId;
-
-    // Kontrol yetkisi: biz gönderdiysek veya requesterId undefined ise kontrol bizde
     isMusicController = (socket && requesterId === socket.id) || (!socket && requesterId === undefined);
 
     document.getElementById('musicPlayerTitle').textContent = title;
@@ -2591,15 +2589,12 @@ function playMusic(videoId, title, channel, requesterId) {
     document.getElementById('musicPlayer').classList.add('active');
 
     const container = document.getElementById('musicPlayerContent');
-    container.innerHTML = ''; // Eski içeriği temizle
+    container.innerHTML = '';
 
-    const toggleBtn = document.getElementById('musicToggleBtn');
-    const muteBtn = document.getElementById('musicMuteBtn');
+    document.getElementById('musicToggleBtn').style.display = 'flex';
+    document.getElementById('musicMuteBtn').style.display = 'flex';
 
-    toggleBtn.style.display = 'flex';
-    muteBtn.style.display = 'flex';
-
-    // Yeni oynatıcıyı oluştur
+    // Yeni oynatıcı oluştur
     if (typeof YT !== 'undefined' && YT.Player) {
         youtubePlayer = new YT.Player(container, {
             height: '70',
@@ -2609,11 +2604,14 @@ function playMusic(videoId, title, channel, requesterId) {
                 autoplay: 1,
                 controls: 0,
                 modestbranding: 1,
-                rel: 0
+                rel: 0,
+                playsinline: 1
             },
             events: {
                 onReady: (event) => {
+                    // Sadece videoyu oynat ve sesin açık olduğundan emin ol
                     event.target.playVideo();
+                    event.target.unMute();
                     isMusicPlaying = true;
                     updateMusicToggleIcon();
                     updateMusicMuteIcon();
@@ -3540,14 +3538,14 @@ async function toggleRecording() {
             audio: {
                 echoCancellation: true,
                 noiseSuppression: false,
-                autoGainControl: true,
+                autoGainControl: false,
                 channelCount: 1,
                 sampleRate: 48000,
                 sampleSize: 16,
                 latency: 0.01,
                 googEchoCancellation: true,
                 googNoiseSuppression: false,
-                googAutoGainControl: true,
+                googAutoGainControl: false,
                 googHighpassFilter: false,
                 googAudioMirroring: false
             }
@@ -4963,7 +4961,7 @@ async function initCall() {
             ? { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: { echoCancellation: true, noiseSuppression: true } }
 : { 
     audio: { 
-        echoCancellation: false,
+        echoCancellation: true,
         noiseSuppression: false,
         autoGainControl: false,
         channelCount: 1,
@@ -5197,7 +5195,7 @@ socket.on('incoming-call', async (data) => {
                 ? { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: { echoCancellation: true, noiseSuppression: true } }
                 : { 
     audio: { 
-        echoCancellation: false,
+        echoCancellation: true,
         noiseSuppression: false,
         autoGainControl: false,
         channelCount: 1,
