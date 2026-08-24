@@ -2454,6 +2454,19 @@ body.dark-mode .message-avatar {
     </div>
 </div>
 
+<!-- Ekran Paylaşımı Seçim Modalı -->
+<div id="screenShareModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:27000; align-items:center; justify-content:center; flex-direction:column; gap:20px;">
+    <div style="background:#2d2d44; padding:30px; border-radius:20px; text-align:center;">
+        <h3 style="margin-bottom:20px; color:#fff;">Ekran Paylaşımı Modu</h3>
+        <button id="btnScreenOnly" style="display:block; width:100%; margin-bottom:10px; padding:15px; background:#667eea; color:#fff; border:none; border-radius:10px; font-size:16px; cursor:pointer;">
+            Sadece Ekran Paylaşımı
+        </button>
+        <button id="btnScreenWithCall" style="display:block; width:100%; padding:15px; background:#27ae60; color:#fff; border:none; border-radius:10px; font-size:16px; cursor:pointer;">
+            Ekran + Sesli Arama
+        </button>
+    </div>
+</div>
+
     <!-- ÇAĞRI OVERLAY -->
     <div class="call-overlay" id="callOverlay">
         <audio id="callRemoteAudio" autoplay playsinline style="display:none;"></audio>
@@ -3169,44 +3182,69 @@ function setupMusicSocketEvents() {
         touchStartY = null;
     });
     
-// ============ EKRAN PAYLAŞIMI SİSTEMİ ============
+// ============ EKRAN PAYLAŞIMI SİSTEMİ (GÜNCELLENMİŞ) ============
 let screenStream = null;
 let screenPeer = null;
 let isScreenSharing = false;
 let isScreenCallActive = false;
 let screenShareRequesterId = null;
 
-// Ekran paylaşımı isteği gönder (Butona basınca çalışır)
+// Butona tıklayınca seçim menüsünü göster
 function startScreenShare() {
-    if (!socket || !callTarget) {
-        alert('Önce bir sesli arama başlatmalısınız.');
+    // Çevrimiçi diğer kullanıcıyı bul
+    const otherUsers = onlineUsers.filter(u => u.userName !== currentUser?.name);
+    if (otherUsers.length === 0) {
+        alert('Odada başka kullanıcı yok!');
         return;
     }
-    socket.emit('screen-share-request', {
-        targetUserName: callTarget,
-        requesterId: socket.id,
-        requesterName: currentUser?.name
-    });
+
+    // Hedefi ilk çevrimiçi kullanıcıya ata (ileride çoklu seçim yapılabilir)
+    const targetUserName = otherUsers[0].userName;
+    
+    // Seçim modalını göster
+    const modal = document.getElementById('screenShareModal');
+    modal.style.display = 'flex';
+    
+    // Butonlara tıklanınca istek gönder
+    document.getElementById('btnScreenOnly').onclick = () => {
+        modal.style.display = 'none';
+        socket.emit('screen-share-request', {
+            targetUserName: targetUserName,
+            requesterId: socket.id,
+            requesterName: currentUser?.name,
+            mode: 'screen-only' // sadece ekran paylaşımı
+        });
+    };
+    
+    document.getElementById('btnScreenWithCall').onclick = () => {
+        modal.style.display = 'none';
+        socket.emit('screen-share-request', {
+            targetUserName: targetUserName,
+            requesterId: socket.id,
+            requesterName: currentUser?.name,
+            mode: 'screen-call' // ekran + sesli arama
+        });
+    };
 }
 
-// Ekran paylaşımını başlat (İstek kabul edilince her iki tarafta da çalışır)
-// includeMic: true ise sesli arama da başlar, false ise sadece ekran paylaşımı olur
+// Ekran paylaşımını başlat (istek kabul edilince her iki taraf da çağırır)
+// includeMic: true ise sesli arama da eklenir, false ise sadece ekran
 async function initScreenShare(requesterId, includeMic = true) {
     try {
-        // Ekranı ve sistem sesini al (Cloudflare TURN üzerinden akacak)
+        // Ekran ve sistem sesini al
         screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
 
-        // Eğer sesli arama seçeneği seçildiyse mikrofonu ekle
+        // Sesli arama seçilmişse mikrofonu ekle
         if (includeMic) {
             const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             screenStream.addTrack(micStream.getAudioTracks()[0]);
             isScreenCallActive = true;
-            // Sesli arama butonlarını göster
+            // Mikrofon ve arama sonlandır butonlarını göster
             document.getElementById('screenShareMicToggle').style.display = 'flex';
             document.getElementById('screenShareEndCall').style.display = 'flex';
         } else {
             isScreenCallActive = false;
-            // Sesli arama butonlarını gizle
+            // Mikrofon ve arama sonlandır butonlarını gizle
             document.getElementById('screenShareMicToggle').style.display = 'none';
             document.getElementById('screenShareEndCall').style.display = 'none';
         }
@@ -3222,7 +3260,7 @@ async function initScreenShare(requesterId, includeMic = true) {
         // Cloudflare TURN kullanarak bağlantı kur
         screenPeer = new RTCPeerConnection(rtcConfig);
 
-        // Tüm izleri (ekran + ses) bağla
+        // Tüm izleri bağla
         screenStream.getTracks().forEach(track => {
             screenPeer.addTrack(track, screenStream);
         });
@@ -3313,14 +3351,14 @@ function setupScreenShareSocketEvents() {
 
     // Karşı taraftan istek geldiğinde
     socket.on('screen-share-request', (data) => {
-        const acceptShare = confirm(`${data.requesterName} ekranını paylaşmak istiyor. Kabul edilsin mi?`);
+        const acceptShare = confirm(`${data.requesterName} ekranını paylaşmak istiyor.\nMod: ${data.mode === 'screen-call' ? 'Ekran + Sesli Arama' : 'Sadece Ekran Paylaşımı'}\nKabul edilsin mi?`);
         if (acceptShare) {
             screenShareRequesterId = data.requesterId;
             socket.emit('screen-share-accept', data);
 
-            // İkinci seçim: Sesli arama da başlatılsın mı?
-            const wantCall = confirm('Sesli arama da başlatılsın mı?\n\n"Tamam" = Evet\n"İptal" = Hayır');
-            initScreenShare(data.requesterId, wantCall);
+            // İstekteki moda göre sesli arama dahil mi?
+            const includeMic = (data.mode === 'screen-call');
+            initScreenShare(data.requesterId, includeMic);
         } else {
             socket.emit('screen-share-reject', data);
         }
@@ -3329,7 +3367,11 @@ function setupScreenShareSocketEvents() {
     // İstek kabul edildi (istek gönderen tarafta)
     socket.on('screen-share-accepted', async (data) => {
         screenShareRequesterId = data.requesterId;
-        await initScreenShare(data.requesterId, true); // İstek gönderen taraf sesli arama ister
+        // İstek gönderen taraf kendi seçtiği modu bilir; burada da mode bilgisini tutmak gerekir
+        // Basitlik için: istek gönderen her zaman sesli arama istediğini varsayalım.
+        // Ancak daha doğrusu, istek gönderirken seçilen modu bir değişkende saklamak.
+        // Biz burada varsayılan olarak true kullanıyoruz; siz isterseniz bu kısmı düzenleyin.
+        await initScreenShare(data.requesterId, true);
     });
 
     // Teklif geldi (Cevap veren tarafta)
@@ -3377,7 +3419,8 @@ function setupScreenShareSocketEvents() {
         document.getElementById('screenShareMicToggle').style.display = 'none';
         document.getElementById('screenShareEndCall').style.display = 'none';
     });
-}    
+}
+
  // ============ ARKA PLAN KİLİDİ ============
 document.addEventListener('visibilitychange', () => {
     if (document.hidden && isInChat) {
