@@ -2570,6 +2570,12 @@ function selectMusic(videoId, title, channel) {
 }
 
 function playMusic(videoId, title, channel, requesterId) {
+    // Mikrofonu kapat (müzik dinlerken ses kısılmasın)
+    if (typeof localStream !== 'undefined' && localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+        console.log('🎤 Müzik için mikrofon kapatıldı');
+    }
     // Eski oynatıcıyı temizle ve yok et
     if (youtubePlayer && typeof youtubePlayer.destroy === 'function') {
         try {
@@ -3230,14 +3236,14 @@ async function showChat() {
     document.getElementById('chatUserName').textContent = currentUser.name;
     if (!socket) connectSocket(); else if (socket.connected) joinChatRoom();
     document.getElementById('messageInput').focus();
-    
+ /*   
     // Mikrofonu otomatik aç (önceden izin verilmişse sormaz)
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         console.log('🎤 Mikrofon otomatik açıldı');
     } catch (error) {
         console.log('❌ Mikrofon açılamadı:', error);
-    }
+    } */
 }
 
 function exitChat() {
@@ -3534,22 +3540,7 @@ async function toggleRecording() {
     if (isRecording) { stopRecording(); return; }
     try {
         // Ses filtrelerini ayarla
-        const stream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-                echoCancellation: true,
-                noiseSuppression: false,
-                autoGainControl: false,
-                channelCount: 1,
-                sampleRate: 48000,
-                sampleSize: 16,
-                latency: 0.01,
-                googEchoCancellation: true,
-                googNoiseSuppression: false,
-                googAutoGainControl: false,
-                googHighpassFilter: false,
-                googAudioMirroring: false
-            }
-        });
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
         // BURAYA mimeType seçimi gelecek
         let mimeType = 'audio/webm;codecs=opus';
@@ -5195,13 +5186,10 @@ socket.on('incoming-call', async (data) => {
                 ? { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: { echoCancellation: true, noiseSuppression: true } }
                 : { 
     audio: { 
-        echoCancellation: true,
-        noiseSuppression: false,
-        autoGainControl: false,
         channelCount: 1,
         sampleRate: 48000,
         sampleSize: 16
-    } 
+    }
 };
             
             localStream = await navigator.mediaDevices.getUserMedia(constraints);
