@@ -25,21 +25,17 @@ const { Pool } = require('pg');
 const pool = new Pool({
   connectionString: 'postgresql://tncwn4641_gmail_com:eUYuxelhs0piwiL0Z3mQ7A@fbgtgh-32639.j77.aws-eu-central-1.cockroachlabs.cloud:26257/defaultdb?sslmode=require'
 });
-
-// Tabloyu sıfırla (eski hatalı tablo varsa sil)
-pool.query(`DROP TABLE IF EXISTS mesajlar`).then(() => {
-  return pool.query(`
-    CREATE TABLE mesajlar (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      oda_id TEXT NOT NULL,
-      kullanici TEXT NOT NULL,
-      user_photo TEXT DEFAULT '',
-      user_color TEXT DEFAULT '#ffffff',
-      mesaj TEXT NOT NULL,
-      zaman TIMESTAMPTZ DEFAULT NOW()
-    )
-  `);
-}).catch(err => console.error('Tablo oluşturma hatası:', err));
+pool.query(`
+  CREATE TABLE IF NOT EXISTS mesajlar (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    oda_id TEXT NOT NULL,
+    kullanici TEXT NOT NULL,
+    user_photo TEXT DEFAULT '',
+    user_color TEXT DEFAULT '#ffffff',
+    mesaj TEXT NOT NULL,
+    zaman TIMESTAMPTZ DEFAULT NOW()
+  )
+`).catch(err => console.error('Tablo oluşturma hatası:', err));
 
 pool.query(`
   CREATE TABLE IF NOT EXISTS dm_mesajlar (
@@ -881,7 +877,7 @@ app.get('/api/dm-messages', async (req, res) => {
       reply_to: msg.reply_to,
       reply_to_id: msg.reply_to_id,
       edited: msg.edited,
-      reactions: msg.reactions,
+      reactions: typeof msg.reactions === 'string' ? JSON.parse(msg.reactions) : msg.reactions,
       created_at: msg.created_at
     }));
 
