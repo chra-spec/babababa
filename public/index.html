@@ -2100,6 +2100,7 @@ body.dark-mode .message-avatar {
 </button>
     <button class="music-menu-btn" onclick="toggleMusicPanel()" title="Müzik">🎵</button>
     <button class="font-menu-btn" onclick="toggleFontPanel()" title="Menü">☰</button>
+    <button class="utility-btn" id="roomBtn" onclick="toggleRoomMenu()" title="Oda">🏠</button>
 </div>
     <div class="header-right">        
         <button id="notifBtn" class="utility-btn" onclick="toggleNotifications()" title="Bildirimleri aç/kapat">
@@ -2217,6 +2218,59 @@ body.dark-mode .message-avatar {
     <input type="text" id="musicSearchInput" class="music-search-input" placeholder="Müzik ara..." onkeypress="if(event.key==='Enter') searchMusic()">
     <button class="btn-full" onclick="searchMusic()" style="margin-top:8px;">🔍 Ara</button>
     <div id="musicResults" style="margin-top:10px; max-height:250px; overflow-y:auto;"></div>
+</div>
+
+<!-- ODA MENÜSÜ -->
+<div id="roomMenu" class="music-panel" style="display:none;">
+    <div class="menu-header-row">
+        <button class="menu-back-btn" onclick="closeRoomMenu()">←</button>
+        <div class="font-panel-title">🏠 Oda</div>
+    </div>
+    <button class="btn-full" onclick="showRoomCreate()">➕ Oda Kur</button>
+    <button class="btn-full" onclick="showRoomJoin()" style="margin-top:8px;">🔑 Odaya Katıl</button>
+    <div id="activeRoomList" style="margin-top:10px; max-height:200px; overflow-y:auto;"></div>
+</div>
+
+<!-- ODA KUR MODAL -->
+<div class="modal" id="roomCreateModal">
+    <div class="modal-content">
+        <h2>Oda Kur</h2>
+        <div class="form-group">
+            <label>Oda Adı</label>
+            <input type="text" class="form-input" id="roomNameInput" placeholder="Oda adı">
+        </div>
+        <div class="form-group">
+            <label>Şifre</label>
+            <input type="password" class="form-input" id="roomPasswordInput" placeholder="En az 1 büyük, 1 rakam, 1 noktalama">
+        </div>
+        <div class="form-group">
+            <label>Tag</label>
+            <input type="text" class="form-input" id="roomTagInput" placeholder="Tag belirleyin">
+        </div>
+        <button class="btn-full" onclick="createRoom()">Oda Kur</button>
+        <button class="btn-full" style="margin-top:8px; background:#e74c3c;" onclick="closeRoomCreate()">İptal</button>
+    </div>
+</div>
+
+<!-- ODAYA KATIL MODAL -->
+<div class="modal" id="roomJoinModal">
+    <div class="modal-content">
+        <h2>Odaya Katıl</h2>
+        <div class="form-group">
+            <label>Oda Adı</label>
+            <input type="text" class="form-input" id="roomJoinNameInput" placeholder="Oda adı">
+        </div>
+        <div class="form-group">
+            <label>Şifre</label>
+            <input type="password" class="form-input" id="roomJoinPasswordInput" placeholder="Şifre">
+        </div>
+        <div class="form-group">
+            <label>Tag</label>
+            <input type="text" class="form-input" id="roomJoinTagInput" placeholder="Tag belirleyin">
+        </div>
+        <button class="btn-full" onclick="joinRoom()">Katıl</button>
+        <button class="btn-full" style="margin-top:8px; background:#e74c3c;" onclick="closeRoomJoin()">İptal</button>
+    </div>
 </div>
 
     <!-- STICKER PANELİ -->
@@ -2357,12 +2411,13 @@ body.dark-mode .message-avatar {
     <div class="messages-container scrollbar-thin" id="dmMessagesContainer" style="flex:1; overflow-y:auto;"></div>
     <div class="input-area">
     <div class="input-buttons">
-        <button class="input-btn" onclick="openDMGallery()" title="Galeri">🖼️</button>
-        <button class="input-btn" onclick="toggleDMStickerPanel()" title="Çıkartma">🐰</button>
-        <button class="input-btn" id="dmRecordBtn" onclick="toggleDMRecording()" title="Ses Kaydı">🎤</button>
-        <input type="file" id="dmImageInput" accept="image/*" multiple style="display: none;">
-        <input type="file" id="dmVideoInput" accept="video/*" multiple style="display: none;">
-    </div>
+    <button class="input-btn" onclick="openDMCamera()" title="Kamera">📷</button>
+    <button class="input-btn" onclick="openDMGallery()" title="Galeri">🖼️</button>
+    <button class="input-btn" onclick="toggleDMStickerPanel()" title="Çıkartma">🐰</button>
+    <button class="input-btn" id="dmRecordBtn" onclick="toggleDMRecording()" title="Ses Kaydı">🎤</button>
+    <input type="file" id="dmImageInput" accept="image/*" multiple style="display: none;">
+    <input type="file" id="dmVideoInput" accept="video/*" multiple style="display: none;">
+</div>
     <textarea class="message-input" id="dmMessageInput" placeholder="Mesaj yaz..." rows="1"></textarea>
     <button class="send-btn" onclick="sendDMMessage()">➤</button>
 </div>
@@ -3908,11 +3963,103 @@ document.getElementById('videoInput').addEventListener('change', function(e) {
     this.value = '';
 });
 
+function toggleRoomMenu() {
+    const panel = document.getElementById('roomMenu');
+    if (panel.style.display === 'block') {
+        panel.style.display = 'none';
+    } else {
+        panel.style.display = 'block';
+        loadActiveRooms();
+    }
+}
+
+function closeRoomMenu() {
+    document.getElementById('roomMenu').style.display = 'none';
+}
+
+function showRoomCreate() {
+    closeRoomMenu();
+    document.getElementById('roomCreateModal').classList.add('active');
+}
+
+function closeRoomCreate() {
+    document.getElementById('roomCreateModal').classList.remove('active');
+}
+
+function showRoomJoin() {
+    closeRoomMenu();
+    document.getElementById('roomJoinModal').classList.add('active');
+}
+
+function closeRoomJoin() {
+    document.getElementById('roomJoinModal').classList.remove('active');
+}
+
+function createRoom() {
+    const roomName = document.getElementById('roomNameInput').value.trim();
+    const roomPassword = document.getElementById('roomPasswordInput').value.trim();
+    const userTag = document.getElementById('roomTagInput').value.trim();
+    if (!roomName || !roomPassword || !userTag) return alert('Tüm alanları doldurun');
+    
+    socket.emit('room-create', { roomName, roomPassword, userTag });
+}
+
+function joinRoom() {
+    const roomName = document.getElementById('roomJoinNameInput').value.trim();
+    const roomPassword = document.getElementById('roomJoinPasswordInput').value.trim();
+    const userTag = document.getElementById('roomJoinTagInput').value.trim();
+    if (!roomName || !roomPassword || !userTag) return alert('Tüm alanları doldurun');
+    
+    socket.emit('room-join', { roomName, roomPassword, userTag });
+}
+
+function loadActiveRooms() {
+    socket.emit('room-list');
+}
+
+function renderActiveRoomList(rooms) {
+    const container = document.getElementById('activeRoomList');
+    container.innerHTML = '';
+    if (rooms.length === 0) {
+        container.innerHTML = '<div style="color:#666; padding:10px;">Aktif oda yok</div>';
+        return;
+    }
+    rooms.forEach(room => {
+        const div = document.createElement('div');
+        div.className = 'dm-user-item';
+        div.style.cursor = 'pointer';
+        div.innerHTML = `
+            <span>🏠 ${room.name.substring(0, 3)}...</span>
+            <span style="margin-left:auto;">Şifre: ${'*'.repeat(6)}</span>
+        `;
+        div.onclick = () => {
+            document.getElementById('roomJoinNameInput').value = room.name;
+            closeRoomMenu();
+            showRoomJoin();
+        };
+        container.appendChild(div);
+    });
+}
+
+function enterRoomInterface(roomId, roomName, roomPassword, isAdmin) {
+    currentRoomId = roomId;
+    currentRoomName = roomName;
+    currentRoomPassword = roomPassword;
+    isRoomAdmin = isAdmin;
+    document.getElementById('chatInterface').classList.add('active');
+    document.getElementById('gameContainer').style.display = 'none';
+    document.getElementById('chatUserName').textContent = `🏠 ${roomName}`;
+    document.getElementById('chatOnlineCount').textContent = `Şifre: ${isAdmin || true ? roomPassword : '********'}`; // Şifre gösterimi
+    // Mesaj geçmişini yükle
+    socket.emit('room-history');
+}
+
 // ============ SES KAYDI ============
 let mediaRecorder = null, audioChunks = [], isRecording = false;
 let dmMediaRecorder = null;
 let dmAudioChunks = [];
 let dmIsRecording = false;
+let isDMCameraMode = false;
 async function toggleRecording() {
     const btn = document.getElementById('recordBtn');
     if (isRecording) { stopRecording(); return; }
@@ -4361,8 +4508,9 @@ let pendingMediaURL = null;
 
 // ============ KAMERA AÇ ============
 async function openCamera() {
-    setCameraMode('photo');
-    
+    document.getElementById('videoModeBtn').style.display = 'inline-block';
+    setCameraMode('photo');    
+
     if (cameraStream) {
         cameraStream.getTracks().forEach(track => track.stop());
         cameraStream = null;
@@ -4872,15 +5020,27 @@ function sendMediaFromPreview() {
         }
     };
 
-    reader.onload = (e) => {
+reader.onload = (e) => {
+    if (isDMCameraMode && currentDMUser) {
+        // DM modunda DM'e gönder
+        socket.emit('dm-message', {
+            receiver: currentDMUser,
+            type: 'image', // Sadece fotoğraf olacak
+            fileData: e.target.result,
+            mimeType: 'image/jpeg'
+        });
+        isDMCameraMode = false; // Modu sıfırla
+    } else {
+        // Normal sohbet modunda normal gönder
         socket.emit('message', {
             type: pendingMediaType,
             fileData: e.target.result,
             mimeType: pendingMediaType === 'image' ? 'image/jpeg' : 'video/webm'
         });
-        loadingDiv.remove();
-        finishSending();
-    };
+    }
+    loadingDiv.remove();
+    finishSending();
+};
 
     const file = new File([pendingMediaBlob], pendingMediaType === 'image' ? 'photo.jpg' : 'video.webm', {
         type: pendingMediaType === 'image' ? 'image/jpeg' : 'video/webm'
@@ -4906,6 +5066,8 @@ previewContent.innerHTML = '';
     }
     document.getElementById('cameraOverlay').classList.remove('active');
     document.getElementById('galleryOverlay').classList.remove('active');
+    isDMCameraMode = false; // DM kamera modunu kapat
+    document.getElementById('videoModeBtn').style.display = 'inline-block'; // Video butonunu geri göster
 }
 
 // ============ DM SİSTEMİ ============
@@ -5026,6 +5188,16 @@ function openDMGallery() {
     } else {
         document.getElementById('dmVideoInput').click();
     }
+}
+
+function openDMCamera() {
+    isDMCameraMode = true;
+    // Video modu butonunu gizle (sadece fotoğraf)
+    document.getElementById('videoModeBtn').style.display = 'none';
+    // Fotoğraf modunu aktifleştir
+    setCameraMode('photo');
+    // Kamerayı aç
+    openCamera();
 }
 
 // DM Çıkartma Paneli
@@ -6146,6 +6318,19 @@ socket.on('webrtc-answer', async (data) => {
         // connectSocket fonksiyonunu güncelle - setupCallSocketEvents'i çağır
         const originalConnectSocket = connectSocket;
 connectSocket = function() {
+socket.on('room-list-update', (rooms) => renderActiveRoomList(rooms));
+socket.on('room-created', (data) => {
+    closeRoomCreate();
+    alert(`Oda kuruldu: ${data.roomName}\nŞifre: ${data.roomPassword}`);
+    // Oda arayüzüne geç
+    enterRoomInterface(data.roomId, data.roomName, data.roomPassword, true);
+});
+socket.on('room-joined', (data) => {
+    closeRoomJoin();
+    alert(`Odaya katıldınız: ${data.roomName}`);
+    enterRoomInterface(data.roomId, data.roomName, data.roomPassword, data.isAdmin);
+});
+socket.on('room-error', (data) => alert(data.message));
     originalConnectSocket();
     setupCallSocketEvents();
     setupDMSocketEvents();
@@ -6171,8 +6356,6 @@ if (bannerModeEnabled) {
        
     document.getElementById('notifBtn').classList.toggle('active', notificationsEnabled);
 });
-
-
     </script>
 </body>
 </html>       
