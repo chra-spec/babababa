@@ -20,41 +20,6 @@ const io = socketIo(server, {
   maxHttpBufferSize: 50 * 1024 * 1024
 });
 
-const { Pool } = require('pg');
-
-const pool = new Pool({
-  connectionString: 'postgresql://tncwn4641_gmail_com:eUYuxelhs0piwiL0Z3mQ7A@fbgtgh-32639.j77.aws-eu-central-1.cockroachlabs.cloud:26257/defaultdb?sslmode=require'
-});
-pool.query(`
-  CREATE TABLE IF NOT EXISTS mesajlar (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    oda_id TEXT NOT NULL,
-    kullanici TEXT NOT NULL,
-    user_photo TEXT DEFAULT '',
-    user_color TEXT DEFAULT '#ffffff',
-    mesaj TEXT NOT NULL,
-    zaman TIMESTAMPTZ DEFAULT NOW()
-  )
-`).catch(err => console.error('Tablo oluşturma hatası:', err));
-
-pool.query(`
-  CREATE TABLE IF NOT EXISTS dm_mesajlar (
-    id TEXT PRIMARY KEY,
-    sender TEXT NOT NULL,
-    receiver TEXT NOT NULL,
-    message TEXT,
-    type TEXT DEFAULT 'text',
-    file_data TEXT,
-    mime_type TEXT,
-    sticker_type TEXT,
-    reply_to TEXT,
-    reply_to_id TEXT,
-    edited BOOLEAN DEFAULT false,
-    reactions TEXT DEFAULT '[]',
-    created_at TIMESTAMPTZ DEFAULT NOW()
-  )
-`).catch(err => console.error('DM tablosu oluşturma hatası:', err));
-
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -96,31 +61,6 @@ function updateUserList(roomCode) {
     userColor: u.userColor
   }));
   io.to(roomCode).emit('user-list-update', userList);
-}
-
-async function dbMesajKaydet(odaId, kullanici, userPhoto, userColor, mesaj) {
-  try {
-    await pool.query(
-      'INSERT INTO mesajlar (oda_id, kullanici, user_photo, user_color, mesaj) VALUES ($1, $2, $3, $4, $5)',
-      [odaId, kullanici, userPhoto, userColor, mesaj]
-    );
-  } catch (err) {
-    console.error('Mesaj kaydetme hatası:', err);
-  }
-}
-
-// Odadaki son 100 mesajı getir
-async function dbMesajlariGetir(odaId) {
-  try {
-    const result = await pool.query(
-      'SELECT * FROM mesajlar WHERE oda_id = $1 ORDER BY zaman ASC LIMIT 100',
-      [odaId]
-    );
-    return result.rows;
-  } catch (err) {
-    console.error('Mesaj çekme hatası:', err);
-    return [];
-  }
 }
 
 io.on('connection', (socket) => {
@@ -206,56 +146,54 @@ room.messages.forEach(msg => {
     }
   });
   
-socket.on('message', async (data) => {
-  try {
-    if (!currentRoomCode || !currentUser) return;
-    const room = rooms.get(currentRoomCode);
-    if (!room) return;
+  // ============ MESAJ GÖNDER ============
+  socket.on('message', async (data) => {
+    try {
+      if (!currentRoomCode || !currentUser) return;
+      const room = rooms.get(currentRoomCode);
+      if (!room) return;
 
-    const message = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-      userName: currentUser.userName,
-      userPhoto: currentUser.userPhoto,
-      userColor: currentUser.userColor,
-      type: data.type || 'text',
-      text: data.text || '',
-      fileData: data.fileData || null,
-      mimeType: data.mimeType || null,
-      stickerType: data.stickerType || null,
-      replyTo: data.replyTo || null,
-      isMirrored: data.isMirrored === true,
-      replyToUserName: data.replyToUserName || null,
-      replyToText: data.replyToText || null,
-      font: data.font || null,
-      bannerMode: data.bannerMode === true,
-      reactions: [],
-      time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' }),
-      timestamp: Date.now()
-    };
+      const message = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+        userName: currentUser.userName,
+        userPhoto: currentUser.userPhoto,
+        userColor: currentUser.userColor,
+        type: data.type || 'text',
+        text: data.text || '',
+        fileData: data.fileData || null,
+        mimeType: data.mimeType || null,
+        stickerType: data.stickerType || null,
+        replyTo: data.replyTo || null,
+        isMirrored: data.isMirrored === true,
+        replyToUserName: data.replyToUserName || null,
+        replyToText: data.replyToText || null,
+        font: data.font || null, 
+        bannerMode: data.bannerMode === true,
+        reactions: [],
+        time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' }),
+        timestamp: Date.now()
+      };
 
-    // 1) Önce odaya yayınla (anında gitsin)
-    room.messages.push(message);
-    io.to(currentRoomCode).emit('message', message);
+      room.messages.push(message);
 
-    // 2) Sonra arka planda veritabanına kaydet (senkron değil)
-    dbMesajKaydet(currentRoomCode, currentUser.userName, currentUser.userPhoto, currentUser.userColor, data.text).catch(err => console.error('DB kayıt hatası:', err));
+      io.to(currentRoomCode).emit('message', message);
 
-    // 3) Push bildirimleri
-    const targetUsers = Array.from(room.users.values()).filter(u => u.userName !== currentUser.userName);
-    targetUsers.forEach(user => {
-      const sub = pushSubscriptions.get(user.userName);
-      if (sub) {
-        webpush.sendNotification(sub, JSON.stringify({
-          title: 'Yeni Mesaj',
-          body: `${currentUser.userName}: ${data.text || 'medya'}`
-        })).catch(err => console.error('Push hatası:', err));
-      }
-    });
+      // Diğer kullanıcılara push bildirimi gönder
+      const targetUsers = Array.from(room.users.values()).filter(u => u.userName !== currentUser.userName);
+      targetUsers.forEach(user => {
+        const sub = pushSubscriptions.get(user.userName);
+        if (sub) {
+          webpush.sendNotification(sub, JSON.stringify({
+            title: 'Yılan Oyunu Platformu',
+            body: 'Yılan seni özledi gel ve skorunu arttır!'
+          })).catch(err => console.error('Push hatası:', err));
+        }
+      });
 
-  } catch (error) {
-    console.error('❌ Mesaj hatası:', error);
-  }
-});
+    } catch (error) {
+      console.error('❌ Mesaj hatası:', error);
+    }
+  });
 
   // ============ MESAJ SİL ============
   socket.on('delete-message', async (data) => {
@@ -283,7 +221,6 @@ socket.on('message', async (data) => {
       console.error('❌ Mesaj silme hatası:', error);
     }
   });
-
   // ============ MESAJA İFADE BIRAK ============
   socket.on('react-message', (data) => {
     try {
@@ -439,22 +376,18 @@ socket.on('message', async (data) => {
     }
   });
 
-  socket.on('dm-message', async (data) => {
+// ============ DM MESAJLARI ============
+socket.on('dm-message', async (data) => {
   try {
     if (!currentUser) return;
-    const { receiver, text, replyTo, replyToId, replyToSender, type, fileData, mimeType, stickerType } = data;
-
-    if (!receiver || (!text && !fileData && !stickerType)) return;
+    const { receiver, text, replyTo, replyToId, replyToSender } = data;
+    if (!receiver || !text) return;
 
     const dmMessage = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
       sender: currentUser.userName,
       receiver: receiver,
-      message: text || '',
-      type: type || 'text',
-      fileData: fileData || null,
-      mimeType: mimeType || null,
-      stickerType: stickerType || null,
+      message: text,
       reply_to: replyTo ? `${replyToSender ? replyToSender + ': ' : ''}${replyTo}` : null,
       reply_to_id: replyToId || null,
       edited: false,
@@ -462,29 +395,23 @@ socket.on('message', async (data) => {
       created_at: new Date().toISOString()
     };
 
-    // CockroachDB'ye kaydet
-    await pool.query(
-      `INSERT INTO dm_mesajlar (id, sender, receiver, message, type, file_data, mime_type, sticker_type, reply_to, reply_to_id, edited, reactions)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-      [
-        dmMessage.id,
-        dmMessage.sender,
-        dmMessage.receiver,
-        dmMessage.message,
-        dmMessage.type,
-        dmMessage.fileData,
-        dmMessage.mimeType,
-        dmMessage.stickerType,
-        dmMessage.reply_to,
-        dmMessage.reply_to_id,
-        dmMessage.edited,
-        JSON.stringify(dmMessage.reactions)
-      ]
-    );
+    const { error } = await supabase.from('dm_messages').insert({
+      id: dmMessage.id,
+      sender: dmMessage.sender,
+      receiver: dmMessage.receiver,
+      message: dmMessage.message,
+      reply_to: dmMessage.reply_to,
+      reply_to_id: dmMessage.reply_to_id,
+      edited: dmMessage.edited,
+      reactions: dmMessage.reactions
+    });
+    if (error) console.error('DM kayıt hatası:', error.message);
 
     let receiverSocketId = null;
     rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
-      if (user.userName === receiver) receiverSocketId = socketId;
+      if (user.userName === receiver) {
+        receiverSocketId = socketId;
+      }
     });
 
     if (receiverSocketId) {
@@ -495,7 +422,20 @@ socket.on('message', async (data) => {
     console.error('DM mesaj hatası:', error);
   }
 });
+
+  socket.on('dm-delete', async (data) => {
+    try {
+      if (!currentUser) return;
+      const { messageId } = data;
+      await supabase.from('dm_messages').delete().eq('id', messageId).eq('sender', currentUser.userName);
+      // Basitçe silme işlemini taraflara bildir
+      io.emit('dm-deleted', { messageId });
+    } catch (error) {
+      console.error('DM silme hatası:', error);
+    }
+  });
   
+  // ============ DM İFADE BIRAK ============
 socket.on('dm-react', async (data) => {
   try {
     if (!currentUser) return;
@@ -503,45 +443,71 @@ socket.on('dm-react', async (data) => {
     if (!messageId || !emoji) return;
     if (!['🖕', '❤️', '😜', '🤍'].includes(emoji)) return;
 
-    const result = await pool.query('SELECT * FROM dm_mesajlar WHERE id = $1', [messageId]);
-    if (result.rows.length === 0) return;
+    // Supabase'den mesajı çek
+    const { data: dmMsg, error: fetchError } = await supabase
+      .from('dm_messages')
+      .select('*')
+      .eq('id', messageId)
+      .single();
 
-    let reactions = result.rows[0].reactions || [];
+    if (fetchError || !dmMsg) {
+      console.error('DM mesaj bulunamadı:', fetchError?.message);
+      return;
+    }
+
+    // Mevcut reaksiyonları güncelle
+    let reactions = dmMsg.reactions || [];
     const existingReaction = reactions.find(r => r.emoji === emoji);
     if (existingReaction) {
       if (existingReaction.users.includes(currentUser.userName)) return;
       existingReaction.users.push(currentUser.userName);
       existingReaction.count = existingReaction.users.length;
     } else {
-      reactions.push({ emoji, users: [currentUser.userName], count: 1 });
+      reactions.push({
+        emoji: emoji,
+        users: [currentUser.userName],
+        count: 1
+      });
     }
 
-    await pool.query('UPDATE dm_mesajlar SET reactions = $1 WHERE id = $2', [JSON.stringify(reactions), messageId]);
+    const { error: updateError } = await supabase
+      .from('dm_messages')
+      .update({ reactions: reactions })
+      .eq('id', messageId);
 
-    io.emit('dm-reaction-updated', { messageId, emoji, userName: currentUser.userName });
+    if (updateError) {
+      console.error('DM reaksiyon güncelleme hatası:', updateError.message);
+      return;
+    }
+
+    // Taraflara bildir
+    io.emit('dm-reaction-updated', {
+      messageId: messageId,
+      emoji: emoji,
+      userName: currentUser.userName
+    });
   } catch (error) {
     console.error('DM reaksiyon hatası:', error);
   }
 });
 
-  socket.on('dm-delete', async (data) => {
-  try {
-    if (!currentUser) return;
-    const { messageId } = data;
-    await pool.query('DELETE FROM dm_mesajlar WHERE id = $1 AND sender = $2', [messageId, currentUser.userName]);
-    io.emit('dm-deleted', { messageId });
-  } catch (error) {
-    console.error('DM silme hatası:', error);
-  }
-});
-
+// ============ DM MESAJ DÜZENLE ============
 socket.on('dm-edit', async (data) => {
   try {
     if (!currentUser) return;
     const { messageId, newText } = data;
     if (!messageId || !newText || !newText.trim()) return;
 
-    await pool.query('UPDATE dm_mesajlar SET message = $1, edited = true WHERE id = $2 AND sender = $3', [newText.trim(), messageId, currentUser.userName]);
+    const { error } = await supabase
+      .from('dm_messages')
+      .update({ message: newText.trim(), edited: true })
+      .eq('id', messageId)
+      .eq('sender', currentUser.userName);
+
+    if (error) {
+      console.error('DM düzenleme hatası:', error.message);
+      return;
+    }
 
     io.emit('dm-edited', {
       messageId: messageId,
@@ -551,7 +517,7 @@ socket.on('dm-edit', async (data) => {
   } catch (error) {
     console.error('DM düzenleme hatası:', error);
   }
-}); 
+});
 // ============ EKRAN PAYLAŞIMI OLAYLARI (SUNUCU) ============
 socket.on('screen-share-request', (data) => {
     console.log('📺 Ekran paylaşımı isteği geldi:', data);
