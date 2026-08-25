@@ -4400,26 +4400,6 @@ async function openCamera() {
     }
 }
 
-const video = document.getElementById('cameraPreview');
-video.srcObject = cameraStream;
-video.classList.remove('rear');
-video.classList.add('zoom');
-cameraCanvas.width = 850;
-cameraCanvas.height = 1400;
-startCanvasDraw(video);
-
-        if (cameraFacing === 'environment') {
-            video.classList.add('rear');
-        }
-
-        document.getElementById('cameraOverlay').classList.add('active');
-        document.getElementById('captureBtn').style.display = 'block';
-    } catch (error) {
-        console.error('Kamera açılamadı:', error);
-        alert('Kamera erişimi reddedildi veya bulunamadı!');
-    }
-}
-
 // ============ KAMERA KAPAT ============
 function closeCamera() {
     // Animasyon döngüsünü durdur
