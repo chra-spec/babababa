@@ -41,6 +41,24 @@ pool.query(`DROP TABLE IF EXISTS mesajlar`).then(() => {
   `);
 }).catch(err => console.error('Tablo oluşturma hatası:', err));
 
+pool.query(`
+  CREATE TABLE IF NOT EXISTS dm_mesajlar (
+    id TEXT PRIMARY KEY,
+    sender TEXT NOT NULL,
+    receiver TEXT NOT NULL,
+    message TEXT,
+    type TEXT DEFAULT 'text',
+    file_data TEXT,
+    mime_type TEXT,
+    sticker_type TEXT,
+    reply_to TEXT,
+    reply_to_id TEXT,
+    edited BOOLEAN DEFAULT false,
+    reactions TEXT DEFAULT '[]',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )
+`).catch(err => console.error('DM tablosu oluşturma hatası:', err));
+
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -198,13 +216,6 @@ room.messages.forEach(msg => {
       if (!currentRoomCode || !currentUser) return;
       const room = rooms.get(currentRoomCode);
       if (!room) return;
-await dbMesajKaydet(
-  currentRoomCode,
-  currentUser.userName,
-  currentUser.userPhoto || '',
-  currentUser.userColor || '#ffffff',
-  data.text
-);
       const message = {
         id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
         userName: currentUser.userName,
@@ -241,6 +252,8 @@ await dbMesajKaydet(
           })).catch(err => console.error('Push hatası:', err));
         }
       });
+
+await dbMesajKaydet(currentRoomCode, currentUser.userName, currentUser.userPhoto, currentUser.userColor, data.text);
 
     } catch (error) {
       console.error('❌ Mesaj hatası:', error);
