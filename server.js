@@ -22,21 +22,24 @@ const io = socketIo(server, {
 
 const { Pool } = require('pg');
 
-// CockroachDB bağlantısı
 const pool = new Pool({
   connectionString: 'postgresql://tncwn4641_gmail_com:eUYuxelhs0piwiL0Z3mQ7A@fbgtgh-32639.j77.aws-eu-central-1.cockroachlabs.cloud:26257/defaultdb?sslmode=require'
 });
 
-// Mesajlar tablosunu oluştur (ilk çalıştırmada otomatik)
-pool.query(`
-  CREATE TABLE IF NOT EXISTS mesajlar (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    oda_id TEXT NOT NULL,
-    kullanici TEXT NOT NULL,
-    mesaj TEXT NOT NULL,
-    zaman TIMESTAMPTZ DEFAULT NOW()
-  )
-`).catch(err => console.error('Tablo oluşturma hatası:', err));
+// Tabloyu sıfırla (eski hatalı tablo varsa sil)
+pool.query(`DROP TABLE IF EXISTS mesajlar`).then(() => {
+  return pool.query(`
+    CREATE TABLE mesajlar (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      oda_id TEXT NOT NULL,
+      kullanici TEXT NOT NULL,
+      user_photo TEXT DEFAULT '',
+      user_color TEXT DEFAULT '#ffffff',
+      mesaj TEXT NOT NULL,
+      zaman TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+}).catch(err => console.error('Tablo oluşturma hatası:', err));
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -81,12 +84,11 @@ function updateUserList(roomCode) {
   io.to(roomCode).emit('user-list-update', userList);
 }
 
-// Mesajı veritabanına kaydet
-async function dbMesajKaydet(odaId, kullanici, mesaj) {
+async function dbMesajKaydet(odaId, kullanici, userPhoto, userColor, mesaj) {
   try {
     await pool.query(
-      'INSERT INTO mesajlar (oda_id, kullanici, mesaj) VALUES ($1, $2, $3)',
-      [odaId, kullanici, mesaj]
+      'INSERT INTO mesajlar (oda_id, kullanici, user_photo, user_color, mesaj) VALUES ($1, $2, $3, $4, $5)',
+      [odaId, kullanici, userPhoto, userColor, mesaj]
     );
   } catch (err) {
     console.error('Mesaj kaydetme hatası:', err);
@@ -144,13 +146,28 @@ io.on('connection', (socket) => {
       room.users.set(socket.id, currentUser);
       currentRoomCode = ROOM_CODE;
       socket.join(ROOM_CODE);
-            const eskiMesajlar = await dbMesajlariGetir(ROOM_CODE);
-eskiMesajlar.forEach(msg => {
-  socket.emit('message', {
-    userName: msg.kullanici,
-    text: msg.mesaj,
-    time: new Date(msg.zaman).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+            // Eski mesajları veritabanından getir
+const eskiMesajlar = await dbMesajlariGetir(ROOM_CODE);
+
+// Oda mesaj dizisine ekle (eğer boşsa)
+if (room.messages.length === 0) {
+  eskiMesajlar.forEach(msg => {
+    room.messages.push({
+      id: msg.id,
+      userName: msg.kullanici,
+      userPhoto: msg.user_photo || '',
+      userColor: msg.user_color || '#ffffff',
+      type: 'text',
+      text: msg.mesaj,
+      time: new Date(msg.zaman).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+      reactions: []
+    });
   });
+}
+
+// Tüm mesajları bu kullanıcıya gönder
+room.messages.forEach(msg => {
+  socket.emit('message', msg);
 });
 
       socket.to(ROOM_CODE).emit('user-joined', { userName: currentUser.userName });
@@ -181,7 +198,13 @@ eskiMesajlar.forEach(msg => {
       if (!currentRoomCode || !currentUser) return;
       const room = rooms.get(currentRoomCode);
       if (!room) return;
-await dbMesajKaydet(currentRoomCode || 'genel', currentUser.userName, data.text);
+await dbMesajKaydet(
+  currentRoomCode,
+  currentUser.userName,
+  currentUser.userPhoto || '',
+  currentUser.userColor || '#ffffff',
+  data.text
+);
       const message = {
         id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
         userName: currentUser.userName,
