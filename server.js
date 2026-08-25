@@ -6,7 +6,7 @@ const cors = require('cors');
 const fs = require('fs');
 const webpush = require('web-push');
 const { createClient } = require('@supabase/supabase-js');
-
+const { Pool } = require('pg');
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 10000;
@@ -41,6 +41,54 @@ webpush.setVapidDetails(
   VAPID_PUBLIC_KEY,
   VAPID_PRIVATE_KEY
 );
+
+// CockroachDB bağlantısı
+const cockroachPool = new Pool({
+  user: 'tncwn4641_gmail_com',
+  password: 'eUYuxelhs0piwiL0Z3mQ7A',
+  host: 'fbgtgh-32639.j77.aws-eu-central-1.cockroachlabs.cloud',
+  port: 26257,
+  database: 'defaultdb',
+  ssl: { rejectUnauthorized: false }
+});
+
+// Tabloları oluştur
+async function initCockroachTables() {
+  try {
+    await cockroachPool.query(`
+      CREATE TABLE IF NOT EXISTS rooms (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        password TEXT NOT NULL,
+        admin_id TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        max_users INT DEFAULT 10
+      );
+      CREATE TABLE IF NOT EXISTS room_messages (
+        id TEXT PRIMARY KEY,
+        room_id TEXT REFERENCES rooms(id) ON DELETE CASCADE,
+        user_tag TEXT NOT NULL,
+        user_name TEXT,
+        message TEXT,
+        type TEXT DEFAULT 'text',
+        file_data TEXT,
+        mime_type TEXT,
+        sticker_type TEXT,
+        reply_to TEXT,
+        reply_to_user_name TEXT,
+        reply_to_text TEXT,
+        font TEXT,
+        banner_mode BOOLEAN DEFAULT false,
+        reactions JSONB DEFAULT '[]',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    console.log('✅ CockroachDB tabloları hazır');
+  } catch (e) {
+    console.error('CockroachDB tablo hatası:', e.message);
+  }
+}
+initCockroachTables();
 
 const pushSubscriptions = new Map();
 const rooms = new Map();
@@ -115,6 +163,208 @@ io.on('connection', (socket) => {
       socket.emit('error', { message: 'Sohbete katılamadı' });
     }
   });
+  
+  // ============ ODA KUR ============
+socket.on('room-create', async (data) => {
+  try {
+    if (!currentUser) return;
+    const { roomName, roomPassword, userTag } = data;
+
+    // Şifre kriteri: en az 1 büyük, 1 noktalama, 1 rakam
+    const passwordValid = /[A-Z]/.test(roomPassword) && /[0-9]/.test(roomPassword) && /[.,!?;:]/.test(roomPassword);
+    if (!passwordValid) {
+      socket.emit('room-error', { message: 'Şifre en az 1 büyük harf, 1 rakam ve 1 noktalama işareti içermeli' });
+      return;
+    }
+
+    const roomId = 'room_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+    
+    const { error } = await cockroachPool.query(
+      'INSERT INTO rooms (id, name, password, admin_id, max_users) VALUES ($1,$2,$3,$4,$5)',
+      [roomId, roomName, roomPassword, socket.id, 10]
+    );
+    if (error) {
+      console.error('Oda kurma DB hatası:', error.message);
+      socket.emit('room-error', { message: 'Oda kurulamadı, tekrar deneyin' });
+      return;
+    }
+
+    currentRoomCode = roomId;
+    socket.join(roomId);
+    socket.emit('room-created', { roomId, roomName, roomPassword, isAdmin: true });
+    console.log(`🏠 Oda kuruldu: ${roomName} (${roomId})`);
+  } catch (e) {
+    console.error('Oda kurma hatası:', e);
+    socket.emit('room-error', { message: 'Oda kurulamadı' });
+  }
+});
+
+// ============ ODAYA KATIL ============
+socket.on('room-join', async (data) => {
+  try {
+    if (!currentUser) return;
+    const { roomName, roomPassword, userTag } = data;
+
+    const result = await cockroachPool.query(
+      'SELECT * FROM rooms WHERE name = $1 AND password = $2',
+      [roomName, roomPassword]
+    );
+    if (result.rows.length === 0) {
+      socket.emit('room-error', { message: 'Oda bulunamadı veya şifre hatalı' });
+      return;
+    }
+
+    const room = result.rows[0];
+    // Kullanıcı sayısı kontrolü (ayrıca socket odasındaki kişi sayısına bakmak daha doğru)
+    const roomUserCount = io.sockets.adapter.rooms.get(room.id)?.size || 0;
+    if (roomUserCount >= room.max_users) {
+      socket.emit('room-error', { message: 'Oda dolu (maks 10 kişi)' });
+      return;
+    }
+
+    currentRoomCode = room.id;
+    socket.join(room.id);
+    socket.emit('room-joined', { roomId: room.id, roomName: room.name, roomPassword: null, isAdmin: room.admin_id === socket.id });
+    console.log(`🚪 ${currentUser.userName} odaya katıldı: ${room.name}`);
+  } catch (e) {
+    console.error('Odaya katılma hatası:', e);
+    socket.emit('room-error', { message: 'Odaya katılamadı' });
+  }
+});
+
+// ============ AKTİF ODA LİSTESİ ============
+socket.on('room-list', async () => {
+  try {
+    const result = await cockroachPool.query('SELECT id, name, password FROM rooms');
+    const roomsList = result.rows.map(r => ({
+      id: r.id,
+      name: r.name,
+      password: r.password
+    }));
+    socket.emit('room-list-update', roomsList);
+  } catch (e) {
+    console.error('Oda listesi hatası:', e);
+  }
+});
+
+// ============ ODA MESAJI GÖNDER ============
+socket.on('room-message', async (data) => {
+  try {
+    if (!currentRoomCode || !currentUser) return;
+    const { text, type, fileData, mimeType, stickerType, replyTo, replyToUserName, replyToText, font, bannerMode } = data;
+
+    const message = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+      roomId: currentRoomCode,
+      userTag: currentUser.userName, // şimdilik mevcut isim, tag sonra değişecek
+      userName: currentUser.userName,
+      text: text || '',
+      type: type || 'text',
+      fileData: fileData || null,
+      mimeType: mimeType || null,
+      stickerType: stickerType || null,
+      replyTo: replyTo || null,
+      replyToUserName: replyToUserName || null,
+      replyToText: replyToText || null,
+      font: font || null,
+      bannerMode: bannerMode === true,
+      reactions: [],
+      time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' }),
+      timestamp: Date.now()
+    };
+
+    // DB'ye kaydet
+    await cockroachPool.query(
+      `INSERT INTO room_messages (id, room_id, user_tag, user_name, message, type, file_data, mime_type, sticker_type, reply_to, reply_to_user_name, reply_to_text, font, banner_mode, reactions, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NOW())`,
+      [message.id, message.roomId, message.userTag, message.userName, message.text, message.type, message.fileData, message.mimeType, message.stickerType, message.replyTo, message.replyToUserName, message.replyToText, message.font, message.bannerMode, JSON.stringify([])]
+    );
+
+    io.to(currentRoomCode).emit('room-message', message);
+  } catch (e) {
+    console.error('Oda mesaj hatası:', e);
+  }
+});
+
+// ============ ODA MESAJ GEÇMİŞİ ============
+socket.on('room-history', async () => {
+  try {
+    if (!currentRoomCode) return;
+    const result = await cockroachPool.query(
+      'SELECT * FROM room_messages WHERE room_id = $1 ORDER BY created_at ASC LIMIT 100',
+      [currentRoomCode]
+    );
+    const messages = result.rows.map(r => ({
+      id: r.id,
+      userName: r.user_name,
+      userTag: r.user_tag,
+      text: r.message,
+      type: r.type,
+      fileData: r.file_data,
+      mimeType: r.mime_type,
+      stickerType: r.sticker_type,
+      replyTo: r.reply_to,
+      replyToUserName: r.reply_to_user_name,
+      replyToText: r.reply_to_text,
+      font: r.font,
+      bannerMode: r.banner_mode,
+      reactions: r.reactions,
+      time: new Date(r.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' })
+    }));
+    socket.emit('room-history', messages);
+  } catch (e) {
+    console.error('Oda geçmiş hatası:', e);
+  }
+});
+
+// ============ DAVET GÖNDER ============
+socket.on('room-invite', async (data) => {
+  try {
+    if (!currentRoomCode || !currentUser) return;
+    const { targetUserName } = data;
+    if (!targetUserName) return;
+
+    // Alıcı socket'ini bul
+    let targetSocketId = null;
+    rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
+      if (user.userName === targetUserName) targetSocketId = socketId;
+    });
+    if (!targetSocketId) {
+      socket.emit('room-error', { message: 'Davet edilecek kullanıcı çevrimiçi değil' });
+      return;
+    }
+
+    // Oda bilgisini al
+    const roomResult = await cockroachPool.query('SELECT * FROM rooms WHERE id = $1', [currentRoomCode]);
+    if (roomResult.rows.length === 0) return;
+    const room = roomResult.rows[0];
+
+    const inviteMessage = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+      sender: 'SİSTEM',
+      receiver: targetUserName,
+      message: `🏠 Oda daveti: ${room.name}\nŞifre: ${room.password}`,
+      type: 'text',
+      created_at: new Date().toISOString()
+    };
+
+    // DM olarak gönder
+    io.to(targetSocketId).emit('dm-message', inviteMessage);
+    socket.emit('room-invite-sent', { targetUserName });
+  } catch (e) {
+    console.error('Davet hatası:', e);
+  }
+});
+
+// ============ ODA TEMİZLİK ============
+setInterval(async () => {
+  try {
+    // 24 saatten eski odaları sil
+    await cockroachPool.query("DELETE FROM rooms WHERE created_at < NOW() - INTERVAL '24 hours'");
+  } catch (e) {
+    console.error('Oda temizlik hatası:', e);
+  }
+}, 60 * 60 * 1000);
 
   // ============ PUSH ABONELİĞİ KAYDET ============
   socket.on('save-subscription', (data) => {
