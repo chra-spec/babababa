@@ -3617,7 +3617,6 @@ function exitChat() {
     }
 }
 
-function sendMessage() {
 // Medya veya dosya gönderme yardımcı fonksiyonu
 function sendMedia(payload) {
     if (!socket) return;
@@ -3629,6 +3628,8 @@ function sendMedia(payload) {
     }
     socket.emit('message', payload);
 }
+
+function sendMessage() {
     const input = document.getElementById('messageInput');
     const text = input.value.trim();
     if (!text || !socket) return;
@@ -4360,19 +4361,43 @@ let pendingMediaURL = null;
 
 // ============ KAMERA AÇ ============
 async function openCamera() {
-    setCameraMode('photo'); // Varsayılan fotoğraf
+    setCameraMode('photo');
     
-    // Önceki kamera akışını temizle
     if (cameraStream) {
         cameraStream.getTracks().forEach(track => track.stop());
         cameraStream = null;
     }
     
     try {
-        const constraints = { ... };
+        const constraints = {
+            video: {
+                facingMode: cameraFacing,
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            },
+            audio: true
+        };
+
         cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
-        ...
-    } catch (error) { ... }
+
+        const video = document.getElementById('cameraPreview');
+        video.srcObject = cameraStream;
+        video.classList.remove('rear');
+        video.classList.add('zoom');
+        cameraCanvas.width = 850;
+        cameraCanvas.height = 1400;
+        startCanvasDraw(video);
+
+        if (cameraFacing === 'environment') {
+            video.classList.add('rear');
+        }
+
+        document.getElementById('cameraOverlay').classList.add('active');
+        document.getElementById('captureBtn').style.display = 'block';
+    } catch (error) {
+        console.error('Kamera açılamadı:', error);
+        alert('Kamera erişimi reddedildi veya bulunamadı!');
+    }
 }
 
         cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -5664,14 +5689,6 @@ async function startAudioCall() {
     openUserSelect('audio');
 }
     
-    const choice = prompt('Kimi aramak istiyorsun?\n' + users.map((u, i) => `${i + 1}. ${u}`).join('\n'));
-    const index = parseInt(choice) - 1;
-    if (index >= 0 && index < users.length) {
-        callTarget = users[index];
-        callType = 'audio';
-        await initCall();
-    }
-}
 async function initCall() {
    await fetchTurnConfig();
      try {   
