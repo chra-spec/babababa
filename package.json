@@ -1,3 +1,4 @@
+
 {
   "name": "destek-merkezi",
   "version": "1.0.0",
@@ -17,7 +18,8 @@
     "emoji-reactions",
     "sticker",
     "push-notifications",
-    "supabase"
+    "supabase",
+    "cockroachdb"
   ],
   "author": "Kaan",
   "license": "MIT",
@@ -26,7 +28,8 @@
     "socket.io": "^4.7.2",
     "cors": "^2.8.5",
     "web-push": "^3.6.7",
-    "@supabase/supabase-js": "^2.45.0"
+    "@supabase/supabase-js": "^2.45.0",
+    "pg": "^8.11.3"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
