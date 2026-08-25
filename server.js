@@ -428,19 +428,23 @@ await dbMesajKaydet(
       console.error('❌ Çağrı sonlandırma hatası:', error);
     }
   });
-  
-// ============ DM MESAJLARI ============
-socket.on('dm-message', async (data) => {
+
+  socket.on('dm-message', async (data) => {
   try {
     if (!currentUser) return;
-    const { receiver, text, replyTo, replyToId, replyToSender } = data;
-    if (!receiver || !text) return;
+    const { receiver, text, replyTo, replyToId, replyToSender, type, fileData, mimeType, stickerType } = data;
+
+    if (!receiver || (!text && !fileData && !stickerType)) return;
 
     const dmMessage = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
       sender: currentUser.userName,
       receiver: receiver,
-      message: text,
+      message: text || '',
+      type: type || 'text',
+      fileData: fileData || null,
+      mimeType: mimeType || null,
+      stickerType: stickerType || null,
       reply_to: replyTo ? `${replyToSender ? replyToSender + ': ' : ''}${replyTo}` : null,
       reply_to_id: replyToId || null,
       edited: false,
@@ -448,23 +452,29 @@ socket.on('dm-message', async (data) => {
       created_at: new Date().toISOString()
     };
 
-    const { error } = await supabase.from('dm_messages').insert({
-      id: dmMessage.id,
-      sender: dmMessage.sender,
-      receiver: dmMessage.receiver,
-      message: dmMessage.message,
-      reply_to: dmMessage.reply_to,
-      reply_to_id: dmMessage.reply_to_id,
-      edited: dmMessage.edited,
-      reactions: dmMessage.reactions
-    });
-    if (error) console.error('DM kayıt hatası:', error.message);
+    // CockroachDB'ye kaydet
+    await pool.query(
+      `INSERT INTO dm_mesajlar (id, sender, receiver, message, type, file_data, mime_type, sticker_type, reply_to, reply_to_id, edited, reactions)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+      [
+        dmMessage.id,
+        dmMessage.sender,
+        dmMessage.receiver,
+        dmMessage.message,
+        dmMessage.type,
+        dmMessage.fileData,
+        dmMessage.mimeType,
+        dmMessage.stickerType,
+        dmMessage.reply_to,
+        dmMessage.reply_to_id,
+        dmMessage.edited,
+        JSON.stringify(dmMessage.reactions)
+      ]
+    );
 
     let receiverSocketId = null;
     rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
-      if (user.userName === receiver) {
-        receiverSocketId = socketId;
-      }
+      if (user.userName === receiver) receiverSocketId = socketId;
     });
 
     if (receiverSocketId) {
@@ -475,20 +485,7 @@ socket.on('dm-message', async (data) => {
     console.error('DM mesaj hatası:', error);
   }
 });
-
-  socket.on('dm-delete', async (data) => {
-    try {
-      if (!currentUser) return;
-      const { messageId } = data;
-      await supabase.from('dm_messages').delete().eq('id', messageId).eq('sender', currentUser.userName);
-      // Basitçe silme işlemini taraflara bildir
-      io.emit('dm-deleted', { messageId });
-    } catch (error) {
-      console.error('DM silme hatası:', error);
-    }
-  });
   
-  // ============ DM İFADE BIRAK ============
 socket.on('dm-react', async (data) => {
   try {
     if (!currentUser) return;
@@ -496,71 +493,45 @@ socket.on('dm-react', async (data) => {
     if (!messageId || !emoji) return;
     if (!['🖕', '❤️', '😜', '🤍'].includes(emoji)) return;
 
-    // Supabase'den mesajı çek
-    const { data: dmMsg, error: fetchError } = await supabase
-      .from('dm_messages')
-      .select('*')
-      .eq('id', messageId)
-      .single();
+    const result = await pool.query('SELECT * FROM dm_mesajlar WHERE id = $1', [messageId]);
+    if (result.rows.length === 0) return;
 
-    if (fetchError || !dmMsg) {
-      console.error('DM mesaj bulunamadı:', fetchError?.message);
-      return;
-    }
-
-    // Mevcut reaksiyonları güncelle
-    let reactions = dmMsg.reactions || [];
+    let reactions = result.rows[0].reactions || [];
     const existingReaction = reactions.find(r => r.emoji === emoji);
     if (existingReaction) {
       if (existingReaction.users.includes(currentUser.userName)) return;
       existingReaction.users.push(currentUser.userName);
       existingReaction.count = existingReaction.users.length;
     } else {
-      reactions.push({
-        emoji: emoji,
-        users: [currentUser.userName],
-        count: 1
-      });
+      reactions.push({ emoji, users: [currentUser.userName], count: 1 });
     }
 
-    const { error: updateError } = await supabase
-      .from('dm_messages')
-      .update({ reactions: reactions })
-      .eq('id', messageId);
+    await pool.query('UPDATE dm_mesajlar SET reactions = $1 WHERE id = $2', [JSON.stringify(reactions), messageId]);
 
-    if (updateError) {
-      console.error('DM reaksiyon güncelleme hatası:', updateError.message);
-      return;
-    }
-
-    // Taraflara bildir
-    io.emit('dm-reaction-updated', {
-      messageId: messageId,
-      emoji: emoji,
-      userName: currentUser.userName
-    });
+    io.emit('dm-reaction-updated', { messageId, emoji, userName: currentUser.userName });
   } catch (error) {
     console.error('DM reaksiyon hatası:', error);
   }
 });
 
-// ============ DM MESAJ DÜZENLE ============
+  socket.on('dm-delete', async (data) => {
+  try {
+    if (!currentUser) return;
+    const { messageId } = data;
+    await pool.query('DELETE FROM dm_mesajlar WHERE id = $1 AND sender = $2', [messageId, currentUser.userName]);
+    io.emit('dm-deleted', { messageId });
+  } catch (error) {
+    console.error('DM silme hatası:', error);
+  }
+});
+
 socket.on('dm-edit', async (data) => {
   try {
     if (!currentUser) return;
     const { messageId, newText } = data;
     if (!messageId || !newText || !newText.trim()) return;
 
-    const { error } = await supabase
-      .from('dm_messages')
-      .update({ message: newText.trim(), edited: true })
-      .eq('id', messageId)
-      .eq('sender', currentUser.userName);
-
-    if (error) {
-      console.error('DM düzenleme hatası:', error.message);
-      return;
-    }
+    await pool.query('UPDATE dm_mesajlar SET message = $1, edited = true WHERE id = $2 AND sender = $3', [newText.trim(), messageId, currentUser.userName]);
 
     io.emit('dm-edited', {
       messageId: messageId,
@@ -570,8 +541,7 @@ socket.on('dm-edit', async (data) => {
   } catch (error) {
     console.error('DM düzenleme hatası:', error);
   }
-});
-
+}); 
 // ============ EKRAN PAYLAŞIMI OLAYLARI (SUNUCU) ============
 socket.on('screen-share-request', (data) => {
     console.log('📺 Ekran paylaşımı isteği geldi:', data);
@@ -878,27 +848,31 @@ app.get('/api/dm-messages', async (req, res) => {
     if (!sender || !receiver) {
       return res.status(400).json({ error: 'sender ve receiver gerekli' });
     }
-    
 
-    const { data, error } = await supabase
-      .from('dm_messages')
-      .select('*')
-      .or(`sender.eq.${sender},receiver.eq.${sender}`)
-      .or(`sender.eq.${receiver},receiver.eq.${receiver}`)
-      .order('created_at', { ascending: true })
-      .limit(100);
-
-    if (error) {
-      return res.status(500).json({ error: error.message });
-    }
-
-    // İki kişi arasındaki mesajları filtrele
-    const filtered = data.filter(msg => 
-      (msg.sender === sender && msg.receiver === receiver) ||
-      (msg.sender === receiver && msg.receiver === sender)
+    const result = await pool.query(
+      `SELECT * FROM dm_mesajlar 
+       WHERE (sender = $1 AND receiver = $2) OR (sender = $2 AND receiver = $1)
+       ORDER BY created_at ASC LIMIT 100`,
+      [sender, receiver]
     );
 
-    res.json(filtered);
+    const messages = result.rows.map(msg => ({
+      id: msg.id,
+      sender: msg.sender,
+      receiver: msg.receiver,
+      message: msg.message,
+      type: msg.type,
+      fileData: msg.file_data,
+      mimeType: msg.mime_type,
+      stickerType: msg.sticker_type,
+      reply_to: msg.reply_to,
+      reply_to_id: msg.reply_to_id,
+      edited: msg.edited,
+      reactions: msg.reactions,
+      created_at: msg.created_at
+    }));
+
+    res.json(messages);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
