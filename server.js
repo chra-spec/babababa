@@ -122,22 +122,6 @@ io.on('connection', (socket) => {
       currentRoomCode = ROOM_CODE;
       socket.join(ROOM_CODE);
 
-// Oda mesaj dizisine ekle (eğer boşsa)
-if (room.messages.length === 0) {
-  eskiMesajlar.forEach(msg => {
-    room.messages.push({
-      id: msg.id,
-      userName: msg.kullanici,
-      userPhoto: msg.user_photo || '',
-      userColor: msg.user_color || '#ffffff',
-      type: 'text',
-      text: msg.mesaj,
-      time: new Date(msg.zaman).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-      reactions: []
-    });
-  });
-}
-
 // Tüm mesajları bu kullanıcıya gönder
 room.messages.forEach(msg => {
   socket.emit('message', msg);
@@ -563,7 +547,7 @@ socket.on('screen-share-request', (data) => {
     if (targetSocketId) {
         io.to(targetSocketId).emit('screen-share-request', {
             requesterId: socket.id,
-            requesterName: currentUser.userName || currentUser.name || 'Bilinmeyen Kullanıcı',
+            requesterName: currentUser.userName || currentUser.UserName; || 'Bilinmeyen Kullanıcı',
             targetUserName: data.targetUserName,
             mode: data.mode
         });
@@ -614,7 +598,7 @@ socket.on('request-music-permission', (data) => {
     if (!currentUser) return;
     
     const requesterId = socket.id;
-    const requesterName = currentUser.name;
+    const requesterName = currentUser.UserName;
     
     const targetUsers = Array.from(rooms.get(ROOM_CODE)?.users.values() || [])
       .filter(u => u.userName !== requesterName);
@@ -650,7 +634,7 @@ socket.on('accept-music-permission', (data) => {
     if (requesterId) {
       io.to(requesterId).emit('music-permission-status', { 
         status: 'accepted', 
-        listenerName: currentUser.name 
+        listenerName: currentUser.UserName; 
       });
     }
   } catch (error) {
@@ -677,7 +661,7 @@ socket.on('revoke-music-permission', (data) => {
     if (requesterId) {
       io.to(requesterId).emit('music-permission-status', { 
         status: 'revoked', 
-        listenerName: currentUser.name 
+        listenerName: currentUser.UserName; 
       });
     }
   } catch (error) {
