@@ -116,14 +116,6 @@ io.on('connection', (socket) => {
   // ============ SOBETE KATIL ============
   socket.on('join-chat', async (data) => {
     try {
-      const eskiMesajlar = await dbMesajlariGetir(ROOM_CODE);
-eskiMesajlar.forEach(msg => {
-  socket.emit('message', {
-    userName: msg.kullanici,
-    text: msg.mesaj,
-    time: new Date(msg.zaman).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
-  });
-});
       const { roomCode, userName, userPhoto } = data;
 
       if (roomCode !== ROOM_CODE) {
@@ -152,6 +144,14 @@ eskiMesajlar.forEach(msg => {
       room.users.set(socket.id, currentUser);
       currentRoomCode = ROOM_CODE;
       socket.join(ROOM_CODE);
+            const eskiMesajlar = await dbMesajlariGetir(ROOM_CODE);
+eskiMesajlar.forEach(msg => {
+  socket.emit('message', {
+    userName: msg.kullanici,
+    text: msg.mesaj,
+    time: new Date(msg.zaman).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+  });
+});
 
       socket.to(ROOM_CODE).emit('user-joined', { userName: currentUser.userName });
       updateUserList(ROOM_CODE);
@@ -178,11 +178,10 @@ eskiMesajlar.forEach(msg => {
   // ============ MESAJ GÖNDER ============
   socket.on('message', async (data) => {
     try {
-      await dbMesajKaydet(currentRoomCode || 'genel', currentUser.userName, data.text);
       if (!currentRoomCode || !currentUser) return;
       const room = rooms.get(currentRoomCode);
       if (!room) return;
-
+await dbMesajKaydet(currentRoomCode || 'genel', currentUser.userName, data.text);
       const message = {
         id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
         userName: currentUser.userName,
