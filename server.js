@@ -20,6 +20,24 @@ const io = socketIo(server, {
   maxHttpBufferSize: 50 * 1024 * 1024
 });
 
+const { Pool } = require('pg');
+
+// CockroachDB bağlantısı
+const pool = new Pool({
+  connectionString: 'postgresql://tncwn4641_gmail_com:eUYuxelhs0piwiL0Z3mQ7A@fbgtgh-32639.j77.aws-eu-central-1.cockroachlabs.cloud:26257/defaultdb?sslmode=require'
+});
+
+// Mesajlar tablosunu oluştur (ilk çalıştırmada otomatik)
+pool.query(`
+  CREATE TABLE IF NOT EXISTS mesajlar (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    oda_id TEXT NOT NULL,
+    kullanici TEXT NOT NULL,
+    mesaj TEXT NOT NULL,
+    zaman TIMESTAMPTZ DEFAULT NOW()
+  )
+`).catch(err => console.error('Tablo oluşturma hatası:', err));
+
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -63,6 +81,32 @@ function updateUserList(roomCode) {
   io.to(roomCode).emit('user-list-update', userList);
 }
 
+// Mesajı veritabanına kaydet
+async function dbMesajKaydet(odaId, kullanici, mesaj) {
+  try {
+    await pool.query(
+      'INSERT INTO mesajlar (oda_id, kullanici, mesaj) VALUES ($1, $2, $3)',
+      [odaId, kullanici, mesaj]
+    );
+  } catch (err) {
+    console.error('Mesaj kaydetme hatası:', err);
+  }
+}
+
+// Odadaki son 100 mesajı getir
+async function dbMesajlariGetir(odaId) {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM mesajlar WHERE oda_id = $1 ORDER BY zaman ASC LIMIT 100',
+      [odaId]
+    );
+    return result.rows;
+  } catch (err) {
+    console.error('Mesaj çekme hatası:', err);
+    return [];
+  }
+}
+
 io.on('connection', (socket) => {
   console.log('✅ Bağlandı:', socket.id);
 
@@ -72,6 +116,14 @@ io.on('connection', (socket) => {
   // ============ SOBETE KATIL ============
   socket.on('join-chat', async (data) => {
     try {
+      const eskiMesajlar = await dbMesajlariGetir(ROOM_CODE);
+eskiMesajlar.forEach(msg => {
+  socket.emit('message', {
+    userName: msg.kullanici,
+    text: msg.mesaj,
+    time: new Date(msg.zaman).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+  });
+});
       const { roomCode, userName, userPhoto } = data;
 
       if (roomCode !== ROOM_CODE) {
@@ -126,6 +178,7 @@ io.on('connection', (socket) => {
   // ============ MESAJ GÖNDER ============
   socket.on('message', async (data) => {
     try {
+      await dbMesajKaydet(currentRoomCode || 'genel', currentUser.userName, data.text);
       if (!currentRoomCode || !currentUser) return;
       const room = rooms.get(currentRoomCode);
       if (!room) return;
@@ -828,6 +881,8 @@ app.get('/api/dm-messages', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', onlineUsers: rooms.get(ROOM_CODE)?.users.size || 0 });
