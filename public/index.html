@@ -4263,18 +4263,27 @@ startCanvasDraw(video);
 
 // ============ KAMERA KAPAT ============
 function closeCamera() {
-if (isRecordingVideo && videoRecorder && videoRecorder.state !== 'inactive') {
-  videoRecorder.stop();
-}
-videoRecordedChunks = [];
-audioChunks = [];
-recordedVideoBlob = null;
-pendingMediaBlob = null;
-pendingMediaURL = null;
-isRecordingVideo = false;
+    if (isRecordingVideo && videoRecorder && videoRecorder.state !== 'inactive') {
+        videoRecorder.stop();
+    }
+    isRecordingVideo = false;
+    videoRecordedChunks = [];
+    audioChunks = [];
+    recordedVideoBlob = null;
+    if (pendingMediaURL) {
+        URL.revokeObjectURL(pendingMediaURL);
+        pendingMediaURL = null;
+    }
+    pendingMediaBlob = null;
+    pendingMediaType = null;
+
     if (cameraStream) {
         cameraStream.getTracks().forEach(track => track.stop());
         cameraStream = null;
+    }
+    if (drawLoop) {
+        cancelAnimationFrame(drawLoop);
+        drawLoop = null;
     }
     document.getElementById('cameraOverlay').classList.remove('active');
 }
@@ -4349,43 +4358,65 @@ function toggleVideoRecording() {
     const captureBtn = document.getElementById('captureBtn');
     const captureImg = captureBtn.querySelector('img');
 
-if (!isRecordingVideo) {
-  videoRecordedChunks = [];
-  audioChunks = [];
-  recordedVideoBlob = null;
+    if (!isRecordingVideo) {
+        // Önceki kayıt kalıntılarını temizle (birikme sorunu çözülür)
+        videoRecordedChunks = [];
+        audioChunks = [];
+        recordedVideoBlob = null;
+        if (pendingMediaURL) {
+            URL.revokeObjectURL(pendingMediaURL);
+            pendingMediaURL = null;
+        }
 
-  const canvasStream = cameraCanvas.captureStream(30);
-  if (cameraStream) {
-    cameraStream.getAudioTracks().forEach(track => canvasStream.addTrack(track));
-  }
+        // 60 FPS akış al (desteklenmiyorsa otomatik düşer)
+        const canvasStream = cameraCanvas.captureStream(60);
 
-  let mimeType = 'video/webm;codecs=vp9,opus';
-  if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=vp8,opus';
-  if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
+        // Ses track'lerini ekle ve etkinleştir
+        if (cameraStream) {
+            cameraStream.getAudioTracks().forEach(track => {
+                track.enabled = true;
+            });
+            cameraStream.getAudioTracks().forEach(track => {
+                canvasStream.addTrack(track);
+            });
+        }
 
-  videoRecorder = new MediaRecorder(canvasStream, {
-    mimeType: mimeType,
-    videoBitsPerSecond: 2500000,
-    audioBitsPerSecond: 128000
-  });
+        // En uyumlu codec seç
+        let mimeType = 'video/webm;codecs=vp9,opus';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'video/webm;codecs=vp8,opus';
+        }
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'video/webm';
+        }
 
-  videoRecorder.ondataavailable = (event) => {
-    if (event.data.size > 0) videoRecordedChunks.push(event.data);
-  };
+        videoRecorder = new MediaRecorder(canvasStream, {
+            mimeType: mimeType,
+            videoBitsPerSecond: 2500000,  // 2.5 Mbps (kaliteli + akıcı)
+            audioBitsPerSecond: 128000    // 128 kbps (yüksek ses)
+        });
 
-  videoRecorder.onstop = () => {
-    recordedVideoBlob = new Blob(videoRecordedChunks, { type: mimeType });
-    pendingMediaBlob = recordedVideoBlob;
-    pendingMediaType = 'video';
-    pendingMediaURL = URL.createObjectURL(recordedVideoBlob);
-    openMediaPreview();
-  };
+        videoRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) videoRecordedChunks.push(event.data);
+        };
 
-  videoRecorder.start(100);
-  isRecordingVideo = true;
-  captureImg.src = 'https://cdn.phototourl.com/free/2026-08-22-de5dcf7d-23aa-4f8e-a1eb-fc01e62c2737.png';
-} else {
-        videoRecorder.stop();
+        videoRecorder.onstop = () => {
+            recordedVideoBlob = new Blob(videoRecordedChunks, { type: mimeType });
+            pendingMediaBlob = recordedVideoBlob;
+            pendingMediaType = 'video';
+            pendingMediaURL = URL.createObjectURL(recordedVideoBlob);
+            pendingMediaIsMirrored = false;
+            openMediaPreview();
+        };
+
+        // Anında başlat (gecikme yok)
+        videoRecorder.start(100);
+        isRecordingVideo = true;
+        captureImg.src = 'https://cdn.phototourl.com/free/2026-08-22-de5dcf7d-23aa-4f8e-a1eb-fc01e62c2737.png';
+    } else {
+        if (videoRecorder && videoRecorder.state !== 'inactive') {
+            videoRecorder.stop();
+        }
         isRecordingVideo = false;
         captureImg.src = 'https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAEZnjVqiNcypAY9RPOqIiCfIwkYE0S-EQACHiEAAgK8SFT-tAhBtaDTQT0E.png';
     }
@@ -4505,17 +4536,16 @@ socket.emit('message', {
     }
 }
 
-// ============ MEDYA ÖNİZLEME ============
 function openMediaPreview() {
     const previewContent = document.getElementById('previewContent');
     previewContent.innerHTML = '';
 
     if (pendingMediaType === 'image') {
         const img = document.createElement('img');
-img.src = pendingMediaURL;
-if (pendingMediaIsMirrored) {
-    img.style.transform = 'scaleX(-1)';
-}
+        img.src = pendingMediaURL;
+        if (pendingMediaIsMirrored) {
+            img.style.transform = 'scaleX(-1)';
+        }
         previewContent.appendChild(img);
         document.getElementById('previewActionBtn').style.display = 'flex';
         document.getElementById('previewActionBtn').innerHTML = `
@@ -4526,13 +4556,17 @@ if (pendingMediaIsMirrored) {
             </svg>
         `;
     } else if (pendingMediaType === 'video') {
-const video = document.createElement('video');
-video.src = pendingMediaURL;
-video.controls = true;
-video.autoplay = true;
-video.loop = true;
-video.muted = false;
-video.style.transform = 'scaleX(1)'; 
+        const video = document.createElement('video');
+        video.src = pendingMediaURL;
+        video.controls = true;
+        video.autoplay = true;
+        video.loop = true; // Video sona gelince başa sar
+        video.muted = false;
+        video.playsInline = true;
+        video.style.transform = 'scaleX(1)';
+        video.style.width = '100%';
+        video.style.height = '100%';
+        video.style.objectFit = 'contain';
         previewContent.appendChild(video);
         document.getElementById('previewActionBtn').style.display = 'flex';
         document.getElementById('previewActionBtn').innerHTML = `
@@ -4543,37 +4577,40 @@ video.style.transform = 'scaleX(1)';
             </svg>
         `;
     }
-    
-if (cropBox) {
-    cropBox.style.display = 'none';
-}
-isCropping = false;
+
+    if (cropBox) {
+        cropBox.style.display = 'none';
+    }
+    isCropping = false;
     document.getElementById('mediaPreviewOverlay').classList.add('active');
 }
 
 function closeMediaPreview() {
-if (isRecordingVideo && videoRecorder && videoRecorder.state !== 'inactive') {
-  videoRecorder.stop();
-}
-videoRecordedChunks = [];
-audioChunks = [];
-recordedVideoBlob = null;
-pendingMediaBlob = null;
-pendingMediaURL = null;
-isRecordingVideo = false;
+    // Aktif video kaydını durdur
+    if (isRecordingVideo && videoRecorder && videoRecorder.state !== 'inactive') {
+        videoRecorder.stop();
+    }
+    isRecordingVideo = false;
+    videoRecordedChunks = [];
+    audioChunks = [];
+    recordedVideoBlob = null;
+    if (pendingMediaURL) {
+        URL.revokeObjectURL(pendingMediaURL);
+        pendingMediaURL = null;
+    }
+    pendingMediaBlob = null;
+    pendingMediaType = null;
+
     const previewContent = document.getElementById('previewContent');
     const video = previewContent.querySelector('video');
     if (video) {
         video.pause();
-        video.src = ''; // Kaynağı kaldır, ses tamamen dursun
+        video.src = '';
         video.load();
     }
-    previewContent.innerHTML = ''; // İçeriği temizle
-    
+    previewContent.innerHTML = '';
+
     document.getElementById('mediaPreviewOverlay').classList.remove('active');
-    pendingMediaBlob = null;
-    pendingMediaType = null;
-    pendingMediaURL = null;
     isCropping = false;
     if (cropBox) cropBox.style.display = 'none';
 }
@@ -4709,7 +4746,6 @@ function getCroppedImage(image, cropBoxRect, callback) {
 function sendMediaFromPreview() {
     if (!pendingMediaBlob || !pendingMediaType) return;
 
-    // Yükleme yüzdesi göstergesi oluştur
     const loadingDiv = document.createElement('div');
     loadingDiv.className = 'message own';
     loadingDiv.innerHTML = `
@@ -4730,25 +4766,15 @@ function sendMediaFromPreview() {
         }
     };
 
-reader.onload = (e) => {
-  const payload = {
-    type: pendingMediaType,
-    fileData: e.target.result,
-    mimeType: pendingMediaType === 'image' ? 'image/jpeg' : 'video/webm'
-  };
-
-  if (currentDMUser) {
-    // DM'e gönder
-    payload.receiver = currentDMUser;
-    socket.emit('dm-message', payload);
-  } else {
-    // Genel sohbete gönder
-    socket.emit('message', payload);
-  }
-
-  loadingDiv.remove();
-  finishSending();
-};
+    reader.onload = (e) => {
+        sendMedia({
+            type: pendingMediaType,
+            fileData: e.target.result,
+            mimeType: pendingMediaType === 'image' ? 'image/jpeg' : 'video/webm'
+        });
+        loadingDiv.remove();
+        finishSending();
+    };
 
     const file = new File([pendingMediaBlob], pendingMediaType === 'image' ? 'photo.jpg' : 'video.webm', {
         type: pendingMediaType === 'image' ? 'image/jpeg' : 'video/webm'
