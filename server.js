@@ -32,27 +32,6 @@ const supabaseUrl = 'https://xmmwsjzipluvbdtsqegz.supabase.co';
 const supabaseKey = 'sb_publishable_CWiyCnet9IVtwAK8mSI7VQ_YRTyrg0r';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// ============ VERİTABANINDAN ESKİ MESAJLARI GETİR ============
-async function dbMesajlariGetir(roomCode) {
-  try {
-    const { data, error } = await supabase
-      .from('room_messages')
-      .select('*')
-      .eq('room_code', roomCode)
-      .order('timestamp', { ascending: true })
-      .limit(200);
-    
-    if (error) {
-      console.error('Eski mesaj getirme hatası:', error.message);
-      return [];
-    }
-    return data || [];
-  } catch (e) {
-    console.error('DB mesaj hatası:', e);
-    return [];
-  }
-}
-
 // VAPID anahtarları
 const VAPID_PUBLIC_KEY = 'BGi5YzcNdxf0cwoOedi2_IHJ3dQ8R6gzqSu-WmDUM9C0cldXbtjkoOZcQirdT-Pb3GVelT3G206tIAyaDu59m_0';
 const VAPID_PRIVATE_KEY = '4baVyLZ1-ruqf-j1m0du27BNbDJd9zv5VaB3fd_uhjQ';
@@ -122,12 +101,12 @@ io.on('connection', (socket) => {
       currentRoomCode = ROOM_CODE;
       socket.join(ROOM_CODE);
 
-// Tüm mesajları bu kullanıcıya gönder
-room.messages.forEach(msg => {
-  socket.emit('message', msg);
-});
+      // Tüm mesajları bu kullanıcıya gönder
+      room.messages.forEach(msg => {
+        socket.emit('message', msg);
+      });
 
-      socket.to(ROOM_CODE).emit('user-joined', { userName: currentUser.userName; });
+      socket.to(ROOM_CODE).emit('user-joined', { userName: currentUser.userName });
       updateUserList(ROOM_CODE);
 
       console.log(`✅ ${userName} sohbete katıldı`);
@@ -141,14 +120,14 @@ room.messages.forEach(msg => {
   socket.on('save-subscription', (data) => {
     try {
       if (currentUser && data.subscription) {
-        pushSubscriptions.set(currentUser.userName;, data.subscription);
-        console.log(`🔔 ${currentUser.userName;} bildirime abone oldu`);
+        pushSubscriptions.set(currentUser.userName, data.subscription);
+        console.log(`🔔 ${currentUser.userName} bildirime abone oldu`);
       }
     } catch (error) {
       console.error('❌ Abonelik hatası:', error);
     }
   });
-  
+
   // ============ MESAJ GÖNDER ============
   socket.on('message', async (data) => {
     try {
@@ -158,7 +137,7 @@ room.messages.forEach(msg => {
 
       const message = {
         id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-        userName: currentUser.userName;,
+        userName: currentUser.userName,
         userPhoto: currentUser.userPhoto,
         userColor: currentUser.userColor,
         type: data.type || 'text',
@@ -170,7 +149,7 @@ room.messages.forEach(msg => {
         isMirrored: data.isMirrored === true,
         replyToUserName: data.replyToUserName || null,
         replyToText: data.replyToText || null,
-        font: data.font || null, 
+        font: data.font || null,
         bannerMode: data.bannerMode === true,
         reactions: [],
         time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' }),
@@ -182,7 +161,7 @@ room.messages.forEach(msg => {
       io.to(currentRoomCode).emit('message', message);
 
       // Diğer kullanıcılara push bildirimi gönder
-      const targetUsers = Array.from(room.users.values()).filter(u => u.userName !== currentUser.userName;);
+      const targetUsers = Array.from(room.users.values()).filter(u => u.userName !== currentUser.userName);
       targetUsers.forEach(user => {
         const sub = pushSubscriptions.get(user.userName);
         if (sub) {
@@ -209,14 +188,12 @@ room.messages.forEach(msg => {
       if (messageIndex === -1) return;
 
       const message = room.messages[messageIndex];
-      if (message.userName !== currentUser.userName;) {
+      if (message.userName !== currentUser.userName) {
         socket.emit('error', { message: 'Sadece kendi mesajını silebilirsin' });
         return;
       }
 
       room.messages.splice(messageIndex, 1);
-
-
 
       io.to(currentRoomCode).emit('message-deleted', { messageId: data.messageId });
       console.log(`🗑️ Mesaj silindi: ${data.messageId}`);
@@ -224,6 +201,7 @@ room.messages.forEach(msg => {
       console.error('❌ Mesaj silme hatası:', error);
     }
   });
+
   // ============ MESAJA İFADE BIRAK ============
   socket.on('react-message', (data) => {
     try {
@@ -239,13 +217,13 @@ room.messages.forEach(msg => {
 
       const existingReaction = message.reactions.find(r => r.emoji === emoji);
       if (existingReaction) {
-        if (existingReaction.users.includes(currentUser.userName;)) return;
-        existingReaction.users.push(currentUser.userName;);
+        if (existingReaction.users.includes(currentUser.userName)) return;
+        existingReaction.users.push(currentUser.userName);
         existingReaction.count = existingReaction.users.length;
       } else {
         message.reactions.push({
           emoji: emoji,
-          users: [currentUser.userName;],
+          users: [currentUser.userName],
           count: 1
         });
       }
@@ -253,9 +231,9 @@ room.messages.forEach(msg => {
       io.to(currentRoomCode).emit('message-reaction', {
         messageId: data.messageId,
         emoji: emoji,
-        userName: currentUser.userName;
+        userName: currentUser.userName
       });
-      console.log(`😀 ${currentUser.userName;} ${emoji} ifadesi bıraktı`);
+      console.log(`😀 ${currentUser.userName} ${emoji} ifadesi bıraktı`);
     } catch (error) {
       console.error('❌ İfade bırakma hatası:', error);
     }
@@ -379,329 +357,312 @@ room.messages.forEach(msg => {
     }
   });
 
-// ============ DM MESAJLARI ============
-socket.on('dm-message', async (data) => {
-  try {
-    if (!currentUser) return;
-    const { receiver, text, type, fileData, mimeType, stickerType, replyTo, replyToId, replyToSender } = data;
-    if (!receiver) return;
-    if (!text && !fileData) return;
+  // ============ DM MESAJLARI ============
+  socket.on('dm-message', async (data) => {
+    try {
+      if (!currentUser) return;
+      const { receiver, text, type, fileData, mimeType, stickerType, replyTo, replyToId, replyToSender } = data;
+      if (!receiver) return;
+      if (!text && !fileData) return;
 
-    const dmMessage = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-      sender: currentUser.userName;,
-      receiver: receiver,
-      message: text || '',
-      type: type || 'text',
-      fileData: fileData || null,
-      mimeType: mimeType || null,
-      stickerType: stickerType || null,
-      reply_to: replyTo ? `${replyToSender ? replyToSender + ': ' : ''}${replyTo}` : null,
-      reply_to_id: replyToId || null,
-      edited: false,
-      reactions: [],
-      created_at: new Date().toISOString()
-    };
+      const dmMessage = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+        sender: currentUser.userName,
+        receiver: receiver,
+        message: text || '',
+        type: type || 'text',
+        fileData: fileData || null,
+        mimeType: mimeType || null,
+        stickerType: stickerType || null,
+        reply_to: replyTo ? `${replyToSender ? replyToSender + ': ' : ''}${replyTo}` : null,
+        reply_to_id: replyToId || null,
+        edited: false,
+        reactions: [],
+        created_at: new Date().toISOString()
+      };
 
-    // Veritabanına insert
-    const { error } = await supabase.from('dm_messages').insert({
-      id: dmMessage.id,
-      sender: dmMessage.sender,
-      receiver: dmMessage.receiver,
-      message: dmMessage.message,
-      type: dmMessage.type,
-      file_data: dmMessage.fileData,          // kolon adı file_data
-      mime_type: dmMessage.mimeType,          // kolon adı mime_type
-      sticker_type: dmMessage.stickerType,    // kolon adı sticker_type
-      reply_to: dmMessage.reply_to,
-      reply_to_id: dmMessage.reply_to_id,
-      edited: dmMessage.edited,
-      reactions: dmMessage.reactions
-    });
-    if (error) console.error('DM kayıt hatası:', error.message);
+      const { error } = await supabase.from('dm_messages').insert({
+        id: dmMessage.id,
+        sender: dmMessage.sender,
+        receiver: dmMessage.receiver,
+        message: dmMessage.message,
+        type: dmMessage.type,
+        file_data: dmMessage.fileData,
+        mime_type: dmMessage.mimeType,
+        sticker_type: dmMessage.stickerType,
+        reply_to: dmMessage.reply_to,
+        reply_to_id: dmMessage.reply_to_id,
+        edited: dmMessage.edited,
+        reactions: dmMessage.reactions
+      });
+      if (error) console.error('DM kayıt hatası:', error.message);
 
-    // Alıcı socket'e gönder
-    let receiverSocketId = null;
-    rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
-      if (user.userName === receiver) receiverSocketId = socketId;
-    });
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit('dm-message', dmMessage);
+      let receiverSocketId = null;
+      rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
+        if (user.userName === receiver) receiverSocketId = socketId;
+      });
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit('dm-message', dmMessage);
+      }
+      socket.emit('dm-message', dmMessage);
+    } catch (error) {
+      console.error('DM mesaj hatası:', error);
     }
-    socket.emit('dm-message', dmMessage);
-  } catch (error) {
-    console.error('DM mesaj hatası:', error);
-  }
-});
+  });
 
   socket.on('dm-delete', async (data) => {
     try {
       if (!currentUser) return;
       const { messageId } = data;
-      await supabase.from('dm_messages').delete().eq('id', messageId).eq('sender', currentUser.userName;);
-      // Basitçe silme işlemini taraflara bildir
+      await supabase.from('dm_messages').delete().eq('id', messageId).eq('sender', currentUser.userName);
       io.emit('dm-deleted', { messageId });
     } catch (error) {
       console.error('DM silme hatası:', error);
     }
   });
-  
+
   // ============ DM İFADE BIRAK ============
-socket.on('dm-react', async (data) => {
-  try {
-    if (!currentUser) return;
-    const { messageId, emoji } = data;
-    if (!messageId || !emoji) return;
-    if (!['🖕', '❤️', '😜', '🤍'].includes(emoji)) return;
+  socket.on('dm-react', async (data) => {
+    try {
+      if (!currentUser) return;
+      const { messageId, emoji } = data;
+      if (!messageId || !emoji) return;
+      if (!['🖕', '❤️', '😜', '🤍'].includes(emoji)) return;
 
-    // Supabase'den mesajı çek
-    const { data: dmMsg, error: fetchError } = await supabase
-      .from('dm_messages')
-      .select('*')
-      .eq('id', messageId)
-      .single();
+      const { data: dmMsg, error: fetchError } = await supabase
+        .from('dm_messages')
+        .select('*')
+        .eq('id', messageId)
+        .single();
 
-    if (fetchError || !dmMsg) {
-      console.error('DM mesaj bulunamadı:', fetchError?.message);
-      return;
-    }
-
-    // Mevcut reaksiyonları güncelle
-    let reactions = dmMsg.reactions || [];
-    const existingReaction = reactions.find(r => r.emoji === emoji);
-    if (existingReaction) {
-      if (existingReaction.users.includes(currentUser.userName;)) return;
-      existingReaction.users.push(currentUser.userName;);
-      existingReaction.count = existingReaction.users.length;
-    } else {
-      reactions.push({
-        emoji: emoji,
-        users: [currentUser.userName;],
-        count: 1
-      });
-    }
-
-    const { error: updateError } = await supabase
-      .from('dm_messages')
-      .update({ reactions: reactions })
-      .eq('id', messageId);
-
-    if (updateError) {
-      console.error('DM reaksiyon güncelleme hatası:', updateError.message);
-      return;
-    }
-
-    // Taraflara bildir
-    io.emit('dm-reaction-updated', {
-      messageId: messageId,
-      emoji: emoji,
-      userName: currentUser.userName;
-    });
-  } catch (error) {
-    console.error('DM reaksiyon hatası:', error);
-  }
-});
-
-// ============ DM MESAJ DÜZENLE ============
-socket.on('dm-edit', async (data) => {
-  try {
-    if (!currentUser) return;
-    const { messageId, newText } = data;
-    if (!messageId || !newText || !newText.trim()) return;
-
-    const { error } = await supabase
-      .from('dm_messages')
-      .update({ message: newText.trim(), edited: true })
-      .eq('id', messageId)
-      .eq('sender', currentUser.userName;);
-
-    if (error) {
-      console.error('DM düzenleme hatası:', error.message);
-      return;
-    }
-
-    io.emit('dm-edited', {
-      messageId: messageId,
-      newText: newText.trim(),
-      edited: true
-    });
-  } catch (error) {
-    console.error('DM düzenleme hatası:', error);
-  }
-});
-// ============ EKRAN PAYLAŞIMI OLAYLARI (SUNUCU) ============
-socket.on('screen-share-request', (data) => {
-    console.log('📺 Ekran paylaşımı isteği geldi:', data);
-    if (!currentUser) {
-        console.log('❌ currentUser yok, istek gönderilemedi');
+      if (fetchError || !dmMsg) {
+        console.error('DM mesaj bulunamadı:', fetchError?.message);
         return;
-    }
-    
-    let targetSocketId = null;
-    rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
-        if (user.userName === data.targetUserName) targetSocketId = socketId;
-    });
-    
-    console.log('Hedef socket ID:', targetSocketId);
-    
-    if (targetSocketId) {
-        io.to(targetSocketId).emit('screen-share-request', {
-            requesterId: socket.id,
-requesterName: currentUser.userName; || 'Bilinmeyen Kullanıcı',
-            targetUserName: data.targetUserName,
-            mode: data.mode
-        });
-        console.log('✅ İstek karşı tarafa iletildi');
-    } else {
-        console.log('❌ Hedef kullanıcı bulunamadı');
-    }
-});
+      }
 
-socket.on('screen-share-accept', (data) => {
-    console.log('📞 Kabul geldi, gönderen:', data.requesterId);
-    io.to(data.requesterId).emit('screen-share-accepted', { requesterId: socket.id });
-});
-
-socket.on('screen-share-reject', (data) => {
-    io.to(data.requesterId).emit('screen-share-rejected');
-});
-
-socket.on('screen-share-offer', (data) => {
-    io.to(data.targetUserId).emit('screen-share-offer', {
-        offer: data.offer,
-        targetUserId: socket.id
-    });
-});
-
-socket.on('screen-share-answer', (data) => {
-    io.to(data.targetUserId).emit('screen-share-answer', { answer: data.answer });
-});
-
-socket.on('screen-share-ice', (data) => {
-    io.to(data.targetUserId).emit('screen-share-ice', { candidate: data.candidate });
-});
-
-socket.on('screen-share-stopped', (data) => {
-    io.to(data.targetUserId).emit('screen-share-stopped');
-});
-
-socket.on('screen-share-call-ended', (data) => {
-    io.to(data.targetUserId).emit('screen-share-call-ended');
-});
-
-  
-// ============ MÜZİK SİSTEMİ (TEMİZ) ============
-
-// İzin isteği gönder
-socket.on('request-music-permission', (data) => {
-  try {
-    if (!currentUser) return;
-    
-    const requesterId = socket.id;
-    const requesterName = currentUser.userName;;
-    
-    const targetUsers = Array.from(rooms.get(ROOM_CODE)?.users.values() || [])
-      .filter(u => u.userName !== requesterName);
-    
-    if (targetUsers.length === 0) {
-      socket.emit('music-permission-status', { status: 'no-users' });
-      return;
-    }
-    
-    // Her hedef kullanıcıya istek gönder
-    targetUsers.forEach(user => {
-      const targetSocketId = Array.from(rooms.get(ROOM_CODE).users.entries())
-        .find(([id, u]) => u.userName === user.userName)?.[0];
-      
-      if (targetSocketId && targetSocketId !== socket.id) {
-        io.to(targetSocketId).emit('music-permission-request', {
-          requesterId: requesterId,
-          requester: requesterName
+      let reactions = dmMsg.reactions || [];
+      const existingReaction = reactions.find(r => r.emoji === emoji);
+      if (existingReaction) {
+        if (existingReaction.users.includes(currentUser.userName)) return;
+        existingReaction.users.push(currentUser.userName);
+        existingReaction.count = existingReaction.users.length;
+      } else {
+        reactions.push({
+          emoji: emoji,
+          users: [currentUser.userName],
+          count: 1
         });
       }
-    });
-    
-    socket.emit('music-permission-status', { status: 'sent' });
-  } catch (error) {
-    console.error('Müzik izin istek hatası:', error);
-  }
-});
 
-// İzin kabul edildi
-socket.on('accept-music-permission', (data) => {
-  try {
-    const requesterId = data.requesterId;
-    if (requesterId) {
-io.to(requesterId).emit('music-permission-status', { 
-  status: 'accepted', 
-  listenerName: currentUser.userName 
-});
-    }
-  } catch (error) {
-    console.error('Müzik izin kabul hatası:', error);
-  }
-});
+      const { error: updateError } = await supabase
+        .from('dm_messages')
+        .update({ reactions: reactions })
+        .eq('id', messageId);
 
-// İzin reddedildi
-socket.on('reject-music-permission', (data) => {
-  try {
-    const requesterId = data.requesterId;
-    if (requesterId) {
-      io.to(requesterId).emit('music-permission-status', { status: 'rejected' });
-    }
-  } catch (error) {
-    console.error('Müzik izin reddetme hatası:', error);
-  }
-});
+      if (updateError) {
+        console.error('DM reaksiyon güncelleme hatası:', updateError.message);
+        return;
+      }
 
-// İzin iptal edildi
-socket.on('revoke-music-permission', (data) => {
-  try {
-    const requesterId = data.requesterId;
-    if (requesterId) {
-      io.to(requesterId).emit('music-permission-status', { 
-        status: 'revoked', 
-        listenerName: currentUser.userName;; 
+      io.emit('dm-reaction-updated', {
+        messageId: messageId,
+        emoji: emoji,
+        userName: currentUser.userName
       });
+    } catch (error) {
+      console.error('DM reaksiyon hatası:', error);
     }
-  } catch (error) {
-    console.error('Müzik izin iptal hatası:', error);
-  }
-});
+  });
 
-// Müzik çal (kontrolcü gönderir)
-socket.on('music-play', (data) => {
-  try {
-    if (!currentUser) return;
-    
-    // Kontrolcü her zaman isteği atan kişidir (socket.id)
-    // Başkasının requesterId göndermesini engelle
-    io.to(ROOM_CODE).emit('music-play', {
-      videoId: data.videoId,
-      title: data.title,
-      channel: data.channel,
-      requesterId: socket.id  // Daima gerçek gönderenin id'si
+  // ============ DM MESAJ DÜZENLE ============
+  socket.on('dm-edit', async (data) => {
+    try {
+      if (!currentUser) return;
+      const { messageId, newText } = data;
+      if (!messageId || !newText || !newText.trim()) return;
+
+      const { error } = await supabase
+        .from('dm_messages')
+        .update({ message: newText.trim(), edited: true })
+        .eq('id', messageId)
+        .eq('sender', currentUser.userName);
+
+      if (error) {
+        console.error('DM düzenleme hatası:', error.message);
+        return;
+      }
+
+      io.emit('dm-edited', {
+        messageId: messageId,
+        newText: newText.trim(),
+        edited: true
+      });
+    } catch (error) {
+      console.error('DM düzenleme hatası:', error);
+    }
+  });
+
+  // ============ EKRAN PAYLAŞIMI OLAYLARI ============
+  socket.on('screen-share-request', (data) => {
+    console.log('📺 Ekran paylaşımı isteği geldi:', data);
+    if (!currentUser) {
+      console.log('❌ currentUser yok, istek gönderilemedi');
+      return;
+    }
+
+    let targetSocketId = null;
+    rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
+      if (user.userName === data.targetUserName) targetSocketId = socketId;
     });
-  } catch (error) {
-    console.error('Müzik çalma hatası:', error);
-  }
-});
 
-// Müzik kontrolü (play/pause/mute/unmute/stop)
-socket.on('music-control', (data) => {
-  try {
-    // Sadece kontrolcü (kendi socket.id'si) kontrol edebilir
-    if (data.requesterId === socket.id) {
-      socket.to(ROOM_CODE).emit('music-control', {
-        action: data.action,
+    console.log('Hedef socket ID:', targetSocketId);
+
+    if (targetSocketId) {
+      io.to(targetSocketId).emit('screen-share-request', {
+        requesterId: socket.id,
+        requesterName: currentUser.userName || 'Bilinmeyen Kullanıcı',
+        targetUserName: data.targetUserName,
+        mode: data.mode
+      });
+      console.log('✅ İstek karşı tarafa iletildi');
+    } else {
+      console.log('❌ Hedef kullanıcı bulunamadı');
+    }
+  });
+
+  socket.on('screen-share-accept', (data) => {
+    console.log('📞 Kabul geldi, gönderen:', data.requesterId);
+    io.to(data.requesterId).emit('screen-share-accepted', { requesterId: socket.id });
+  });
+
+  socket.on('screen-share-reject', (data) => {
+    io.to(data.requesterId).emit('screen-share-rejected');
+  });
+
+  socket.on('screen-share-offer', (data) => {
+    io.to(data.targetUserId).emit('screen-share-offer', {
+      offer: data.offer,
+      targetUserId: socket.id
+    });
+  });
+
+  socket.on('screen-share-answer', (data) => {
+    io.to(data.targetUserId).emit('screen-share-answer', { answer: data.answer });
+  });
+
+  socket.on('screen-share-ice', (data) => {
+    io.to(data.targetUserId).emit('screen-share-ice', { candidate: data.candidate });
+  });
+
+  socket.on('screen-share-stopped', (data) => {
+    io.to(data.targetUserId).emit('screen-share-stopped');
+  });
+
+  socket.on('screen-share-call-ended', (data) => {
+    io.to(data.targetUserId).emit('screen-share-call-ended');
+  });
+
+  // ============ MÜZİK SİSTEMİ ============
+  socket.on('request-music-permission', (data) => {
+    try {
+      if (!currentUser) return;
+
+      const requesterId = socket.id;
+      const requesterName = currentUser.userName;
+
+      const targetUsers = Array.from(rooms.get(ROOM_CODE)?.users.values() || [])
+        .filter(u => u.userName !== requesterName);
+
+      if (targetUsers.length === 0) {
+        socket.emit('music-permission-status', { status: 'no-users' });
+        return;
+      }
+
+      targetUsers.forEach(user => {
+        const targetSocketId = Array.from(rooms.get(ROOM_CODE).users.entries())
+          .find(([id, u]) => u.userName === user.userName)?.[0];
+
+        if (targetSocketId && targetSocketId !== socket.id) {
+          io.to(targetSocketId).emit('music-permission-request', {
+            requesterId: requesterId,
+            requester: requesterName
+          });
+        }
+      });
+
+      socket.emit('music-permission-status', { status: 'sent' });
+    } catch (error) {
+      console.error('Müzik izin istek hatası:', error);
+    }
+  });
+
+  socket.on('accept-music-permission', (data) => {
+    try {
+      const requesterId = data.requesterId;
+      if (requesterId) {
+        io.to(requesterId).emit('music-permission-status', {
+          status: 'accepted',
+          listenerName: currentUser.userName
+        });
+      }
+    } catch (error) {
+      console.error('Müzik izin kabul hatası:', error);
+    }
+  });
+
+  socket.on('reject-music-permission', (data) => {
+    try {
+      const requesterId = data.requesterId;
+      if (requesterId) {
+        io.to(requesterId).emit('music-permission-status', { status: 'rejected' });
+      }
+    } catch (error) {
+      console.error('Müzik izin reddetme hatası:', error);
+    }
+  });
+
+  socket.on('revoke-music-permission', (data) => {
+    try {
+      const requesterId = data.requesterId;
+      if (requesterId) {
+        io.to(requesterId).emit('music-permission-status', {
+          status: 'revoked',
+          listenerName: currentUser.userName
+        });
+      }
+    } catch (error) {
+      console.error('Müzik izin iptal hatası:', error);
+    }
+  });
+
+  socket.on('music-play', (data) => {
+    try {
+      if (!currentUser) return;
+
+      io.to(ROOM_CODE).emit('music-play', {
+        videoId: data.videoId,
+        title: data.title,
+        channel: data.channel,
         requesterId: socket.id
       });
+    } catch (error) {
+      console.error('Müzik çalma hatası:', error);
     }
-  } catch (error) {
-    console.error('Müzik kontrol hatası:', error);
-  }
-});
-  
+  });
+
+  socket.on('music-control', (data) => {
+    try {
+      if (data.requesterId === socket.id) {
+        socket.to(ROOM_CODE).emit('music-control', {
+          action: data.action,
+          requesterId: socket.id
+        });
+      }
+    } catch (error) {
+      console.error('Müzik kontrol hatası:', error);
+    }
+  });
+
   // ============ BAĞLANTI KOPTU ============
   socket.on('disconnect', () => {
     console.log('🔌 Ayrıldı:', socket.id);
@@ -709,7 +670,7 @@ socket.on('music-control', (data) => {
       const room = rooms.get(currentRoomCode);
       if (room) {
         room.users.delete(socket.id);
-        socket.to(currentRoomCode).emit('user-left', { userName: currentUser.userName; });
+        socket.to(currentRoomCode).emit('user-left', { userName: currentUser.userName });
         updateUserList(currentRoomCode);
 
         if (room.users.size === 0) {
@@ -727,25 +688,25 @@ socket.on('music-control', (data) => {
 
 // ============ CLOUDFLARE TURN KİMLİK ÜRETME ============
 app.get('/api/turn-config', async (req, res) => {
-    try {
-        const response = await fetch('https://rtc.live.cloudflare.com/v1/turn/keys/b7ae356ddfbcf724dbf0a80bbcffe1d3/credentials/generate-ice-servers', {
-            method: 'POST',
-            headers: {
-                'Authorization': 'Bearer 66db5c5d5686c1ad66857a565f3d777997379f46d1b5370e0544d4d7f858a2f7',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ ttl: 86400 })
-        });
-        
-        const data = await response.json();
-        res.json(data);
-    } catch (error) {
-        console.error('TURN kimlik üretme hatası:', error);
-        res.status(500).json({ error: 'TURN kimlik üretilemedi' });
-    }
+  try {
+    const response = await fetch('https://rtc.live.cloudflare.com/v1/turn/keys/b7ae356ddfbcf724dbf0a80bbcffe1d3/credentials/generate-ice-servers', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer 66db5c5d5686c1ad66857a565f3d777997379f46d1b5370e0544d4d7f858a2f7',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ttl: 86400 })
+    });
+
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    console.error('TURN kimlik üretme hatası:', error);
+    res.status(500).json({ error: 'TURN kimlik üretilemedi' });
+  }
 });
 
-      app.get('/zombie', (req, res) => {
+app.get('/zombie', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'zombie.html'));
 });
 
@@ -756,7 +717,6 @@ app.get('/api/dm-messages', async (req, res) => {
       return res.status(400).json({ error: 'sender ve receiver gerekli' });
     }
 
-    // Supabase ile DM mesajlarını getir
     const { data: messages, error } = await supabase
       .from('dm_messages')
       .select('*')
@@ -787,8 +747,6 @@ app.get('/api/dm-messages', async (req, res) => {
   }
 });
 
-
-
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', onlineUsers: rooms.get(ROOM_CODE)?.users.size || 0 });
 });
@@ -811,16 +769,16 @@ app.get('*', (req, res) => {
 
 // 24 saatten eski DM mesajlarını temizle
 setInterval(async () => {
-    try {
-        const { error } = await supabase
-            .from('dm_messages')
-            .delete()
-            .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
-        if (error) console.error('DM temizleme hatası:', error.message);
-    } catch (e) {
-        console.error('DM temizlik hatası:', e);
-    }
-}, 60 * 60 * 1000); // Her saat kontrol
+  try {
+    const { error } = await supabase
+      .from('dm_messages')
+      .delete()
+      .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+    if (error) console.error('DM temizleme hatası:', error.message);
+  } catch (e) {
+    console.error('DM temizlik hatası:', e);
+  }
+}, 60 * 60 * 1000);
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server ${PORT} portunda çalışıyor`);
