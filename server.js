@@ -206,55 +206,56 @@ room.messages.forEach(msg => {
     }
   });
   
-  // ============ MESAJ GÖNDER ============
-  socket.on('message', async (data) => {
-    try {
-      if (!currentRoomCode || !currentUser) return;
-      const room = rooms.get(currentRoomCode);
-      if (!room) return;
-      const message = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-        userName: currentUser.userName,
-        userPhoto: currentUser.userPhoto,
-        userColor: currentUser.userColor,
-        type: data.type || 'text',
-        text: data.text || '',
-        fileData: data.fileData || null,
-        mimeType: data.mimeType || null,
-        stickerType: data.stickerType || null,
-        replyTo: data.replyTo || null,
-        isMirrored: data.isMirrored === true,
-        replyToUserName: data.replyToUserName || null,
-        replyToText: data.replyToText || null,
-        font: data.font || null, 
-        bannerMode: data.bannerMode === true,
-        reactions: [],
-        time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' }),
-        timestamp: Date.now()
-      };
+socket.on('message', async (data) => {
+  try {
+    if (!currentRoomCode || !currentUser) return;
+    const room = rooms.get(currentRoomCode);
+    if (!room) return;
 
-      room.messages.push(message);
+    const message = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+      userName: currentUser.userName,
+      userPhoto: currentUser.userPhoto,
+      userColor: currentUser.userColor,
+      type: data.type || 'text',
+      text: data.text || '',
+      fileData: data.fileData || null,
+      mimeType: data.mimeType || null,
+      stickerType: data.stickerType || null,
+      replyTo: data.replyTo || null,
+      isMirrored: data.isMirrored === true,
+      replyToUserName: data.replyToUserName || null,
+      replyToText: data.replyToText || null,
+      font: data.font || null,
+      bannerMode: data.bannerMode === true,
+      reactions: [],
+      time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' }),
+      timestamp: Date.now()
+    };
 
-      io.to(currentRoomCode).emit('message', message);
+    // 1) Önce odaya yayınla (anında gitsin)
+    room.messages.push(message);
+    io.to(currentRoomCode).emit('message', message);
 
-      // Diğer kullanıcılara push bildirimi gönder
-      const targetUsers = Array.from(room.users.values()).filter(u => u.userName !== currentUser.userName);
-      targetUsers.forEach(user => {
-        const sub = pushSubscriptions.get(user.userName);
-        if (sub) {
-          webpush.sendNotification(sub, JSON.stringify({
-            title: 'Yılan Oyunu Platformu',
-            body: 'Yılan seni özledi gel ve skorunu arttır!'
-          })).catch(err => console.error('Push hatası:', err));
-        }
-      });
+    // 2) Sonra arka planda veritabanına kaydet (senkron değil)
+    dbMesajKaydet(currentRoomCode, currentUser.userName, currentUser.userPhoto, currentUser.userColor, data.text).catch(err => console.error('DB kayıt hatası:', err));
 
-await dbMesajKaydet(currentRoomCode, currentUser.userName, currentUser.userPhoto, currentUser.userColor, data.text);
+    // 3) Push bildirimleri
+    const targetUsers = Array.from(room.users.values()).filter(u => u.userName !== currentUser.userName);
+    targetUsers.forEach(user => {
+      const sub = pushSubscriptions.get(user.userName);
+      if (sub) {
+        webpush.sendNotification(sub, JSON.stringify({
+          title: 'Yeni Mesaj',
+          body: `${currentUser.userName}: ${data.text || 'medya'}`
+        })).catch(err => console.error('Push hatası:', err));
+      }
+    });
 
-    } catch (error) {
-      console.error('❌ Mesaj hatası:', error);
-    }
-  });
+  } catch (error) {
+    console.error('❌ Mesaj hatası:', error);
+  }
+});
 
   // ============ MESAJ SİL ============
   socket.on('delete-message', async (data) => {
