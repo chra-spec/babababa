@@ -547,7 +547,7 @@ socket.on('screen-share-request', (data) => {
     if (targetSocketId) {
         io.to(targetSocketId).emit('screen-share-request', {
             requesterId: socket.id,
-            requesterName: currentUser.userName || currentUser.UserName; || 'Bilinmeyen Kullanıcı',
+requesterName: currentUser.userName || 'Bilinmeyen Kullanıcı',
             targetUserName: data.targetUserName,
             mode: data.mode
         });
