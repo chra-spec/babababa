@@ -2582,6 +2582,10 @@ body.dark-mode .message-avatar {
     let activeContextMessageElement = null;
     let replyToMessage = null;
     let onlineUsers = [];
+    let currentRoomId = null;
+let currentRoomName = null;
+let currentRoomPassword = null;
+let isRoomAdmin = false;
     let darkModeEnabled = localStorage.getItem('darkModeEnabled') === 'true';
 let bannerModeEnabled = localStorage.getItem('bannerModeEnabled') === 'true';
 let notificationsEnabled = localStorage.getItem('notificationsEnabled') === 'true';
@@ -6315,27 +6319,28 @@ socket.on('webrtc-answer', async (data) => {
             });
         }
 
-        // connectSocket fonksiyonunu güncelle - setupCallSocketEvents'i çağır
-        const originalConnectSocket = connectSocket;
+const originalConnectSocket = connectSocket;
 connectSocket = function() {
-socket.on('room-list-update', (rooms) => renderActiveRoomList(rooms));
-socket.on('room-created', (data) => {
-    closeRoomCreate();
-    alert(`Oda kuruldu: ${data.roomName}\nŞifre: ${data.roomPassword}`);
-    // Oda arayüzüne geç
-    enterRoomInterface(data.roomId, data.roomName, data.roomPassword, true);
-});
-socket.on('room-joined', (data) => {
-    closeRoomJoin();
-    alert(`Odaya katıldınız: ${data.roomName}`);
-    enterRoomInterface(data.roomId, data.roomName, data.roomPassword, data.isAdmin);
-});
-socket.on('room-error', (data) => alert(data.message));
-    originalConnectSocket();
+    originalConnectSocket(); // ÖNCE socket oluştur
+
+    // Şimdi socket var, olayları bağla
+    socket.on('room-list-update', (rooms) => renderActiveRoomList(rooms));
+    socket.on('room-created', (data) => {
+        closeRoomCreate();
+        alert(`Oda kuruldu: ${data.roomName}\nŞifre: ${data.roomPassword}`);
+        enterRoomInterface(data.roomId, data.roomName, data.roomPassword, true);
+    });
+    socket.on('room-joined', (data) => {
+        closeRoomJoin();
+        alert(`Odaya katıldınız: ${data.roomName}`);
+        enterRoomInterface(data.roomId, data.roomName, data.roomPassword, data.isAdmin);
+    });
+    socket.on('room-error', (data) => alert(data.message));
+
     setupCallSocketEvents();
     setupDMSocketEvents();
     setupMusicSocketEvents();
-    setupScreenShareSocketEvents(); 
+    setupScreenShareSocketEvents();
 };
 
         // ============ BAŞLANGIÇ ============
