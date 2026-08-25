@@ -4400,8 +4400,6 @@ async function openCamera() {
     }
 }
 
-        cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
-
 const video = document.getElementById('cameraPreview');
 video.srcObject = cameraStream;
 video.classList.remove('rear');
