@@ -19,7 +19,6 @@
     <title>Destek Merkezi</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
- <script src="https://cdn.uploadcare.com/blink/1.0.0/uploadcare.js"></script>
        <style>
         * { 
             margin: 0; padding: 0; box-sizing: border-box; 
@@ -2112,9 +2111,8 @@ body.dark-mode .message-avatar {
     <button class="input-btn" onclick="openCameraGallery()" title="Galeri">🖼️</button>
     <button class="input-btn" onclick="toggleStickerPanel()" title="Çıkartma">🐰</button>
     <button class="input-btn" id="recordBtn" onclick="toggleRecording()" title="Ses Kaydı">🎤</button>
-<input type="hidden" id="videoInput" role="uploadcare-uploader" data-public-key="ee9c8eae9f0a0ebf5d5e" data-images-only="false" data-multiple="false" />
-
-<input type="hidden" id="imageInput" role="uploadcare-uploader" data-public-key="ee9c8eae9f0a0ebf5d5e" data-images-only="true" data-multiple="true" />
+<input type="file" id="videoInput" accept="video/*" multiple style="display: none;">
+<input type="file" id="imageInput" accept="image/*" multiple style="display: none;">
 </div>
             <textarea class="message-input" id="messageInput" placeholder="Mesaj yaz..." rows="1"></textarea>
             <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
@@ -2346,12 +2344,6 @@ body.dark-mode .message-avatar {
     </div>
     <div class="messages-container scrollbar-thin" id="dmMessagesContainer" style="flex:1; overflow-y:auto;"></div>
     <div class="input-area">
-    <div class="input-buttons">
-    <button class="input-btn" onclick="openCamera()" title="Kamera">📷</button>
-    <button class="input-btn" onclick="openCameraGallery()" title="Galeri">🖼️</button>
-    <button class="input-btn" onclick="toggleStickerPanel()" title="Çıkartma">🐰</button>
-    <button class="input-btn" onclick="toggleRecording()" title="Ses Kaydı">🎤</button>
-</div>
         <textarea class="message-input" id="dmMessageInput" placeholder="Mesaj yaz..." rows="1"></textarea>
         <button class="send-btn" onclick="sendDMMessage()">➤</button>
     </div>
@@ -3849,6 +3841,31 @@ function scrollToMessage(messageId) {
 }
 
 // ============ DOSYA GÖNDERME ============
+document.getElementById('imageInput').addEventListener('change', function(e) {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+        if (file.size > 5 * 1024 * 1024) { alert('Fotoğraf 5MB altı olmalı'); return; }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            sendMedia({ type: 'image', fileData: ev.target.result, mimeType: 'image/jpeg' });
+        };
+        reader.readAsDataURL(file);
+    });
+    this.value = '';
+});
+
+document.getElementById('videoInput').addEventListener('change', function(e) {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+        if (file.size > 50 * 1024 * 1024) { alert('Video 50MB altı olmalı'); return; }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            sendMedia({ type: 'video', fileData: ev.target.result, mimeType: 'video/mp4' });
+        };
+        reader.readAsDataURL(file);
+    });
+    this.value = '';
+});
 
 // ============ SES KAYDI ============
 let mediaRecorder = null, audioChunks = [], isRecording = false;
@@ -3860,7 +3877,7 @@ async function toggleRecording() {
         // Ses filtrelerini ayarla
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-        // BURAYA mimeType seçimi gelecek
+        // MimeType seçimi
         let mimeType = 'audio/webm;codecs=opus';
         if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
             mimeType = 'audio/webm;codecs=opus';
@@ -3874,22 +3891,26 @@ async function toggleRecording() {
             mimeType: mimeType,
             audioBitsPerSecond: 320000
         });
-        
+
         audioChunks = [];
         mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
-mediaRecorder.onstop = () => {
-  const blob = new Blob(audioChunks, { type: mimeType });
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    sendMedia({ type: 'audio', fileData: ev.target.result, mimeType: mimeType });
-  };
-  reader.readAsDataURL(blob);
-  stream.getTracks().forEach(t => t.stop());
-};
+
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(audioChunks, { type: mimeType });
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                sendMedia({ type: 'audio', fileData: ev.target.result, mimeType: mimeType });
+            };
+            reader.readAsDataURL(blob);
+            stream.getTracks().forEach(t => t.stop());
+        };
+
         mediaRecorder.start(100);
         isRecording = true;
-        btn.classList.add('recording');
-        btn.textContent = '⏹';
+        if (btn) {
+            btn.classList.add('recording');
+            btn.textContent = '⏹';
+        }
     } catch(e) { 
         console.error(e); 
         alert('Mikrofon erişimi reddedildi'); 
@@ -3901,8 +3922,10 @@ function stopRecording() {
         mediaRecorder.stop();
         isRecording = false;
         const btn = document.getElementById('recordBtn');
-        btn.classList.remove('recording');
-        btn.textContent = '🎤';
+        if (btn) {
+            btn.classList.remove('recording');
+            btn.textContent = '🎤';
+        }
     }
 }
 
@@ -4058,12 +4081,12 @@ function saveSticker() {
 }
 
 function sendSticker(sticker) {
-  sendMedia({
-    type: 'sticker',
-    stickerType: sticker.type,
-    fileData: sticker.data
-  });
-  document.getElementById('stickerPanel').classList.remove('active');
+    sendMedia({
+        type: 'sticker',
+        stickerType: sticker.type,
+        fileData: sticker.data
+    });
+    document.getElementById('stickerPanel').classList.remove('active');
 }
 
 function toggleDarkMode() {
@@ -4263,27 +4286,9 @@ startCanvasDraw(video);
 
 // ============ KAMERA KAPAT ============
 function closeCamera() {
-    if (isRecordingVideo && videoRecorder && videoRecorder.state !== 'inactive') {
-        videoRecorder.stop();
-    }
-    isRecordingVideo = false;
-    videoRecordedChunks = [];
-    audioChunks = [];
-    recordedVideoBlob = null;
-    if (pendingMediaURL) {
-        URL.revokeObjectURL(pendingMediaURL);
-        pendingMediaURL = null;
-    }
-    pendingMediaBlob = null;
-    pendingMediaType = null;
-
     if (cameraStream) {
         cameraStream.getTracks().forEach(track => track.stop());
         cameraStream = null;
-    }
-    if (drawLoop) {
-        cancelAnimationFrame(drawLoop);
-        drawLoop = null;
     }
     document.getElementById('cameraOverlay').classList.remove('active');
 }
@@ -4359,64 +4364,42 @@ function toggleVideoRecording() {
     const captureImg = captureBtn.querySelector('img');
 
     if (!isRecordingVideo) {
-        // Önceki kayıt kalıntılarını temizle (birikme sorunu çözülür)
         videoRecordedChunks = [];
-        audioChunks = [];
-        recordedVideoBlob = null;
-        if (pendingMediaURL) {
-            URL.revokeObjectURL(pendingMediaURL);
-            pendingMediaURL = null;
-        }
 
-        // 60 FPS akış al (desteklenmiyorsa otomatik düşer)
-        const canvasStream = cameraCanvas.captureStream(60);
+        // Canvas stream'i al
+        const canvasStream = cameraCanvas.captureStream(30);
 
-        // Ses track'lerini ekle ve etkinleştir
+        // Ses track'ini ekle (kamera stream'den)
         if (cameraStream) {
-            cameraStream.getAudioTracks().forEach(track => {
-                track.enabled = true;
-            });
             cameraStream.getAudioTracks().forEach(track => {
                 canvasStream.addTrack(track);
             });
         }
 
-        // En uyumlu codec seç
-        let mimeType = 'video/webm;codecs=vp9,opus';
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
-            mimeType = 'video/webm;codecs=vp8,opus';
-        }
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
-            mimeType = 'video/webm';
-        }
-
         videoRecorder = new MediaRecorder(canvasStream, {
-            mimeType: mimeType,
-            videoBitsPerSecond: 2500000,  // 2.5 Mbps (kaliteli + akıcı)
-            audioBitsPerSecond: 128000    // 128 kbps (yüksek ses)
+            mimeType: 'video/webm;codecs=vp9'
         });
 
         videoRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0) videoRecordedChunks.push(event.data);
+            if (event.data.size > 0) {
+                videoRecordedChunks.push(event.data);
+            }
         };
 
         videoRecorder.onstop = () => {
-            recordedVideoBlob = new Blob(videoRecordedChunks, { type: mimeType });
+            recordedVideoBlob = new Blob(videoRecordedChunks, { type: 'video/webm' });
             pendingMediaBlob = recordedVideoBlob;
             pendingMediaType = 'video';
             pendingMediaURL = URL.createObjectURL(recordedVideoBlob);
-            pendingMediaIsMirrored = false;
+            pendingMediaIsMirrored = false; // Video dosyası ayna modlu
             openMediaPreview();
         };
 
-        // Anında başlat (gecikme yok)
-        videoRecorder.start(100);
+        videoRecorder.start();
         isRecordingVideo = true;
         captureImg.src = 'https://cdn.phototourl.com/free/2026-08-22-de5dcf7d-23aa-4f8e-a1eb-fc01e62c2737.png';
     } else {
-        if (videoRecorder && videoRecorder.state !== 'inactive') {
-            videoRecorder.stop();
-        }
+        videoRecorder.stop();
         isRecordingVideo = false;
         captureImg.src = 'https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAEZnjVqiNcypAY9RPOqIiCfIwkYE0S-EQACHiEAAgK8SFT-tAhBtaDTQT0E.png';
     }
@@ -4464,15 +4447,6 @@ function openCameraGallery() {
 }
 
 function closeGallery() {
-if (isRecordingVideo && videoRecorder && videoRecorder.state !== 'inactive') {
-  videoRecorder.stop();
-}
-videoRecordedChunks = [];
-audioChunks = [];
-recordedVideoBlob = null;
-pendingMediaBlob = null;
-pendingMediaURL = null;
-isRecordingVideo = false;
     document.getElementById('galleryOverlay').classList.remove('active');
 }
 
@@ -4536,16 +4510,17 @@ socket.emit('message', {
     }
 }
 
+// ============ MEDYA ÖNİZLEME ============
 function openMediaPreview() {
     const previewContent = document.getElementById('previewContent');
     previewContent.innerHTML = '';
 
     if (pendingMediaType === 'image') {
         const img = document.createElement('img');
-        img.src = pendingMediaURL;
-        if (pendingMediaIsMirrored) {
-            img.style.transform = 'scaleX(-1)';
-        }
+img.src = pendingMediaURL;
+if (pendingMediaIsMirrored) {
+    img.style.transform = 'scaleX(-1)';
+}
         previewContent.appendChild(img);
         document.getElementById('previewActionBtn').style.display = 'flex';
         document.getElementById('previewActionBtn').innerHTML = `
@@ -4556,17 +4531,13 @@ function openMediaPreview() {
             </svg>
         `;
     } else if (pendingMediaType === 'video') {
-        const video = document.createElement('video');
-        video.src = pendingMediaURL;
-        video.controls = true;
-        video.autoplay = true;
-        video.loop = true; // Video sona gelince başa sar
-        video.muted = false;
-        video.playsInline = true;
-        video.style.transform = 'scaleX(1)';
-        video.style.width = '100%';
-        video.style.height = '100%';
-        video.style.objectFit = 'contain';
+const video = document.createElement('video');
+video.src = pendingMediaURL;
+video.controls = true;
+video.autoplay = true;
+video.loop = true;
+video.muted = false;
+video.style.transform = 'scaleX(1)'; 
         previewContent.appendChild(video);
         document.getElementById('previewActionBtn').style.display = 'flex';
         document.getElementById('previewActionBtn').innerHTML = `
@@ -4577,40 +4548,28 @@ function openMediaPreview() {
             </svg>
         `;
     }
-
-    if (cropBox) {
-        cropBox.style.display = 'none';
-    }
-    isCropping = false;
+    
+if (cropBox) {
+    cropBox.style.display = 'none';
+}
+isCropping = false;
     document.getElementById('mediaPreviewOverlay').classList.add('active');
 }
 
 function closeMediaPreview() {
-    // Aktif video kaydını durdur
-    if (isRecordingVideo && videoRecorder && videoRecorder.state !== 'inactive') {
-        videoRecorder.stop();
-    }
-    isRecordingVideo = false;
-    videoRecordedChunks = [];
-    audioChunks = [];
-    recordedVideoBlob = null;
-    if (pendingMediaURL) {
-        URL.revokeObjectURL(pendingMediaURL);
-        pendingMediaURL = null;
-    }
-    pendingMediaBlob = null;
-    pendingMediaType = null;
-
     const previewContent = document.getElementById('previewContent');
     const video = previewContent.querySelector('video');
     if (video) {
         video.pause();
-        video.src = '';
+        video.src = ''; // Kaynağı kaldır, ses tamamen dursun
         video.load();
     }
-    previewContent.innerHTML = '';
-
+    previewContent.innerHTML = ''; // İçeriği temizle
+    
     document.getElementById('mediaPreviewOverlay').classList.remove('active');
+    pendingMediaBlob = null;
+    pendingMediaType = null;
+    pendingMediaURL = null;
     isCropping = false;
     if (cropBox) cropBox.style.display = 'none';
 }
@@ -4746,6 +4705,7 @@ function getCroppedImage(image, cropBoxRect, callback) {
 function sendMediaFromPreview() {
     if (!pendingMediaBlob || !pendingMediaType) return;
 
+    // Yükleme yüzdesi göstergesi oluştur
     const loadingDiv = document.createElement('div');
     loadingDiv.className = 'message own';
     loadingDiv.innerHTML = `
@@ -4767,7 +4727,7 @@ function sendMediaFromPreview() {
     };
 
     reader.onload = (e) => {
-        sendMedia({
+        socket.emit('message', {
             type: pendingMediaType,
             fileData: e.target.result,
             mimeType: pendingMediaType === 'image' ? 'image/jpeg' : 'video/webm'
@@ -4780,16 +4740,6 @@ function sendMediaFromPreview() {
         type: pendingMediaType === 'image' ? 'image/jpeg' : 'video/webm'
     });
     reader.readAsDataURL(file);
-}
-
-function sendMedia(payload) {
-  if (!socket) return;
-  if (currentDMUser) {
-    payload.receiver = currentDMUser;
-    socket.emit('dm-message', payload);
-  } else {
-    socket.emit('message', payload);
-  }
 }
 
 function finishSending() {
@@ -4811,6 +4761,7 @@ previewContent.innerHTML = '';
     document.getElementById('cameraOverlay').classList.remove('active');
     document.getElementById('galleryOverlay').classList.remove('active');
 }
+
 // ============ DM SİSTEMİ ============
 let dmList = JSON.parse(localStorage.getItem('dmList') || '[]');
 let currentDMUser = null;
@@ -5803,18 +5754,6 @@ let videoUploader;
 let imageUploader;
 
 document.addEventListener('DOMContentLoaded', () => {
-// Video yükleyici
-videoUploader = uploadcare.Widget('#videoInput');
-videoUploader.onUploadComplete((fileInfo) => {
-  sendMedia({ type: 'video', fileData: fileInfo.cdnUrl, mimeType: fileInfo.mimeType || 'video/mp4' });
-});
-
-// Fotoğraf yükleyici
-imageUploader = uploadcare.Widget('#imageInput');
-imageUploader.onUploadComplete((fileInfo) => {
-  sendMedia({ type: 'image', fileData: fileInfo.cdnUrl, mimeType: fileInfo.mimeType || 'image/jpeg' });
-});
-
   if (darkModeEnabled) {
     document.body.classList.add('dark-mode');
     document.getElementById('darkModeStatus').textContent = 'Açık';
