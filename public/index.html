@@ -2351,8 +2351,6 @@ body.dark-mode .message-avatar {
     <button class="input-btn" onclick="openCameraGallery()" title="Galeri">🖼️</button>
     <button class="input-btn" onclick="toggleStickerPanel()" title="Çıkartma">🐰</button>
     <button class="input-btn" onclick="toggleRecording()" title="Ses Kaydı">🎤</button>
-    <button class="input-btn" onclick="document.getElementById('imageInput').click()" title="Fotoğraf">🖼️</button>
-    <button class="input-btn" onclick="document.getElementById('videoInput').click()" title="Video">🎬</button>
 </div>
         <textarea class="message-input" id="dmMessageInput" placeholder="Mesaj yaz..." rows="1"></textarea>
         <button class="send-btn" onclick="sendDMMessage()">➤</button>
@@ -4899,11 +4897,29 @@ function displayDMMessage(msg) {
     div.className = `message ${isOwn ? 'own' : ''}`;
     div.dataset.dmId = msg.id;
 
-    let content = '';
-    if (msg.reply_to) {
-        content += `<div class="message-reply-preview">↩️ ${escapeHtml(msg.reply_to)}</div>`;
+let content = '';
+if (msg.reply_to) {
+    content += `<div class="message-reply-preview">↩️ ${escapeHtml(msg.reply_to)}</div>`;
+}
+
+if (msg.type === 'image') {
+    content += `<img src="${msg.fileData}" class="message-image" alt="Fotoğraf" onclick="openFullscreenImage('${msg.fileData}')">`;
+} else if (msg.type === 'video') {
+    content += `<div class="message-video-card" onclick="openFullscreenVideo('${msg.fileData}')">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16" fill="white"/></svg>
+        <span>Videoyu Aç</span>
+    </div>`;
+} else if (msg.type === 'audio') {
+    content += `<div class="message-audio"><audio controls controlsList="nodownload"><source src="${msg.fileData}" type="${msg.mimeType || 'audio/webm'}"></audio></div>`;
+} else if (msg.type === 'sticker') {
+    if (msg.stickerType === 'video') {
+        content += `<video src="${msg.fileData}" class="message-sticker" autoplay muted loop playsinline></video>`;
+    } else {
+        content += `<img src="${msg.fileData}" class="message-sticker" alt="Sticker">`;
     }
+} else {
     content += `<div class="message-text">${escapeHtml(msg.message)}${msg.edited ? ' <span style="font-size:10px;opacity:0.6;">(düzenlendi)</span>' : ''}</div>`;
+}
 
     if (msg.reactions && msg.reactions.length > 0) {
         content += `<div class="message-reactions">`;
