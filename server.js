@@ -127,7 +127,7 @@ room.messages.forEach(msg => {
   socket.emit('message', msg);
 });
 
-      socket.to(ROOM_CODE).emit('user-joined', { userName: currentUser.userName });
+      socket.to(ROOM_CODE).emit('user-joined', { userName: currentUser.userName; });
       updateUserList(ROOM_CODE);
 
       console.log(`✅ ${userName} sohbete katıldı`);
@@ -141,8 +141,8 @@ room.messages.forEach(msg => {
   socket.on('save-subscription', (data) => {
     try {
       if (currentUser && data.subscription) {
-        pushSubscriptions.set(currentUser.userName, data.subscription);
-        console.log(`🔔 ${currentUser.userName} bildirime abone oldu`);
+        pushSubscriptions.set(currentUser.userName;, data.subscription);
+        console.log(`🔔 ${currentUser.userName;} bildirime abone oldu`);
       }
     } catch (error) {
       console.error('❌ Abonelik hatası:', error);
@@ -158,7 +158,7 @@ room.messages.forEach(msg => {
 
       const message = {
         id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-        userName: currentUser.userName,
+        userName: currentUser.userName;,
         userPhoto: currentUser.userPhoto,
         userColor: currentUser.userColor,
         type: data.type || 'text',
@@ -182,7 +182,7 @@ room.messages.forEach(msg => {
       io.to(currentRoomCode).emit('message', message);
 
       // Diğer kullanıcılara push bildirimi gönder
-      const targetUsers = Array.from(room.users.values()).filter(u => u.userName !== currentUser.userName);
+      const targetUsers = Array.from(room.users.values()).filter(u => u.userName !== currentUser.userName;);
       targetUsers.forEach(user => {
         const sub = pushSubscriptions.get(user.userName);
         if (sub) {
@@ -209,7 +209,7 @@ room.messages.forEach(msg => {
       if (messageIndex === -1) return;
 
       const message = room.messages[messageIndex];
-      if (message.userName !== currentUser.userName) {
+      if (message.userName !== currentUser.userName;) {
         socket.emit('error', { message: 'Sadece kendi mesajını silebilirsin' });
         return;
       }
@@ -239,13 +239,13 @@ room.messages.forEach(msg => {
 
       const existingReaction = message.reactions.find(r => r.emoji === emoji);
       if (existingReaction) {
-        if (existingReaction.users.includes(currentUser.userName)) return;
-        existingReaction.users.push(currentUser.userName);
+        if (existingReaction.users.includes(currentUser.userName;)) return;
+        existingReaction.users.push(currentUser.userName;);
         existingReaction.count = existingReaction.users.length;
       } else {
         message.reactions.push({
           emoji: emoji,
-          users: [currentUser.userName],
+          users: [currentUser.userName;],
           count: 1
         });
       }
@@ -253,9 +253,9 @@ room.messages.forEach(msg => {
       io.to(currentRoomCode).emit('message-reaction', {
         messageId: data.messageId,
         emoji: emoji,
-        userName: currentUser.userName
+        userName: currentUser.userName;
       });
-      console.log(`😀 ${currentUser.userName} ${emoji} ifadesi bıraktı`);
+      console.log(`😀 ${currentUser.userName;} ${emoji} ifadesi bıraktı`);
     } catch (error) {
       console.error('❌ İfade bırakma hatası:', error);
     }
@@ -389,7 +389,7 @@ socket.on('dm-message', async (data) => {
 
     const dmMessage = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-      sender: currentUser.userName,
+      sender: currentUser.userName;,
       receiver: receiver,
       message: text || '',
       type: type || 'text',
@@ -438,7 +438,7 @@ socket.on('dm-message', async (data) => {
     try {
       if (!currentUser) return;
       const { messageId } = data;
-      await supabase.from('dm_messages').delete().eq('id', messageId).eq('sender', currentUser.userName);
+      await supabase.from('dm_messages').delete().eq('id', messageId).eq('sender', currentUser.userName;);
       // Basitçe silme işlemini taraflara bildir
       io.emit('dm-deleted', { messageId });
     } catch (error) {
@@ -470,13 +470,13 @@ socket.on('dm-react', async (data) => {
     let reactions = dmMsg.reactions || [];
     const existingReaction = reactions.find(r => r.emoji === emoji);
     if (existingReaction) {
-      if (existingReaction.users.includes(currentUser.userName)) return;
-      existingReaction.users.push(currentUser.userName);
+      if (existingReaction.users.includes(currentUser.userName;)) return;
+      existingReaction.users.push(currentUser.userName;);
       existingReaction.count = existingReaction.users.length;
     } else {
       reactions.push({
         emoji: emoji,
-        users: [currentUser.userName],
+        users: [currentUser.userName;],
         count: 1
       });
     }
@@ -495,7 +495,7 @@ socket.on('dm-react', async (data) => {
     io.emit('dm-reaction-updated', {
       messageId: messageId,
       emoji: emoji,
-      userName: currentUser.userName
+      userName: currentUser.userName;
     });
   } catch (error) {
     console.error('DM reaksiyon hatası:', error);
@@ -513,7 +513,7 @@ socket.on('dm-edit', async (data) => {
       .from('dm_messages')
       .update({ message: newText.trim(), edited: true })
       .eq('id', messageId)
-      .eq('sender', currentUser.userName);
+      .eq('sender', currentUser.userName;);
 
     if (error) {
       console.error('DM düzenleme hatası:', error.message);
@@ -547,7 +547,7 @@ socket.on('screen-share-request', (data) => {
     if (targetSocketId) {
         io.to(targetSocketId).emit('screen-share-request', {
             requesterId: socket.id,
-requesterName: currentUser.userName || 'Bilinmeyen Kullanıcı',
+requesterName: currentUser.userName; || 'Bilinmeyen Kullanıcı',
             targetUserName: data.targetUserName,
             mode: data.mode
         });
@@ -598,7 +598,7 @@ socket.on('request-music-permission', (data) => {
     if (!currentUser) return;
     
     const requesterId = socket.id;
-    const requesterName = currentUser.UserName;
+    const requesterName = currentUser.userName;;
     
     const targetUsers = Array.from(rooms.get(ROOM_CODE)?.users.values() || [])
       .filter(u => u.userName !== requesterName);
@@ -632,10 +632,10 @@ socket.on('accept-music-permission', (data) => {
   try {
     const requesterId = data.requesterId;
     if (requesterId) {
-      io.to(requesterId).emit('music-permission-status', { 
-        status: 'accepted', 
-        listenerName: currentUser.userName
-      });
+io.to(requesterId).emit('music-permission-status', { 
+  status: 'accepted', 
+  listenerName: currentUser.userName 
+});
     }
   } catch (error) {
     console.error('Müzik izin kabul hatası:', error);
@@ -661,7 +661,7 @@ socket.on('revoke-music-permission', (data) => {
     if (requesterId) {
       io.to(requesterId).emit('music-permission-status', { 
         status: 'revoked', 
-        listenerName: currentUser.UserName; 
+        listenerName: currentUser.userName;; 
       });
     }
   } catch (error) {
@@ -709,7 +709,7 @@ socket.on('music-control', (data) => {
       const room = rooms.get(currentRoomCode);
       if (room) {
         room.users.delete(socket.id);
-        socket.to(currentRoomCode).emit('user-left', { userName: currentUser.userName });
+        socket.to(currentRoomCode).emit('user-left', { userName: currentUser.userName; });
         updateUserList(currentRoomCode);
 
         if (room.users.size === 0) {
