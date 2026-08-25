@@ -634,7 +634,7 @@ socket.on('accept-music-permission', (data) => {
     if (requesterId) {
       io.to(requesterId).emit('music-permission-status', { 
         status: 'accepted', 
-        listenerName: currentUser.UserName; 
+        listenerName: currentUser.userName
       });
     }
   } catch (error) {
