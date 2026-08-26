@@ -2429,18 +2429,58 @@ body.dark-mode .message-avatar {
         <div class="chat-header-left">
             <button class="menu-back-btn" onclick="leaveRoom()" title="Geri">←</button>
             <span class="chat-user-name" id="roomHeaderName">Oda</span>
+            <span class="chat-online-count" id="roomPasswordDisplay" style="margin-left:8px; cursor:pointer;" onclick="handleRoomPasswordClick()"></span>
         </div>
-        <div class="header-right">
-            <!-- Oda içi gerekli butonlar buraya eklenecek (müzik, ekran paylaşımı vs.) -->
-        </div>
+<div class="header-right">
+    <!-- Müzik -->
+    <button class="utility-btn" onclick="toggleRoomMusicPanel()" title="Müzik">🎵</button>
+    <!-- Ekran Paylaşımı -->
+    <button class="utility-btn" onclick="startRoomScreenShare()" title="Ekran Paylaş">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+    </button>
+    <!-- Oda İçi Sesli Arama -->
+    <button class="utility-btn" onclick="toggleRoomCallMenu()" title="Sesli Arama">🎙️</button>
+    <!-- Davet -->
+    <button class="utility-btn" onclick="toggleInviteMenu()" title="Davet Et">📩</button>
+</div>
     </div>
+
     <div class="messages-container scrollbar-thin" id="roomMessagesContainer" style="flex:1; overflow-y:auto;"></div>
+
     <div class="input-area">
         <div class="input-buttons">
-            <!-- Oda içi medya butonları sonra eklenecek, şimdilik boş -->
+            <button class="input-btn" onclick="openRoomCamera()" title="Kamera">📷</button>
+            <button class="input-btn" onclick="openRoomGallery()" title="Galeri">🖼️</button>
+            <button class="input-btn" onclick="toggleRoomStickerPanel()" title="Çıkartma">🐰</button>
         </div>
         <textarea class="message-input" id="roomMessageInput" placeholder="Mesaj yaz..." rows="1"></textarea>
         <button class="send-btn" onclick="sendRoomMessage()">➤</button>
+    </div>
+</div>
+
+<!-- DAVET MENÜSÜ -->
+<div id="inviteMenu" class="music-panel" style="display:none; top:55px; right:10px; left:auto;">
+    <div class="menu-header-row">
+        <button class="menu-back-btn" onclick="closeInviteMenu()">←</button>
+        <div class="font-panel-title">Davet Et</div>
+    </div>
+    <div id="inviteUserList" style="max-height:200px; overflow-y:auto;"></div>
+</div>
+
+<!-- ŞİFRE DÜZENLE MODAL -->
+<div class="modal" id="passwordEditModal">
+    <div class="modal-content">
+        <h2>Şifreyi Düzenle</h2>
+        <div class="form-group">
+            <label>Yeni Şifre</label>
+            <input type="password" class="form-input" id="newPasswordInput" placeholder="Yeni şifre">
+        </div>
+        <button class="btn-full" onclick="submitPasswordEdit()">Güncelle</button>
+        <button class="btn-full" style="margin-top:8px; background:#e74c3c;" onclick="closePasswordEdit()">İptal</button>
     </div>
 </div>
 
@@ -2506,7 +2546,7 @@ body.dark-mode .message-avatar {
             </svg>
             <span>Fotoğraf Seç</span>
         </button>
-        <button class="gallery-option-btn" onclick="selectGalleryMedia('video')">
+        <button class="gallery-option-btn" id="galleryVideoBtn" onclick="selectGalleryMedia('video')">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                 <polygon points="23,7 16,12 23,17"/>
                 <rect x="1" y="5" width="15" height="14" rx="2"/>
@@ -2602,8 +2642,10 @@ body.dark-mode .message-avatar {
     let activeContextMessageId = null;
     let activeContextMessageElement = null;
     let replyToMessage = null;
+    let isRoomMediaMode = false;
     let onlineUsers = [];
     let currentRoomId = null;
+    let passwordHidden = false; // Admin şifreyi gizlesin mi?
 let currentRoomName = null;
 let currentRoomPassword = null;
 let isRoomAdmin = false;
@@ -4052,6 +4094,50 @@ function toggleRoomMenu() {
     }
 }
 
+function toggleRoomStickerPanel() {
+    isRoomMediaMode = true;
+    // Sticker panelini aç, sadece fotoğraf seçimine izin ver
+    // Mevcut paneli kullanacağız ama video seçimini engelleyeceğiz
+    const panel = document.getElementById('stickerPanel');
+    if (panel.classList.contains('active')) {
+        panel.classList.remove('active');
+    } else {
+        panel.classList.add('active');
+        loadRoomStickers();
+    }
+}
+
+function loadRoomStickers() {
+    const grid = document.getElementById('stickerGrid');
+    grid.innerHTML = '<button class="sticker-create-btn" onclick="openRoomStickerModal()">+</button>';
+    const stickers = JSON.parse(localStorage.getItem('stickers') || '[]');
+    stickers.forEach(s => {
+        if (s.type !== 'image') return; // Sadece fotoğraf çıkartmalarını göster
+        const img = document.createElement('img');
+        img.src = s.data;
+        img.className = 'sticker-item';
+        img.onclick = () => sendRoomSticker(s);
+        grid.appendChild(img);
+    });
+}
+
+function openRoomStickerModal() {
+    document.getElementById('stickerPanel').classList.remove('active');
+    document.getElementById('stickerModal').classList.add('active');
+    // Sadece fotoğraf seçimine izin ver
+    document.getElementById('stickerFileInput').setAttribute('accept', 'image/*');
+}
+
+function sendRoomSticker(sticker) {
+    if (!socket || !currentRoomId) return;
+    socket.emit('room-message', {
+        type: 'sticker',
+        stickerType: 'image',
+        fileData: sticker.data
+    });
+    document.getElementById('stickerPanel').classList.remove('active');
+}
+
 function closeRoomMenu() {
     document.getElementById('roomMenu').style.display = 'none';
 }
@@ -4081,6 +4167,19 @@ function createRoom() {
     if (!roomName || !roomPassword || !userTag) return alert('Tüm alanları doldurun');
     
     socket.emit('room-create', { roomName, roomPassword, userTag });
+}
+
+function showRoomInvitation(data) {
+    const result = confirm(`${data.requesterName} sizi "${data.roomName}" odasına davet ediyor.\n15 saniye içinde cevap verin.`);
+    if (result) {
+        socket.emit('room-invite-accept', { roomId: data.roomId });
+    } else {
+        socket.emit('room-invite-reject', { requesterId: data.requesterId });
+    }
+}
+
+function rejectRoomInvitation(requesterId) {
+    socket.emit('room-invite-reject', { requesterId: requesterId });
 }
 
 function joinRoom() {
@@ -4140,14 +4239,44 @@ function enterRoomInterface(roomId, roomName, roomPassword, isAdmin) {
     currentRoomPassword = roomPassword;
     isRoomAdmin = isAdmin;
 
-    // Normal sohbet arayüzünü gizle, oda arayüzünü göster
     document.getElementById('chatInterface').classList.remove('active');
     document.getElementById('roomInterface').style.display = 'flex';
-
     document.getElementById('roomHeaderName').textContent = `🏠 ${roomName}`;
-
-    // Oda mesajlarını yükle
+    
+    updateRoomPasswordDisplay();
     socket.emit('room-history');
+}
+
+function updateRoomPasswordDisplay() {
+    const display = document.getElementById('roomPasswordDisplay');
+    if (!display) return;
+    if (isRoomAdmin && passwordHidden) {
+        // İlk 2 hane göster, gerisi yıldız
+        display.textContent = '🔒 ' + currentRoomPassword.substring(0, 2) + '*'.repeat(currentRoomPassword.length - 2);
+    } else {
+        display.textContent = '🔑 ' + currentRoomPassword;
+    }
+}
+
+function handleRoomPasswordClick() {
+    if (isRoomAdmin) {
+        // Admin düzenleme modalı aç
+        document.getElementById('newPasswordInput').value = '';
+        document.getElementById('passwordEditModal').classList.add('active');
+    } else {
+        // Normal kullanıcı sadece görebilir, belki kopyalama? Şimdilik bir şey yapma.
+    }
+}
+
+function closePasswordEdit() {
+    document.getElementById('passwordEditModal').classList.remove('active');
+}
+
+function submitPasswordEdit() {
+    const newPassword = document.getElementById('newPasswordInput').value.trim();
+    if (!newPassword) return alert('Yeni şifre girin');
+    socket.emit('room-update-password', { newPassword });
+    closePasswordEdit();
 }
 
 // ============ SES KAYDI ============
@@ -4646,6 +4775,7 @@ async function openCamera() {
 
 // ============ KAMERA KAPAT ============
 function closeCamera() {
+isRoomMediaMode = false;
     // Animasyon döngüsünü durdur
     if (drawLoop) {
         cancelAnimationFrame(drawLoop);
@@ -4657,6 +4787,24 @@ function closeCamera() {
         cameraStream = null;
     }
     document.getElementById('cameraOverlay').classList.remove('active');
+}
+
+function openRoomCamera() {
+    isRoomMediaMode = true;
+    isDMCameraMode = false; // DM modunu kapat
+    // Video mod butonunu gizle (sadece fotoğraf)
+    document.getElementById('videoModeBtn').style.display = 'none';
+    setCameraMode('photo');
+    openCamera();
+}
+
+function openRoomGallery() {
+    isRoomMediaMode = true;
+    isDMCameraMode = false;
+    // Video seçim butonunu gizle
+    document.getElementById('galleryVideoBtn')?.style.display = 'none';
+    // Sadece fotoğraf seçimini göster (varsa)
+    openCameraGallery();
 }
 
 function startCanvasDraw(video) {
@@ -4818,6 +4966,7 @@ function openCameraGallery() {
 }
 
 function closeGallery() {
+isRoomMediaMode = false;
     document.getElementById('galleryOverlay').classList.remove('active');
     
     // Eğer kamera hâlâ açıksa, galeriye geçiş yapıldığında kamera akışını durdur
@@ -4831,6 +4980,10 @@ function closeGallery() {
 }
 
 function selectGalleryMedia(type) {
+    if (isRoomMediaMode && type === 'video') {
+        alert('Oda içinde video gönderilemez');
+        return;
+    }
     closeGallery();
     if (type === 'image') {
         document.getElementById('galleryInput').click();
@@ -4937,6 +5090,7 @@ isCropping = false;
 }
 
 function closeMediaPreview() {
+isRoomMediaMode = false;
     const previewContent = document.getElementById('previewContent');
     const video = previewContent.querySelector('video');
     if (video) {
@@ -5117,17 +5271,25 @@ function sendMediaFromPreview() {
     };
 
 reader.onload = (e) => {
-    if (isDMCameraMode && currentDMUser) {
-        // DM modunda DM'e gönder
-        socket.emit('dm-message', {
-            receiver: currentDMUser,
-            type: 'image', // Sadece fotoğraf olacak
+    if (isRoomMediaMode && currentRoomId) {
+        // Oda modunda odaya gönder
+        socket.emit('room-message', {
+            type: 'image',
             fileData: e.target.result,
             mimeType: 'image/jpeg'
         });
-        isDMCameraMode = false; // Modu sıfırla
+        isRoomMediaMode = false;
+    } else if (isDMCameraMode && currentDMUser) {
+        // DM modunda DM'e gönder
+        socket.emit('dm-message', {
+            receiver: currentDMUser,
+            type: 'image',
+            fileData: e.target.result,
+            mimeType: 'image/jpeg'
+        });
+        isDMCameraMode = false;
     } else {
-        // Normal sohbet modunda normal gönder
+        // Normal sohbet
         socket.emit('message', {
             type: pendingMediaType,
             fileData: e.target.result,
@@ -6201,6 +6363,54 @@ function cleanupCall() {
                 timerEl.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             }, 1000);
         }
+        
+function toggleInviteMenu() {
+    const panel = document.getElementById('inviteMenu');
+    if (panel.style.display === 'block') {
+        panel.style.display = 'none';
+    } else {
+        panel.style.display = 'block';
+        renderInviteUserList();
+    }
+}
+
+function closeInviteMenu() {
+    document.getElementById('inviteMenu').style.display = 'none';
+}
+
+function renderInviteUserList() {
+    const container = document.getElementById('inviteUserList');
+    container.innerHTML = '';
+    if (!dmList || dmList.length === 0) {
+        container.innerHTML = '<div style="color:#666; padding:10px;">DM listesi boş</div>';
+        return;
+    }
+
+    dmList.forEach(user => {
+        const isOnline = onlineUsers.some(u => u.userName === user.name);
+        const div = document.createElement('div');
+        div.className = 'dm-user-item';
+        div.style.cursor = isOnline ? 'pointer' : 'not-allowed';
+        div.style.opacity = isOnline ? '1' : '0.5';
+        div.innerHTML = `
+            <span class="dm-user-name">${user.name}</span>
+            <span style="margin-left:auto; font-size:11px;">${isOnline ? '🟢 Çevrimiçi' : '⚪ Çevrimdışı'}</span>
+        `;
+        if (isOnline) {
+            div.onclick = () => {
+                closeInviteMenu();
+                sendRoomInvite(user.name);
+            };
+        } else {
+            div.onclick = () => alert('Kullanıcı çevrimiçi değil');
+        }
+        container.appendChild(div);
+    });
+}
+
+function sendRoomInvite(targetUserName) {
+    socket.emit('room-invite-request', { targetUserName });
+}        
 
         // ============ SOCKET ARAMA OLAYLARI ============
         // Bu olaylar connectSocket içinde değil, global olarak tanımlanmalı
@@ -6416,6 +6626,31 @@ connectSocket = function() {
     originalConnectSocket(); // ÖNCE socket oluştur
     socket.on('room-message', (msg) => {
     displayRoomMessage(msg);
+});
+socket.on('room-password-updated', (data) => {
+    currentRoomPassword = data.newPassword;
+    updateRoomPasswordDisplay();
+});
+
+socket.on('room-invitation', (data) => {
+    showRoomInvitation(data);
+    io.to(targetSocketId).emit('room-invitation', {
+    requesterId: socket.id,
+    requesterName: currentUser.userName,
+    roomName: room.name,
+    roomId: room.id,
+    expiresAt: Date.now() + 15000
+});
+});
+
+socket.on('room-invite-result', (data) => {
+    if (data.status === 'sent') {
+        alert(`Davet gönderildi: ${data.targetUserName}`);
+    } else if (data.status === 'offline') {
+        alert(`${data.targetUserName} çevrimiçi değil`);
+    } else if (data.status === 'rejected') {
+        alert(`${data.targetUserName} daveti reddetti`);
+    }
 });
 socket.on('room-history', (messages) => {
     const container = document.getElementById('roomMessagesContainer');
