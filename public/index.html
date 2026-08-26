@@ -3840,7 +3840,7 @@ if (msg.type === 'video') {
 
 function displayRoomMessage(msg) {
     const container = document.getElementById('roomMessagesContainer');
-    const isOwn = msg.userTag === currentTag || msg.userName === currentUser?.name;
+    const isOwn = msg.userName === currentUser?.name;
     const div = document.createElement('div');
     div.className = `message ${isOwn ? 'own' : ''}`;
     div.dataset.messageId = msg.id;
