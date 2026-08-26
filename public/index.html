@@ -4828,8 +4828,13 @@ function openRoomCamera() {
 function openRoomGallery() {
     isRoomMediaMode = true;
     isDMCameraMode = false;
+    
     // Video seçim butonunu gizle
-    document.getElementById('galleryVideoBtn')?.style.display = 'none';
+    const galleryVideoBtn = document.getElementById('galleryVideoBtn');
+    if (galleryVideoBtn) {
+        galleryVideoBtn.style.display = 'none';
+    }
+    
     // Sadece fotoğraf seçimini göster (varsa)
     openCameraGallery();
 }
