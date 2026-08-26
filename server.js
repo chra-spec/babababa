@@ -237,6 +237,39 @@ updateUserList(ROOM_CODE);
   }
 });
 
+// ============ ODA ŞİFRESİ GÜNCELLE ============
+socket.on('room-update-password', async (data) => {
+  try {
+    if (!currentRoomCode || !currentUser) return;
+    const { newPassword } = data;
+    if (!newPassword) return;
+
+    // Şifre kriteri kontrolü
+    const passwordValid = /[A-Z]/.test(newPassword) && /[0-9]/.test(newPassword) && /[.,!?;:]/.test(newPassword);
+    if (!passwordValid) {
+      socket.emit('room-error', { message: 'Şifre en az 1 büyük harf, 1 rakam ve 1 noktalama işareti içermeli' });
+      return;
+    }
+
+    // Admin kontrolü
+    const roomResult = await cockroachPool.query('SELECT * FROM rooms WHERE id = $1', [currentRoomCode]);
+    if (roomResult.rows.length === 0) return;
+    const room = roomResult.rows[0];
+    if (room.admin_id !== socket.id) {
+      socket.emit('room-error', { message: 'Sadece admin şifreyi değiştirebilir' });
+      return;
+    }
+
+    await cockroachPool.query('UPDATE rooms SET password = $1 WHERE id = $2', [newPassword, currentRoomCode]);
+
+    // Odadaki herkese yeni şifreyi bildir
+    io.to(currentRoomCode).emit('room-password-updated', { newPassword });
+    console.log(`🔑 Oda şifresi güncellendi: ${currentRoomCode}`);
+  } catch (e) {
+    console.error('Şifre güncelleme hatası:', e);
+  }
+});
+
 // ============ AKTİF ODA LİSTESİ ============
 socket.on('room-list', async () => {
   try {
@@ -358,6 +391,100 @@ socket.on('room-invite', async (data) => {
     socket.emit('room-invite-sent', { targetUserName });
   } catch (e) {
     console.error('Davet hatası:', e);
+  }
+});
+
+// ============ DAVET İSTEĞİ GÖNDER ============
+socket.on('room-invite-request', async (data) => {
+  try {
+    if (!currentRoomCode || !currentUser) return;
+    const { targetUserName } = data;
+    if (!targetUserName) return;
+
+    // Hedef socket'i normal sohbetteki kullanıcı listesinden bul
+    let targetSocketId = null;
+    rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
+      if (user.userName === targetUserName) {
+        targetSocketId = socketId;
+      }
+    });
+
+    if (!targetSocketId) {
+      socket.emit('room-invite-result', { status: 'offline', targetUserName });
+      return;
+    }
+
+    // Oda bilgisini al
+    const roomResult = await cockroachPool.query('SELECT * FROM rooms WHERE id = $1', [currentRoomCode]);
+    if (roomResult.rows.length === 0) {
+      socket.emit('room-invite-result', { status: 'room_not_found', targetUserName });
+      return;
+    }
+    const room = roomResult.rows[0];
+
+    // Davet isteğini hedef kullanıcıya gönder
+    io.to(targetSocketId).emit('room-invitation', {
+      requesterId: socket.id,
+      requesterName: currentUser.userName,
+      roomName: room.name,
+      roomId: room.id,
+      expiresAt: Date.now() + 15000 // 15 saniye geçerlilik
+    });
+
+    // Davet eden kişiye bilgi ver
+    socket.emit('room-invite-result', { status: 'sent', targetUserName });
+  } catch (e) {
+    console.error('Davet gönderme hatası:', e);
+    socket.emit('room-invite-result', { status: 'error', targetUserName: data?.targetUserName });
+  }
+});
+
+// ============ DAVET KABUL ============
+// ============ DAVET KABUL ============
+socket.on('room-invite-accept', async (data) => {
+  try {
+    const { roomId } = data;
+    if (!roomId || !currentUser) return;
+
+    const roomResult = await cockroachPool.query('SELECT * FROM rooms WHERE id = $1', [roomId]);
+    if (roomResult.rows.length === 0) {
+      socket.emit('room-error', { message: 'Oda artık mevcut değil' });
+      return;
+    }
+    const room = roomResult.rows[0];
+
+    // Normal sohbetten çıkar
+    socket.leave(ROOM_CODE);
+    rooms.get(ROOM_CODE)?.users.delete(socket.id);
+    updateUserList(ROOM_CODE);
+
+    // Odaya katıl
+    currentRoomCode = room.id;
+    socket.join(room.id);
+    socket.emit('room-joined', {
+      roomId: room.id,
+      roomName: room.name,
+      roomPassword: room.password,
+      isAdmin: false
+    });
+    console.log(`🚪 ${currentUser.userName} davetle odaya katıldı: ${room.name}`);
+  } catch (e) {
+    console.error('Davet kabul hatası:', e);
+  }
+});
+
+// ============ DAVET RED ============
+socket.on('room-invite-reject', (data) => {
+  try {
+    const { requesterId } = data;
+    if (requesterId) {
+      io.to(requesterId).emit('room-invite-result', {
+        status: 'rejected',
+        targetUserName: currentUser?.userName || 'Kullanıcı'
+      });
+    }
+  } catch (e) {
+    console.error('Davet red hatası:', e);
   }
 });
 
