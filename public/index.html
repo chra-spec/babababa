@@ -2423,6 +2423,27 @@ body.dark-mode .message-avatar {
 </div>
 </div>
 
+<!-- ODA TAM EKRAN ARAYÜZÜ -->
+<div id="roomInterface" class="chat-interface" style="display:none; flex-direction:column; height:100dvh;">
+    <div class="chat-header">
+        <div class="chat-header-left">
+            <button class="menu-back-btn" onclick="leaveRoom()" title="Geri">←</button>
+            <span class="chat-user-name" id="roomHeaderName">Oda</span>
+        </div>
+        <div class="header-right">
+            <!-- Oda içi gerekli butonlar buraya eklenecek (müzik, ekran paylaşımı vs.) -->
+        </div>
+    </div>
+    <div class="messages-container scrollbar-thin" id="roomMessagesContainer" style="flex:1; overflow-y:auto;"></div>
+    <div class="input-area">
+        <div class="input-buttons">
+            <!-- Oda içi medya butonları sonra eklenecek, şimdilik boş -->
+        </div>
+        <textarea class="message-input" id="roomMessageInput" placeholder="Mesaj yaz..." rows="1"></textarea>
+        <button class="send-btn" onclick="sendRoomMessage()">➤</button>
+    </div>
+</div>
+
 
 <!-- KAMERA SİSTEMİ -->
 <div class="camera-overlay" id="cameraOverlay">
@@ -3709,6 +3730,22 @@ function sendMessage() {
     input.focus();
 }
 
+function sendRoomMessage() {
+    const input = document.getElementById('roomMessageInput');
+    const text = input.value.trim();
+    if (!text || !socket || !currentRoomId) return;
+
+    socket.emit('room-message', {
+        text: text,
+        type: 'text',
+        font: getComputedStyle(document.documentElement).getPropertyValue('--message-font').trim(),
+        bannerMode: bannerModeEnabled
+    });
+
+    input.value = '';
+    input.style.height = 'auto';
+}
+
 function displayMessage(msg) {
     const container = document.getElementById('messagesContainer');
     const isOwn = msg.userName === currentUser?.name;
@@ -3796,6 +3833,44 @@ if (msg.type === 'video') {
     });
     div.addEventListener('touchend', () => clearTimeout(longPressTimer));
     div.addEventListener('touchmove', () => clearTimeout(longPressTimer));
+
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+function displayRoomMessage(msg) {
+    const container = document.getElementById('roomMessagesContainer');
+    const isOwn = msg.userTag === currentTag || msg.userName === currentUser?.name;
+    const div = document.createElement('div');
+    div.className = `message ${isOwn ? 'own' : ''}`;
+    div.dataset.messageId = msg.id;
+
+    let content = '';
+    if (msg.type === 'text') {
+        const msgFont = msg.font || "'Segoe UI', sans-serif";
+        content = `<div class="message-text" style="font-family: ${msgFont};">${escapeHtml(msg.text)}</div>`;
+    } else if (msg.type === 'image') {
+        content = `<img src="${msg.fileData}" class="message-image" alt="Fotoğraf" onclick="openFullscreenImage('${msg.fileData}')">`;
+    } else if (msg.type === 'video') {
+        content = `<div class="message-video-card" onclick="openFullscreenVideo('${msg.fileData}')">...</div>`;
+    } else if (msg.type === 'sticker') {
+        content = `<img src="${msg.fileData}" class="message-sticker" alt="Sticker">`;
+    } else if (msg.type === 'audio') {
+        content = `<div class="message-audio"><audio controls><source src="${msg.fileData}" type="${msg.mimeType || 'audio/webm'}"></audio></div>`;
+    }
+
+    div.innerHTML = `
+        <img src="${msg.userPhoto || ''}" class="message-avatar" alt="${msg.userName}" onclick="showProfile('${msg.userName}', '${msg.userPhoto}')">
+        <div class="message-body">
+            <div class="message-content">
+                <div class="message-header">
+                    <span class="message-sender">${escapeHtml(msg.userName)}</span>
+                    <span class="message-time">${msg.time}</span>
+                </div>
+                ${content}
+            </div>
+        </div>
+    `;
 
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
@@ -4021,6 +4096,20 @@ function loadActiveRooms() {
     socket.emit('room-list');
 }
 
+function leaveRoom() {
+    // Oda arayüzünü gizle, normal sohbet arayüzüne dön
+    document.getElementById('roomInterface').style.display = 'none';
+    document.getElementById('chatInterface').classList.add('active');
+
+    // Normal sohbete tekrar katıl (server tarafında join-chat tetiklenmeli)
+    socket.emit('join-chat', { roomCode: ROOM_CODE, userName: currentUser.name, userPhoto: currentUser.photo });
+    
+    currentRoomId = null;
+    currentRoomName = null;
+    currentRoomPassword = null;
+    isRoomAdmin = false;
+}
+
 function renderActiveRoomList(rooms) {
     const container = document.getElementById('activeRoomList');
     container.innerHTML = '';
@@ -4050,11 +4139,14 @@ function enterRoomInterface(roomId, roomName, roomPassword, isAdmin) {
     currentRoomName = roomName;
     currentRoomPassword = roomPassword;
     isRoomAdmin = isAdmin;
-    document.getElementById('chatInterface').classList.add('active');
-    document.getElementById('gameContainer').style.display = 'none';
-    document.getElementById('chatUserName').textContent = `🏠 ${roomName}`;
-    document.getElementById('chatOnlineCount').textContent = `Şifre: ${isAdmin || true ? roomPassword : '********'}`; // Şifre gösterimi
-    // Mesaj geçmişini yükle
+
+    // Normal sohbet arayüzünü gizle, oda arayüzünü göster
+    document.getElementById('chatInterface').classList.remove('active');
+    document.getElementById('roomInterface').style.display = 'flex';
+
+    document.getElementById('roomHeaderName').textContent = `🏠 ${roomName}`;
+
+    // Oda mesajlarını yükle
     socket.emit('room-history');
 }
 
@@ -6322,6 +6414,14 @@ socket.on('webrtc-answer', async (data) => {
 const originalConnectSocket = connectSocket;
 connectSocket = function() {
     originalConnectSocket(); // ÖNCE socket oluştur
+    socket.on('room-message', (msg) => {
+    displayRoomMessage(msg);
+});
+socket.on('room-history', (messages) => {
+    const container = document.getElementById('roomMessagesContainer');
+    container.innerHTML = '';
+    messages.forEach(msg => displayRoomMessage(msg));
+});
 
     // Şimdi socket var, olayları bağla
     socket.on('room-list-update', (rooms) => renderActiveRoomList(rooms));
