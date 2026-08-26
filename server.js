@@ -167,6 +167,9 @@ io.on('connection', (socket) => {
   // ============ ODA KUR ============
 socket.on('room-create', async (data) => {
   try {
+socket.leave(ROOM_CODE);
+rooms.get(ROOM_CODE)?.users.delete(socket.id);
+updateUserList(ROOM_CODE);
     if (!currentUser) return;
     const { roomName, roomPassword, userTag } = data;
 
@@ -198,10 +201,12 @@ socket.on('room-create', async (data) => {
     socket.emit('room-error', { message: 'Oda kurulamadı' });
   }
 });
-
 // ============ ODAYA KATIL ============
 socket.on('room-join', async (data) => {
   try {
+socket.leave(ROOM_CODE);
+rooms.get(ROOM_CODE)?.users.delete(socket.id);
+updateUserList(ROOM_CODE);
     if (!currentUser) return;
     const { roomName, roomPassword, userTag } = data;
 
