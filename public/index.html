@@ -2938,12 +2938,11 @@ function closeMusicPlayer() {
     isMusicMuted = false;
     isMusicController = false;
     musicRequesterId = null;
-
-    // Sadece kontrolcü ve izinli ise iptal et, döngüyü önlemek için bayrak kullan
-    if (socket && hasMusicPermission && isMusicController) {
-        hasMusicPermission = false;
-        socket.emit('revoke-music-permission', { requesterId: socket.id });
-    }
+    const wasController = isMusicController;
+if (socket && hasMusicPermission && wasController) {
+    hasMusicPermission = false;
+    socket.emit('revoke-music-permission', { requesterId: socket.id });
+}
 }
 
 function setupMusicSocketEvents() {
@@ -4785,6 +4784,7 @@ async function openCamera() {
 
 // ============ KAMERA KAPAT ============
 function closeCamera() {
+İsDMCameraMode = false;
 isRoomMediaMode = false;
     // Animasyon döngüsünü durdur
     if (drawLoop) {
@@ -5026,12 +5026,13 @@ function handleGallerySelection(files) {
 selectedFiles.forEach(file => {
     const reader = new FileReader();
     reader.onload = (e) => {
-        socket.emit('message', {
-            type: 'image',  // ✅ Düzeltme: Sabit 'image' yazıyoruz
-            fileData: e.target.result,
-            mimeType: file.type,
-            isMirrored: false  // ✅ Düzeltme: Sabit false
-        });
+        if (isRoomMediaMode && currentRoomId) {
+            socket.emit('room-message', { type: 'image', fileData: e.target.result, mimeType: file.type });
+        } else if (isDMCameraMode && currentDMUser) {
+            socket.emit('dm-message', { receiver: currentDMUser, type: 'image', fileData: e.target.result, mimeType: file.type });
+        } else {
+            socket.emit('message', { type: 'image', fileData: e.target.result, mimeType: file.type, isMirrored: false });
+        }
     };
     reader.readAsDataURL(file);
 });
@@ -5269,8 +5270,20 @@ function sendMediaFromPreview() {
             </div>
         </div>
     `;
-    document.getElementById('messagesContainer').appendChild(loadingDiv);
-    document.getElementById('messagesContainer').scrollTop = document.getElementById('messagesContainer').scrollHeight;
+async function initScreenShare(requesterId, includeMic = true) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        alert('Tarayıcınız ekran paylaşımını desteklemiyor. Lütfen Chrome veya Edge kullanın.');
+        return;
+    }
+
+    try {
+        // TURN kimliklerini yükle (bağlantı kalitesi için)
+        await fetchTurnConfig();
+        
+        // ✅ EKLENECEK SATIR: Karşı tarafın ID'sini sakla
+        screenShareRequesterId = requesterId;
+        
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
 
     const reader = new FileReader();
     reader.onprogress = (e) => {
@@ -5460,12 +5473,9 @@ function openDMGallery() {
 
 function openDMCamera() {
     isDMCameraMode = true;
-    // Video modu butonunu gizle (sadece fotoğraf)
-    document.getElementById('videoModeBtn').style.display = 'none';
-    // Fotoğraf modunu aktifleştir
-    setCameraMode('photo');
-    // Kamerayı aç
     openCamera();
+    document.getElementById('videoModeBtn').style.display = 'none'; // openCamera'dan sonra tekrar gizle
+    setCameraMode('photo');
 }
 
 // DM Çıkartma Paneli
