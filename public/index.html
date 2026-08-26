@@ -2431,22 +2431,22 @@ body.dark-mode .message-avatar {
             <span class="chat-user-name" id="roomHeaderName">Oda</span>
             <span class="chat-online-count" id="roomPasswordDisplay" style="margin-left:8px; cursor:pointer;" onclick="handleRoomPasswordClick()"></span>
         </div>
-<div class="header-right">
-    <!-- Müzik -->
-    <button class="utility-btn" onclick="toggleRoomMusicPanel()" title="Müzik">🎵</button>
-    <!-- Ekran Paylaşımı -->
-    <button class="utility-btn" onclick="startRoomScreenShare()" title="Ekran Paylaş">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="3" width="20" height="14" rx="2"/>
-            <line x1="8" y1="21" x2="16" y2="21"/>
-            <line x1="12" y1="17" x2="12" y2="21"/>
-        </svg>
-    </button>
-    <!-- Oda İçi Sesli Arama -->
-    <button class="utility-btn" onclick="toggleRoomCallMenu()" title="Sesli Arama">🎙️</button>
-    <!-- Davet -->
-    <button class="utility-btn" onclick="toggleInviteMenu()" title="Davet Et">📩</button>
-</div>
+        <div class="header-right">
+            <!-- Müzik -->
+            <button class="utility-btn" onclick="toggleRoomMusicPanel()" title="Müzik">🎵</button>
+            <!-- Ekran Paylaşımı -->
+            <button class="utility-btn" onclick="startRoomScreenShare()" title="Ekran Paylaş">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2"/>
+                    <line x1="8" y1="21" x2="16" y2="21"/>
+                    <line x1="12" y1="17" x2="12" y2="21"/>
+                </svg>
+            </button>
+            <!-- Oda İçi Sesli Arama -->
+            <button class="utility-btn" onclick="toggleRoomCallMenu()" title="Sesli Arama">🎙️</button>
+            <!-- Davet -->
+            <button class="utility-btn" onclick="toggleInviteMenu()" title="Davet Et">📩</button>
+        </div>
     </div>
 
     <div class="messages-container scrollbar-thin" id="roomMessagesContainer" style="flex:1; overflow-y:auto;"></div>
@@ -6634,13 +6634,6 @@ socket.on('room-password-updated', (data) => {
 
 socket.on('room-invitation', (data) => {
     showRoomInvitation(data);
-    io.to(targetSocketId).emit('room-invitation', {
-    requesterId: socket.id,
-    requesterName: currentUser.userName,
-    roomName: room.name,
-    roomId: room.id,
-    expiresAt: Date.now() + 15000
-});
 });
 
 socket.on('room-invite-result', (data) => {
