@@ -61,6 +61,7 @@ async function initCockroachTables() {
         name TEXT NOT NULL,
         password TEXT NOT NULL,
         admin_id TEXT NOT NULL,
+        admin_name TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         max_users INT DEFAULT 10
       );
@@ -82,6 +83,19 @@ async function initCockroachTables() {
         reactions JSONB DEFAULT '[]',
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
+      CREATE TABLE IF NOT EXISTS user_tags (
+        tag TEXT PRIMARY KEY,
+        user_name TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS pinned_messages (
+  id TEXT PRIMARY KEY,
+  room_id TEXT,
+  dm_id TEXT,
+  message_id TEXT NOT NULL,
+  pinned_by TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
     `);
     console.log('✅ CockroachDB tabloları hazır');
   } catch (e) {
@@ -92,11 +106,36 @@ initCockroachTables();
 
 const pushSubscriptions = new Map();
 const rooms = new Map();
-
+// Oda içi kullanıcı profilleri (odaId -> Map(socketId -> {userName, emoji}))
+const roomProfiles = new Map();
 function generateUserColor(username) {
   const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'];
   const index = username ? username.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) : 0;
   return colors[index % colors.length];
+}
+
+function generateRandomEmoji(roomId, userName) {
+  const emojis = ['🐼','🐰','🐻','🐶','🐱','🐭','🐮','🦊','🐯'];
+  if (!roomProfiles.has(roomId)) roomProfiles.set(roomId, new Map());
+  const profileMap = roomProfiles.get(roomId);
+
+  // Eğer kullanıcı zaten atanmışsa onu döndür
+  for (const [sid, profile] of profileMap.entries()) {
+    if (profile.userName === userName) return profile.emoji;
+  }
+
+  // Kullanılmamış emojilerden rastgele seç
+  const usedEmojis = Array.from(profileMap.values()).map(p => p.emoji);
+  const available = emojis.filter(e => !usedEmojis.includes(e));
+  const emoji = available.length > 0 ? available[Math.floor(Math.random() * available.length)] : emojis[Math.floor(Math.random() * emojis.length)];
+  
+  profileMap.set(null, { userName, emoji }); // null geçici, bağlantı kopunca temizlenecek
+  return emoji;
+}
+
+async function isRoomAdmin(roomId, socketId) {
+  const result = await cockroachPool.query('SELECT admin_id FROM rooms WHERE id = $1', [roomId]);
+  return result.rows.length > 0 && result.rows[0].admin_id === socketId;
 }
 
 function updateUserList(roomCode) {
@@ -164,38 +203,51 @@ io.on('connection', (socket) => {
     }
   });
   
-  // ============ ODA KUR ============
+// ============ ODA KUR ============
 socket.on('room-create', async (data) => {
   try {
-socket.leave(ROOM_CODE);
-rooms.get(ROOM_CODE)?.users.delete(socket.id);
-updateUserList(ROOM_CODE);
     if (!currentUser) return;
     const { roomName, roomPassword, userTag } = data;
 
-    // Şifre kriteri: en az 1 büyük, 1 noktalama, 1 rakam
+    // Şifre kriteri kontrolü
     const passwordValid = /[A-Z]/.test(roomPassword) && /[0-9]/.test(roomPassword) && /[.,!?;:]/.test(roomPassword);
     if (!passwordValid) {
       socket.emit('room-error', { message: 'Şifre en az 1 büyük harf, 1 rakam ve 1 noktalama işareti içermeli' });
       return;
     }
 
-    const roomId = 'room_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-    
-    const { error } = await cockroachPool.query(
-      'INSERT INTO rooms (id, name, password, admin_id, max_users) VALUES ($1,$2,$3,$4,$5)',
-      [roomId, roomName, roomPassword, socket.id, 10]
-    );
-    if (error) {
-      console.error('Oda kurma DB hatası:', error.message);
-      socket.emit('room-error', { message: 'Oda kurulamadı, tekrar deneyin' });
+    // Tag benzersizlik kontrolü
+    const tagResult = await cockroachPool.query('SELECT * FROM user_tags WHERE tag = $1', [userTag]);
+    if (tagResult.rows.length > 0 && tagResult.rows[0].user_name !== currentUser.userName) {
+      socket.emit('room-error', { message: 'Bu tag başkası tarafından kullanılıyor, başka bir tag seçin' });
       return;
     }
 
+    // Tag'i kaydet veya güncelle
+    await cockroachPool.query(
+      'INSERT INTO user_tags (tag, user_name) VALUES ($1,$2) ON CONFLICT (tag) DO UPDATE SET user_name = $2',
+      [userTag, currentUser.userName]
+    );
+
+    const roomId = 'room_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+
+    await cockroachPool.query(
+      'INSERT INTO rooms (id, name, password, admin_id, admin_name, max_users) VALUES ($1,$2,$3,$4,$5,$6)',
+      [roomId, roomName, roomPassword, socket.id, currentUser.userName, 10]
+    );
+
+    // Kullanıcıyı normal sohbetten çıkar
+    socket.leave(ROOM_CODE);
+    rooms.get(ROOM_CODE)?.users.delete(socket.id);
+    updateUserList(ROOM_CODE);
+
     currentRoomCode = roomId;
     socket.join(roomId);
+    const adminEmoji = '🅰️';
+if (!roomProfiles.has(roomId)) roomProfiles.set(roomId, new Map());
+roomProfiles.get(roomId).set(socket.id, { userName: currentUser.userName, emoji: adminEmoji });
     socket.emit('room-created', { roomId, roomName, roomPassword, isAdmin: true });
-    console.log(`🏠 Oda kuruldu: ${roomName} (${roomId})`);
+    console.log(`🏠 Oda kuruldu: ${roomName} (${roomId}) admin: ${currentUser.userName}`);
   } catch (e) {
     console.error('Oda kurma hatası:', e);
     socket.emit('room-error', { message: 'Oda kurulamadı' });
@@ -204,9 +256,6 @@ updateUserList(ROOM_CODE);
 // ============ ODAYA KATIL ============
 socket.on('room-join', async (data) => {
   try {
-socket.leave(ROOM_CODE);
-rooms.get(ROOM_CODE)?.users.delete(socket.id);
-updateUserList(ROOM_CODE);
     if (!currentUser) return;
     const { roomName, roomPassword, userTag } = data;
 
@@ -220,22 +269,62 @@ updateUserList(ROOM_CODE);
     }
 
     const room = result.rows[0];
-    // Kullanıcı sayısı kontrolü (ayrıca socket odasındaki kişi sayısına bakmak daha doğru)
-    const roomUserCount = io.sockets.adapter.rooms.get(room.id)?.size || 0;
-    if (roomUserCount >= room.max_users) {
-      socket.emit('room-error', { message: 'Oda dolu (maks 10 kişi)' });
+
+// Profil emojisi ata
+let userEmoji = '🅰️';
+if (!isAdmin) {
+  userEmoji = generateRandomEmoji(room.id, currentUser.userName);
+  // Geçici null kaydı socket.id ile güncelle
+  const profileMap = roomProfiles.get(room.id);
+  if (profileMap) {
+    for (const [sid, profile] of profileMap.entries()) {
+      if (profile.userName === currentUser.userName && sid === null) {
+        profileMap.delete(null);
+        profileMap.set(socket.id, profile);
+        break;
+      }
+    }
+    profileMap.set(socket.id, { userName: currentUser.userName, emoji: userEmoji });
+  }
+}
+
+    // Tag benzersizlik kontrolü
+    const tagResult = await cockroachPool.query('SELECT * FROM user_tags WHERE tag = $1', [userTag]);
+    if (tagResult.rows.length > 0 && tagResult.rows[0].user_name !== currentUser.userName) {
+      socket.emit('room-error', { message: 'Bu tag başkası tarafından kullanılıyor, başka bir tag seçin' });
       return;
     }
 
+    // Tag'i kaydet
+    await cockroachPool.query(
+      'INSERT INTO user_tags (tag, user_name) VALUES ($1,$2) ON CONFLICT (tag) DO UPDATE SET user_name = $2',
+      [userTag, currentUser.userName]
+    );
+
+    // Admin kontrolü: Eğer katılan kullanıcı admin adıyla eşleşiyorsa
+    let isAdmin = false;
+    if (room.admin_name === currentUser.userName) {
+      isAdmin = true;
+      // Admin geri döndü, admin_id'yi güncelle (yeni socket id)
+      await cockroachPool.query('UPDATE rooms SET admin_id = $1 WHERE id = $2', [socket.id, room.id]);
+    }
+
+    // Kullanıcıyı normal sohbetten çıkar
+    socket.leave(ROOM_CODE);
+    rooms.get(ROOM_CODE)?.users.delete(socket.id);
+    updateUserList(ROOM_CODE);
+
     currentRoomCode = room.id;
     socket.join(room.id);
-socket.emit('room-joined', { 
-  roomId: room.id, 
-  roomName: room.name, 
-  roomPassword: room.password,  // ✅ Şifreyi doğru gönder
-  isAdmin: room.admin_id === socket.id 
-});
-    console.log(`🚪 ${currentUser.userName} odaya katıldı: ${room.name}`);
+    socket.emit('room-joined', {
+      roomId: room.id,
+      roomName: room.name,
+      roomPassword: room.password,
+      isAdmin: isAdmin,
+      userTag: userTag
+    });
+    io.to(roomId).emit('room-profiles-update', Array.from(roomProfiles.get(roomId)?.values() || []).map(p => ({ userName: p.userName, emoji: p.emoji })));
+    console.log(`🚪 ${currentUser.userName} odaya katıldı: ${room.name} tag: ${userTag} admin: ${isAdmin}`);
   } catch (e) {
     console.error('Odaya katılma hatası:', e);
     socket.emit('room-error', { message: 'Odaya katılamadı' });
@@ -278,11 +367,12 @@ socket.on('room-update-password', async (data) => {
 // ============ AKTİF ODA LİSTESİ ============
 socket.on('room-list', async () => {
   try {
-    const result = await cockroachPool.query('SELECT id, name, password FROM rooms');
+    const result = await cockroachPool.query('SELECT id, name, password, admin_name FROM rooms');
     const roomsList = result.rows.map(r => ({
       id: r.id,
       name: r.name,
-      password: r.password
+      password: r.password,
+      adminName: r.admin_name || ''
     }));
     socket.emit('room-list-update', roomsList);
   } catch (e) {
@@ -326,6 +416,121 @@ socket.on('room-message', async (data) => {
     io.to(currentRoomCode).emit('room-message', message);
   } catch (e) {
     console.error('Oda mesaj hatası:', e);
+  }
+await cockroachPool.query(
+  `DELETE FROM room_messages WHERE room_id = $1 AND id NOT IN (
+    SELECT id FROM room_messages WHERE room_id = $1 ORDER BY created_at DESC LIMIT 250
+  )`,
+  [currentRoomCode]
+);  
+});
+
+// ============ ODA MESAJ SİL ============
+socket.on('room-delete-message', async (data) => {
+  try {
+    if (!currentRoomCode || !currentUser) return;
+    const { messageId } = data;
+    if (!messageId) return;
+
+    // Mesajı bul
+    const msgResult = await cockroachPool.query(
+      'SELECT * FROM room_messages WHERE id = $1 AND room_id = $2',
+      [messageId, currentRoomCode]
+    );
+    if (msgResult.rows.length === 0) return;
+    const message = msgResult.rows[0];
+
+    // Yetki kontrolü: kendi mesajı veya admin
+    const isAdmin = await isRoomAdmin(currentRoomCode, socket.id);
+    if (message.user_name !== currentUser.userName && !isAdmin) {
+      socket.emit('room-error', { message: 'Sadece kendi mesajını veya admin herkesin mesajını silebilir' });
+      return;
+    }
+
+    // DB'den sil
+    await cockroachPool.query('DELETE FROM room_messages WHERE id = $1', [messageId]);
+
+    // Odadaki herkese bildir
+    io.to(currentRoomCode).emit('room-message-deleted', { messageId });
+  } catch (e) {
+    console.error('Oda mesaj silme hatası:', e);
+  }
+});
+
+// ============ ODA MESAJ DÜZENLE ============
+socket.on('room-edit-message', async (data) => {
+  try {
+    if (!currentRoomCode || !currentUser) return;
+    const { messageId, newText } = data;
+    if (!messageId || !newText || !newText.trim()) return;
+
+    // Mesajı bul
+    const msgResult = await cockroachPool.query(
+      'SELECT * FROM room_messages WHERE id = $1 AND room_id = $2',
+      [messageId, currentRoomCode]
+    );
+    if (msgResult.rows.length === 0) return;
+    const message = msgResult.rows[0];
+
+    // Sadece kendi mesajını düzenleyebilir
+    if (message.user_name !== currentUser.userName) {
+      socket.emit('room-error', { message: 'Sadece kendi mesajını düzenleyebilirsin' });
+      return;
+    }
+
+    // Güncelle
+    await cockroachPool.query(
+      'UPDATE room_messages SET message = $1 WHERE id = $2',
+      [newText.trim(), messageId]
+    );
+
+    // Herkese bildir
+    io.to(currentRoomCode).emit('room-message-edited', {
+      messageId,
+      newText: newText.trim()
+    });
+  } catch (e) {
+    console.error('Oda mesaj düzenleme hatası:', e);
+  }
+});
+
+// ============ ODA MESAJ İFADE BIRAK ============
+socket.on('room-react-message', async (data) => {
+  try {
+    if (!currentRoomCode || !currentUser) return;
+    const { messageId, emoji } = data;
+    if (!messageId || !emoji) return;
+    if (!['🖕', '❤️', '😜', '🤍'].includes(emoji)) return;
+
+    const msgResult = await cockroachPool.query(
+      'SELECT * FROM room_messages WHERE id = $1 AND room_id = $2',
+      [messageId, currentRoomCode]
+    );
+    if (msgResult.rows.length === 0) return;
+    const message = msgResult.rows[0];
+
+    let reactions = message.reactions || [];
+    const existing = reactions.find(r => r.emoji === emoji);
+    if (existing) {
+      if (existing.users.includes(currentUser.userName)) return;
+      existing.users.push(currentUser.userName);
+      existing.count = existing.users.length;
+    } else {
+      reactions.push({ emoji, users: [currentUser.userName], count: 1 });
+    }
+
+    await cockroachPool.query(
+      'UPDATE room_messages SET reactions = $1 WHERE id = $2',
+      [JSON.stringify(reactions), messageId]
+    );
+
+    io.to(currentRoomCode).emit('room-message-reaction', {
+      messageId,
+      emoji,
+      userName: currentUser.userName
+    });
+  } catch (e) {
+    console.error('Oda ifade hatası:', e);
   }
 });
 
@@ -443,8 +648,6 @@ socket.on('room-invite-request', async (data) => {
     socket.emit('room-invite-result', { status: 'error', targetUserName: data?.targetUserName });
   }
 });
-
-// ============ DAVET KABUL ============
 // ============ DAVET KABUL ============
 socket.on('room-invite-accept', async (data) => {
   try {
@@ -466,12 +669,12 @@ socket.on('room-invite-accept', async (data) => {
     // Odaya katıl
     currentRoomCode = room.id;
     socket.join(room.id);
-    socket.emit('room-joined', {
-      roomId: room.id,
-      roomName: room.name,
-      roomPassword: room.password,
-      isAdmin: false
-    });
+socket.emit('room-joined', {
+  roomId: room.id,
+  roomName: room.name,
+  roomPassword: room.password,
+  isAdmin: isAdmin
+});
     console.log(`🚪 ${currentUser.userName} davetle odaya katıldı: ${room.name}`);
   } catch (e) {
     console.error('Davet kabul hatası:', e);
@@ -502,6 +705,41 @@ setInterval(async () => {
     console.error('Oda temizlik hatası:', e);
   }
 }, 60 * 60 * 1000);
+
+// ============ MESAJ SABİTLE ============
+socket.on('pin-message', async (data) => {
+  try {
+    if (!currentUser) return;
+    const { messageId, roomId, dmId } = data;
+
+    const pinId = 'pin_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+    await cockroachPool.query(
+      'INSERT INTO pinned_messages (id, room_id, dm_id, message_id, pinned_by) VALUES ($1,$2,$3,$4,$5)',
+      [pinId, roomId || null, dmId || null, messageId, currentUser.userName]
+    );
+
+    if (roomId) {
+      io.to(roomId).emit('message-pinned', { messageId, roomId, pinnedBy: currentUser.userName });
+    } else if (dmId) {
+      io.to(dmId).emit('message-pinned', { messageId, dmId, pinnedBy: currentUser.userName });
+    }
+  } catch (e) {
+    console.error('Mesaj sabitleme hatası:', e);
+  }
+});
+
+// ============ SABİTLEMEYİ KALDIR ============
+socket.on('unpin-message', async (data) => {
+  try {
+    const { messageId } = data;
+    await cockroachPool.query('DELETE FROM pinned_messages WHERE message_id = $1', [messageId]);
+    
+    // Her iki tarafa da bildir
+    io.emit('message-unpinned', { messageId });
+  } catch (e) {
+    console.error('Sabitleme kaldırma hatası:', e);
+  }
+});
 
   // ============ PUSH ABONELİĞİ KAYDET ============
   socket.on('save-subscription', (data) => {
@@ -1049,28 +1287,216 @@ setInterval(async () => {
       console.error('Müzik kontrol hatası:', error);
     }
   });
+  
+// ============ ODA İÇİ MÜZİK BAŞLAT ============
+socket.on('room-music-play', async (data) => {
+  try {
+    if (!currentRoomCode || !currentUser) return;
 
-  // ============ BAĞLANTI KOPTU ============
-  socket.on('disconnect', () => {
-    console.log('🔌 Ayrıldı:', socket.id);
-    if (currentUser && currentRoomCode) {
-      const room = rooms.get(currentRoomCode);
-      if (room) {
-        room.users.delete(socket.id);
-        socket.to(currentRoomCode).emit('user-left', { userName: currentUser.userName });
-        updateUserList(currentRoomCode);
+    // Sadece admin müzik başlatabilir
+    const roomResult = await cockroachPool.query('SELECT admin_id FROM rooms WHERE id = $1', [currentRoomCode]);
+    if (roomResult.rows.length === 0) return;
+    if (roomResult.rows[0].admin_id !== socket.id) {
+      socket.emit('room-error', { message: 'Sadece admin müzik başlatabilir' });
+      return;
+    }
 
-        if (room.users.size === 0) {
-          setTimeout(() => {
-            if (rooms.get(currentRoomCode)?.users.size === 0) {
-              rooms.delete(currentRoomCode);
-              console.log('🗑️ Boş oda silindi');
+    io.to(currentRoomCode).emit('room-music-play', {
+      videoId: data.videoId,
+      title: data.title,
+      channel: data.channel,
+      requesterId: socket.id
+    });
+  } catch (e) {
+    console.error('Oda müzik başlatma hatası:', e);
+  }
+});  
+
+// ============ ODA İÇİ MÜZİK KONTROL ============
+socket.on('room-music-control', async (data) => {
+  try {
+    if (!currentRoomCode || !currentUser) return;
+
+    // Sadece admin kontrol edebilir
+    const roomResult = await cockroachPool.query('SELECT admin_id FROM rooms WHERE id = $1', [currentRoomCode]);
+    if (roomResult.rows.length === 0) return;
+    if (roomResult.rows[0].admin_id !== socket.id) {
+      return;
+    }
+
+    socket.to(currentRoomCode).emit('room-music-control', {
+      action: data.action,
+      requesterId: socket.id
+    });
+  } catch (e) {
+    console.error('Oda müzik kontrol hatası:', e);
+  }
+});
+
+// ============ ODA İÇİ ORTAK VİDEO BAŞLAT ============
+socket.on('room-video-play', async (data) => {
+  try {
+    if (!currentRoomCode || !currentUser) return;
+
+    // Sadece admin video başlatabilir
+    const roomResult = await cockroachPool.query('SELECT admin_id FROM rooms WHERE id = $1', [currentRoomCode]);
+    if (roomResult.rows.length === 0) return;
+    if (roomResult.rows[0].admin_id !== socket.id) {
+      socket.emit('room-error', { message: 'Sadece admin video başlatabilir' });
+      return;
+    }
+
+    io.to(currentRoomCode).emit('room-video-play', {
+      videoId: data.videoId || null,
+      videoUrl: data.videoUrl || null,
+      title: data.title || '',
+      channel: data.channel || '',
+      isUpload: data.isUpload === true,
+      timestamp: Date.now(),
+      requesterId: socket.id
+    });
+  } catch (e) {
+    console.error('Oda video başlatma hatası:', e);
+  }
+});
+
+// ============ ODA İÇİ ORTAK VİDEO KONTROL ============
+socket.on('room-video-control', async (data) => {
+  try {
+    if (!currentRoomCode || !currentUser) return;
+
+    // Sadece admin kontrol edebilir
+    const roomResult = await cockroachPool.query('SELECT admin_id FROM rooms WHERE id = $1', [currentRoomCode]);
+    if (roomResult.rows.length === 0) return;
+    if (roomResult.rows[0].admin_id !== socket.id) {
+      return;
+    }
+
+    socket.to(currentRoomCode).emit('room-video-control', {
+      action: data.action, // play, pause, seek
+      currentTime: data.currentTime || 0,
+      timestamp: Date.now(),
+      requesterId: socket.id
+    });
+  } catch (e) {
+    console.error('Oda video kontrol hatası:', e);
+  }
+});
+
+// ============ ODA İÇİ VİDEO KALDIR ============
+socket.on('room-video-remove', async (data) => {
+  try {
+    if (!currentRoomCode || !currentUser) return;
+
+    // Sadece admin kaldırabilir
+    const roomResult = await cockroachPool.query('SELECT admin_id FROM rooms WHERE id = $1', [currentRoomCode]);
+    if (roomResult.rows.length === 0) return;
+    if (roomResult.rows[0].admin_id !== socket.id) {
+      return;
+    }
+
+    io.to(currentRoomCode).emit('room-video-remove');
+  } catch (e) {
+    console.error('Oda video kaldırma hatası:', e);
+  }
+});
+
+// ============ ODA İÇİ YAZIYOR GÖSTERGESİ ============
+socket.on('room-typing', (data) => {
+  try {
+    if (!currentRoomCode || !currentUser) return;
+    // Sadece oda içindekilere gönder
+    socket.to(currentRoomCode).emit('room-typing', {
+      userName: currentUser.userName,
+      isTyping: data.isTyping === true
+    });
+  } catch (e) {
+    console.error('Yazıyor göstergesi hatası:', e);
+  }
+});
+
+// ============ SABİTLENMİŞ MESAJLARI GETİR ============
+socket.on('room-pinned-messages', async () => {
+  try {
+    if (!currentRoomCode) return;
+    const result = await cockroachPool.query(
+      `SELECT pm.message_id, rm.message 
+       FROM pinned_messages pm 
+       LEFT JOIN room_messages rm ON pm.message_id = rm.id 
+       WHERE pm.room_id = $1`,
+      [currentRoomCode]
+    );
+    const pinnedList = result.rows.map(r => ({
+      messageId: r.message_id,
+      messagePreview: r.message ? r.message.substring(0, 50) : 'Mesaj'
+    }));
+    socket.emit('room-pinned-messages', pinnedList);
+  } catch (e) {
+    console.error('Sabit mesajları getirme hatası:', e);
+  }
+});
+
+
+// ============ BAĞLANTI KOPTU ============
+socket.on('disconnect', async () => {
+  console.log('🔌 Ayrıldı:', socket.id);
+  if (currentUser && currentRoomCode) {
+    // Normal sohbetten ayrılma kontrolü
+    const normalRoom = rooms.get(ROOM_CODE);
+    if (normalRoom && currentRoomCode === ROOM_CODE) {
+      normalRoom.users.delete(socket.id);
+      socket.to(ROOM_CODE).emit('user-left', { userName: currentUser.userName });
+      updateUserList(ROOM_CODE);
+
+      if (normalRoom.users.size === 0) {
+        setTimeout(() => {
+          if (rooms.get(ROOM_CODE)?.users.size === 0) {
+            rooms.delete(ROOM_CODE);
+            console.log('🗑️ Boş normal sohbet alanı silindi');
+          }
+        }, 600000);
+      }
+    }
+
+    // Oda içinden ayrılma kontrolü ve admin devri
+    if (currentRoomCode && currentRoomCode !== ROOM_CODE) {
+      const roomResult = await cockroachPool.query('SELECT * FROM rooms WHERE id = $1', [currentRoomCode]);
+      if (roomResult.rows.length > 0) {
+        const roomData = roomResult.rows[0];
+        
+        // Eğer ayrılan kişi admin ise
+        if (roomData.admin_id === socket.id) {
+          // Odadaki diğer socketleri bul
+          const roomSockets = io.sockets.adapter.rooms.get(currentRoomCode);
+          let newAdminSocketId = null;
+          if (roomSockets) {
+            for (const sid of roomSockets) {
+              if (sid !== socket.id) {
+                newAdminSocketId = sid;
+                break;
+              }
             }
-          }, 600000);
+          }
+
+          if (newAdminSocketId) {
+            // Yeni admini ata (şimdilik adını bilmediğimiz için 'gecici_admin' yapıyoruz,
+            // istemci kendi bilgisiyle zaten isAdmin durumunu öğrenecek)
+            await cockroachPool.query(
+              'UPDATE rooms SET admin_id = $1, admin_name = $2 WHERE id = $3',
+              [newAdminSocketId, 'gecici_admin', currentRoomCode]
+            );
+            io.to(newAdminSocketId).emit('room-admin-transferred', { message: 'Admin yetkisi size devredildi' });
+            console.log(`👑 Admin yetkisi devredildi: ${socket.id} -> ${newAdminSocketId}`);
+          } else {
+            // Odada kimse kalmadıysa odayı sil
+            await cockroachPool.query('DELETE FROM rooms WHERE id = $1', [currentRoomCode]);
+            console.log('🗑️ Boş oda silindi:', currentRoomCode);
+          }
         }
       }
     }
-  });
+  }
+});
 });
 
 // ============ CLOUDFLARE TURN KİMLİK ÜRETME ============
