@@ -2396,6 +2396,16 @@ body.dark-mode .message-avatar {
     <div class="context-item" onclick="dmReactToMessage()"> 🐼 İfade Bırak</div>
 </div>
 
+<!-- ODA CONTEXT MENÜ -->
+<div class="context-menu" id="roomContextMenu">
+    <div class="context-item" onclick="roomReplyToMessage()">∞ Yanıtla</div>
+    <div class="context-item" onclick="roomEditMessage()">✏️ Düzenle</div>
+    <div class="context-item danger" onclick="roomDeleteMessage()">🗑️ Sil</div>
+    <div class="context-item" onclick="roomPinMessage()">📌 Sabitle</div>
+<div class="context-item" onclick="roomUnpinMessage()">📌 Sabitlemeyi Kaldır</div>
+    <div class="context-item" onclick="roomReactToMessage()">🐼 İfade Bırak</div>
+</div>
+
     <!-- EMOJİ SEÇİCİ -->
     <div class="reaction-picker" id="reactionPicker">
         <span class="reaction-emoji" onclick="addReaction('🖕')">🖕</span>
@@ -2447,7 +2457,13 @@ body.dark-mode .message-avatar {
             <span class="chat-online-count" id="roomPasswordDisplay" style="margin-left:8px; cursor:pointer;" onclick="handleRoomPasswordClick()"></span>
         </div>
         <div class="header-right">
-            <!-- Müzik -->
+          <!-- Ortak Video -->
+<button class="utility-btn" onclick="toggleRoomVideoMenu()" title="Ortak Video">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M23.5 6.2l-7.5 4.3V7.5c0-.8-.7-1.5-1.5-1.5H2.5C1.7 6 1 6.7 1 7.5v9c0 .8.7 1.5 1.5 1.5h12c.8 0 1.5-.7 1.5-1.5v-3l7.5 4.3c.3.2.7.2 1-.2s.3-.7 0-1L23.5 6.2z"/>
+    </svg>
+</button>
+              <!-- Müzik -->
             <button class="utility-btn" onclick="toggleRoomMusicPanel()" title="Müzik">🎵</button>
             <!-- Ekran Paylaşımı -->
             <button class="utility-btn" onclick="startRoomScreenShare()" title="Ekran Paylaş">
@@ -2463,15 +2479,36 @@ body.dark-mode .message-avatar {
             <button class="utility-btn" onclick="toggleInviteMenu()" title="Davet Et">📩</button>
         </div>
     </div>
-
+<!-- ORTAK VİDEO ALANI -->
+<div id="roomVideoArea" style="display:none; flex-direction:column; background:#000; border-radius:15px; margin:10px; overflow:hidden; position:relative;">
+    <div id="roomVideoContainer" style="width:100%; height:35vh; display:flex; align-items:center; justify-content:center;">
+        <div id="roomVideoPlayer"></div>
+        <video id="roomGalleryVideoPlayer" controls style="width:100%; height:100%; display:none;"></video>
+        <div id="roomVideoPlaceholder" style="color:#666; text-align:center;">Admin'in video seçmesini bekleyin...</div>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px; padding:8px; background:#1a1a2e;">
+        <span id="roomVideoTitle" style="font-size:12px; flex:1;">Video başlığı</span>
+        <button class="call-btn" onclick="toggleRoomVideoFullscreen()" title="Tam Ekran">⛶</button>
+        <button class="call-btn" id="roomVideoRemoveBtn" onclick="removeRoomVideo()" title="Videoyu Kaldır" style="display:none; color:#e74c3c;">✕</button>
+    </div>
+    <!-- Yükleme yüzdesi -->
+    <div id="roomVideoUploadProgress" style="display:none; padding:10px; text-align:center; background:#2d2d44;">
+        <span id="roomVideoUploadText">Video sunucuya yükleniyor... %0</span>
+    </div>
+</div>
     <div class="messages-container scrollbar-thin" id="roomMessagesContainer" style="flex:1; overflow-y:auto;"></div>
-
+<!-- SABİTLENMİŞ MESAJ ALANI -->
+<div id="roomPinnedMessages" style="display:none; padding:8px; background:#2d2d44; border-bottom:1px solid #444; max-height:80px; overflow-y:auto;"></div>
+<!-- YAZIYOR GÖSTERGESİ -->
+<div id="roomTypingIndicator" style="display:none; padding:5px 10px; font-size:12px; color:#aaa; background:transparent;"></div>
+<div class="messages-container scrollbar-thin" id="roomMessagesContainer" style="flex:1; overflow-y:auto;"></div>
     <div class="input-area">
-        <div class="input-buttons">
-            <button class="input-btn" onclick="openRoomCamera()" title="Kamera">📷</button>
-            <button class="input-btn" onclick="openRoomGallery()" title="Galeri">🖼️</button>
-            <button class="input-btn" onclick="toggleRoomStickerPanel()" title="Çıkartma">🐰</button>
-        </div>
+<div class="input-buttons">
+    <button class="input-btn" onclick="openRoomCamera()" title="Kamera">📷</button>
+    <button class="input-btn" onclick="openRoomGallery()" title="Galeri">🖼️</button>
+    <button class="input-btn" onclick="toggleRoomStickerPanel()" title="Çıkartma">🐰</button>
+    <button class="input-btn" id="roomRecordBtn" onclick="toggleRoomRecording()" title="Ses Kaydı">🎤</button>
+</div>
         <textarea class="message-input" id="roomMessageInput" placeholder="Mesaj yaz..." rows="1"></textarea>
         <button class="send-btn" onclick="sendRoomMessage()">➤</button>
     </div>
@@ -2484,6 +2521,22 @@ body.dark-mode .message-avatar {
         <div class="font-panel-title">Davet Et</div>
     </div>
     <div id="inviteUserList" style="max-height:200px; overflow-y:auto;"></div>
+</div>
+
+<!-- ORTAK VİDEO MENÜSÜ -->
+<div id="roomVideoMenu" class="music-panel" style="display:none; top:55px; right:10px; left:auto; max-width:300px;">
+    <div class="menu-header-row">
+        <button class="menu-back-btn" onclick="closeRoomVideoMenu()">←</button>
+        <div class="font-panel-title">🎬 Ortak Video</div>
+    </div>
+    <button class="btn-full" onclick="chooseYoutubeVideo()" style="margin-bottom:8px;">▶️ YouTube'dan Seç</button>
+    <button class="btn-full" onclick="chooseGalleryVideo()" style="margin-bottom:8px;">📁 Galeriden Yükle</button>
+    <input type="text" id="roomYoutubeLinkInput" class="music-search-input" placeholder="YouTube linki yapıştır..." style="display:none;">
+    <button class="btn-full" id="roomYoutubeLinkBtn" onclick="selectYoutubeLink()" style="display:none; margin-top:8px;">🔗 Linki Seç</button>
+    <input type="text" id="roomYoutubeSearchInput" class="music-search-input" placeholder="YouTube'da ara..." style="display:none;">
+    <button class="btn-full" id="roomYoutubeSearchBtn" onclick="searchRoomYoutube()" style="display:none; margin-top:8px;">🔍 Ara</button>
+    <div id="roomYoutubeResults" style="margin-top:10px; max-height:250px; overflow-y:auto;"></div>
+    <input type="file" id="roomGalleryVideoInput" accept="video/*" style="display:none;">
 </div>
 
 <!-- ŞİFRE DÜZENLE MODAL -->
@@ -2667,6 +2720,10 @@ let isRoomAdmin = false;
     let darkModeEnabled = localStorage.getItem('darkModeEnabled') === 'true';
 let bannerModeEnabled = localStorage.getItem('bannerModeEnabled') === 'true';
 let notificationsEnabled = localStorage.getItem('notificationsEnabled') === 'true';
+let roomProfiles = {}; // { userName: emoji }
+let roomTypingUsers = {}; // { userName: timestamp }
+let roomPinnedMessages = []; // [{ messageId, messagePreview }]
+let activeRoomMessageUserName = null; // Bağlam menüsü için
 
 function openBanner(text, messageId) {
     text = decodeURIComponent(text);
@@ -2804,9 +2861,13 @@ function displayMusicResults(items) {
 }
 
 function selectMusic(videoId, title, channel) {
-    if (hasMusicPermission && socket) {
-        // İzin varsa ve biz kontrolcüyüz - herkese gönder
-        socket.emit('music-play', {
+    if (currentRoomId) {
+        // Oda içindeyiz, oda müzik eventini kullan
+        if (!isRoomAdmin) {
+            alert('Sadece admin müzik seçebilir');
+            return;
+        }
+        socket.emit('room-music-play', {
             videoId: videoId,
             title: title,
             channel: channel,
@@ -2815,8 +2876,93 @@ function selectMusic(videoId, title, channel) {
         // Kendi oynatıcımızda da başlat
         playMusic(videoId, title, channel, socket.id);
     } else {
-        // İzin yoksa sadece kendimiz için oynat
-        playMusic(videoId, title, channel, socket.id);
+        // Normal sohbetteyiz, eski mantık
+        if (hasMusicPermission && socket) {
+            socket.emit('music-play', {
+                videoId: videoId,
+                title: title,
+                channel: channel,
+                requesterId: socket.id
+            });
+            playMusic(videoId, title, channel, socket.id);
+        } else {
+            playMusic(videoId, title, channel, socket.id);
+        }
+    }
+}
+
+function playRoomVideo(data) {
+    isRoomVideoAdmin = (data.requesterId === socket.id);
+    currentRoomVideoId = data.videoId || null;
+    currentRoomVideoUrl = data.videoUrl || null;
+    isRoomVideoUpload = data.isUpload === true;
+
+    document.getElementById('roomVideoArea').style.display = 'flex';
+    document.getElementById('roomVideoTitle').textContent = data.title || 'Video';
+    document.getElementById('roomVideoPlaceholder').style.display = 'none';
+    
+    // Admin kontrol butonunu göster
+    document.getElementById('roomVideoRemoveBtn').style.display = isRoomVideoAdmin ? 'block' : 'none';
+    
+    if (data.isUpload) {
+        // Yüklenen video
+        const video = document.getElementById('roomGalleryVideoPlayer');
+        video.style.display = 'block';
+        video.src = data.videoUrl;
+        video.controls = isRoomVideoAdmin;
+        video.play();
+        if (roomYoutubePlayer) {
+            roomYoutubePlayer.destroy();
+            roomYoutubePlayer = null;
+        }
+    } else if (data.videoId) {
+        // YouTube videosu
+        const container = document.getElementById('roomVideoPlayer');
+        container.innerHTML = '';
+        document.getElementById('roomGalleryVideoPlayer').style.display = 'none';
+        if (roomYoutubePlayer) {
+            roomYoutubePlayer.destroy();
+        }
+        roomYoutubePlayer = new YT.Player(container, {
+            videoId: data.videoId,
+            width: '100%',
+            height: '100%',
+            playerVars: {
+                autoplay: 1,
+                controls: isRoomVideoAdmin ? 1 : 0,
+                modestbranding: 1,
+                rel: 0,
+                playsinline: 1
+            }
+        });
+    }
+}
+
+function controlRoomVideo(action, currentTime) {
+    if (!currentRoomVideoId && !currentRoomVideoUrl) return;
+    
+    const video = document.getElementById('roomGalleryVideoPlayer');
+    if (isRoomVideoUpload && video) {
+        if (action === 'play') video.play();
+        else if (action === 'pause') video.pause();
+        else if (action === 'seek' && currentTime) video.currentTime = currentTime;
+    } else if (roomYoutubePlayer) {
+        if (action === 'play') roomYoutubePlayer.playVideo();
+        else if (action === 'pause') roomYoutubePlayer.pauseVideo();
+        else if (action === 'seek' && currentTime) roomYoutubePlayer.seekTo(currentTime, true);
+    }
+}
+
+function removeRoomVideo() {
+    socket.emit('room-video-remove');
+}
+
+function toggleRoomVideoFullscreen() {
+    const area = document.getElementById('roomVideoArea');
+    if (!document.fullscreenElement) {
+        area.requestFullscreen().catch(() => {});
+    } else {
+        document.exitFullscreen();
     }
 }
 
@@ -2912,12 +3058,16 @@ function toggleMusicPlayback() {
 
     if (isMusicPlaying) {
         youtubePlayer.pauseVideo();
-        if (socket && isMusicController) {
+        if (currentRoomId) {
+            socket.emit('room-music-control', { action: 'pause', requesterId: socket.id });
+        } else if (socket && isMusicController) {
             socket.emit('music-control', { action: 'pause', requesterId: socket.id });
         }
     } else {
         youtubePlayer.playVideo();
-        if (socket && isMusicController) {
+        if (currentRoomId) {
+            socket.emit('room-music-control', { action: 'play', requesterId: socket.id });
+        } else if (socket && isMusicController) {
             socket.emit('music-control', { action: 'play', requesterId: socket.id });
         }
     }
@@ -2934,8 +3084,9 @@ function toggleMusicMute() {
     }
     updateMusicMuteIcon();
 
-    // Eğer kontrolcü biz isek, bu değişikliği diğerlerine de gönder
-    if (socket && isMusicController) {
+    if (currentRoomId) {
+        socket.emit('room-music-control', { action: isMusicMuted ? 'mute' : 'unmute', requesterId: socket.id });
+    } else if (socket && isMusicController) {
         socket.emit('music-control', {
             action: isMusicMuted ? 'mute' : 'unmute',
             requesterId: socket.id
@@ -3681,6 +3832,82 @@ socket.on('message', (msg) => {
         document.getElementById('onlineCount').textContent = users.length;
         document.getElementById('chatOnlineCount').textContent = `Çevrimiçi: ${users.length}`;
     });
+    socket.on('room-music-play', (data) => {
+    playMusic(data.videoId, data.title, data.channel, data.requesterId);
+});
+
+socket.on('room-music-control', (data) => {
+    if (!youtubePlayer) return;
+    if (data.action === 'play') {
+        youtubePlayer.playVideo();
+    } else if (data.action === 'pause') {
+        youtubePlayer.pauseVideo();
+    } else if (data.action === 'mute') {
+        youtubePlayer.mute();
+        isMusicMuted = true;
+        updateMusicMuteIcon();
+    } else if (data.action === 'unmute') {
+        youtubePlayer.unMute();
+        isMusicMuted = false;
+        updateMusicMuteIcon();
+    } else if (data.action === 'stop') {
+        closeMusicPlayer();
+    }
+});
+socket.on('room-typing', (data) => {
+    const name = data.userName;
+    if (data.isTyping) {
+        roomTypingUsers[name] = Date.now();
+    } else {
+        delete roomTypingUsers[name];
+    }
+    updateTypingIndicator();
+});
+
+socket.on('message-pinned', (data) => {
+    if (data.roomId === currentRoomId) {
+        // Sabitlenmiş mesajı odaya ekle
+        fetchRoomPinnedMessages();
+    }
+});
+
+socket.on('message-unpinned', (data) => {
+    if (currentRoomId) {
+        fetchRoomPinnedMessages();
+    }
+});
+
+socket.on('room-pinned-messages', (pinnedList) => {
+    renderRoomPinnedMessages(pinnedList);
+});
+
+function fetchRoomPinnedMessages() {
+    if (socket && currentRoomId) {
+        socket.emit('room-pinned-messages');
+    }
+}
+
+function renderRoomPinnedMessages(pinnedList) {
+    roomPinnedMessages = pinnedList || [];
+    const container = document.getElementById('roomPinnedMessages');
+    if (!container) return;
+
+    if (roomPinnedMessages.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'block';
+    container.innerHTML = '';
+    roomPinnedMessages.forEach(pin => {
+        const div = document.createElement('div');
+        div.className = 'pinned-message-item';
+        div.style.cssText = 'padding:4px 8px; background:#444; border-radius:8px; margin-bottom:4px; cursor:pointer;';
+        div.textContent = '📌 ' + (pin.messagePreview || 'Mesaj');
+        div.onclick = () => scrollToMessage(pin.messageId);
+        container.appendChild(div);
+    });
+}
     socket.on('user-joined', (d) => addSystemMessage(`${d.userName} sohbete katıldı`));
     socket.on('user-left', (d) => addSystemMessage(`${d.userName} sohbetten ayrıldı`));
     socket.on('disconnect', () => console.log('🔌 Koptu'));
@@ -3791,15 +4018,40 @@ function sendRoomMessage() {
     const text = input.value.trim();
     if (!text || !socket || !currentRoomId) return;
 
-    socket.emit('room-message', {
+    const payload = {
         text: text,
         type: 'text',
         font: getComputedStyle(document.documentElement).getPropertyValue('--message-font').trim(),
         bannerMode: bannerModeEnabled
-    });
+    };
+    if (roomReplyTo) {
+        payload.replyTo = roomReplyTo.id;
+        payload.replyToUserName = roomReplyTo.userName;
+        payload.replyToText = roomReplyTo.text;
+        roomReplyTo = null;
+    }
 
+    socket.emit('room-message', payload);
     input.value = '';
     input.style.height = 'auto';
+}
+function roomPinMessage() {
+    if (!activeRoomMessageId || !currentRoomId) return;
+    // Sabitleme yetkisi: oda içinde admin, DM'de herkes
+    if (currentRoomId && !isRoomAdmin) {
+        alert('Sadece admin mesaj sabitleyebilir');
+        return;
+    }
+    const messageEl = document.querySelector(`[data-message-id="${activeRoomMessageId}"]`);
+    const text = messageEl?.querySelector('.message-text')?.textContent || '';
+    socket.emit('pin-message', { messageId: activeRoomMessageId, roomId: currentRoomId });
+    document.getElementById('roomContextMenu').classList.remove('active');
+}
+
+function roomUnpinMessage() {
+    if (!activeRoomMessageId) return;
+    socket.emit('unpin-message', { messageId: activeRoomMessageId });
+    document.getElementById('roomContextMenu').classList.remove('active');
 }
 
 function displayMessage(msg) {
@@ -3902,6 +4154,9 @@ function displayRoomMessage(msg) {
     div.dataset.messageId = msg.id;
 
     let content = '';
+    if (msg.replyTo) {
+        content += `<div class="message-reply-preview" onclick="scrollToMessage('${msg.replyTo}')">↩️ ${escapeHtml(msg.replyToUserName)}: ${escapeHtml(msg.replyToText || '')}</div>`;
+    }
     if (msg.type === 'text') {
         const msgFont = msg.font || "'Segoe UI', sans-serif";
         content = `<div class="message-text" style="font-family: ${msgFont};">${escapeHtml(msg.text)}</div>`;
@@ -3915,18 +4170,40 @@ function displayRoomMessage(msg) {
         content = `<div class="message-audio"><audio controls><source src="${msg.fileData}" type="${msg.mimeType || 'audio/webm'}"></audio></div>`;
     }
 
-    div.innerHTML = `
-        <img src="${msg.userPhoto || ''}" class="message-avatar" alt="${msg.userName}" onclick="showProfile('${msg.userName}', '${msg.userPhoto}')">
-        <div class="message-body">
-            <div class="message-content">
-                <div class="message-header">
-                    <span class="message-sender">${escapeHtml(msg.userName)}</span>
-                    <span class="message-time">${msg.time}</span>
-                </div>
-                ${content}
+    if (msg.reactions && msg.reactions.length > 0) {
+        content += `<div class="message-reactions">`;
+        msg.reactions.forEach(r => {
+            content += `<span class="reaction-badge">${r.emoji} ${r.count > 1 ? r.count : ''}</span>`;
+        });
+        content += `</div>`;
+    }
+
+div.innerHTML = `
+    <div class="message-avatar" style="font-size:24px; display:flex; align-items:center; justify-content:center;">${roomProfiles[msg.userName] || '🐰'}</div>
+    <div class="message-body">
+        <div class="message-content">
+            <div class="message-header">
+                <span class="message-sender">${escapeHtml(msg.userName)}</span>
+                <span class="message-time">${msg.time}</span>
             </div>
+            ${content}
         </div>
-    `;
+    </div>
+`;
+
+    // Uzun basma - oda context menü
+    div.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        showRoomContextMenu(e.clientX, e.clientY, msg.id, div);
+    });
+    let longPressTimer;
+    div.addEventListener('touchstart', (e) => {
+        longPressTimer = setTimeout(() => {
+            showRoomContextMenu(e.touches[0].clientX, e.touches[0].clientY, msg.id, div);
+        }, 500);
+    });
+    div.addEventListener('touchend', () => clearTimeout(longPressTimer));
+    div.addEventListener('touchmove', () => clearTimeout(longPressTimer));
 
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
@@ -4047,6 +4324,69 @@ function contextDelete() {
     document.getElementById('contextMenu').classList.remove('active');
 }
 
+let activeRoomMessageId = null;
+let activeRoomMessageElement = null;
+let roomReplyTo = null;
+
+function showRoomContextMenu(x, y, messageId, element) {
+    activeRoomMessageId = messageId;
+    activeRoomMessageElement = element;
+    const sender = element.querySelector('.message-sender')?.textContent;
+    activeRoomMessageUserName = sender;
+    const menu = document.getElementById('roomContextMenu');
+    menu.style.left = Math.min(x, window.innerWidth - 160) + 'px';
+    menu.style.top = Math.min(y, window.innerHeight - 120) + 'px';
+    menu.classList.add('active');
+}
+
+document.addEventListener('click', () => {
+    document.getElementById('roomContextMenu').classList.remove('active');
+});
+
+document.getElementById('roomContextMenu').addEventListener('click', (e) => e.stopPropagation());
+
+function roomReplyToMessage() {
+    const el = document.querySelector(`[data-message-id="${activeRoomMessageId}"]`);
+    if (el) {
+        const sender = el.querySelector('.message-sender')?.textContent;
+        const text = el.querySelector('.message-text')?.textContent;
+        roomReplyTo = { id: activeRoomMessageId, userName: sender, text };
+    }
+    document.getElementById('roomContextMenu').classList.remove('active');
+    document.getElementById('roomMessageInput').focus();
+}
+
+function roomEditMessage() {
+    const el = document.querySelector(`[data-message-id="${activeRoomMessageId}"]`);
+    if (el) {
+        const currentText = el.querySelector('.message-text')?.textContent;
+        const newText = prompt('Mesajı düzenle:', currentText);
+        if (newText && newText.trim() && newText.trim() !== currentText) {
+            socket.emit('room-edit-message', { messageId: activeRoomMessageId, newText: newText.trim() });
+        }
+    }
+    document.getElementById('roomContextMenu').classList.remove('active');
+}
+
+function roomDeleteMessage() {
+    if (activeRoomMessageId && socket) {
+        socket.emit('room-delete-message', { messageId: activeRoomMessageId });
+    }
+    document.getElementById('roomContextMenu').classList.remove('active');
+}
+
+function roomReactToMessage() {
+    const menu = document.getElementById('roomContextMenu');
+    const rect = menu.getBoundingClientRect();
+    const picker = document.getElementById('reactionPicker');
+    picker.style.left = rect.left + 'px';
+    picker.style.top = rect.top - 60 + 'px';
+    picker.classList.add('active');
+    menu.classList.remove('active');
+    // Oda modunda reaksiyonu yönlendirecek bayrak
+    window.roomReactionMode = true;
+}
+
 function findMessageById(id) {
     const el = document.querySelector(`[data-message-id="${id}"]`);
     if (!el) return null;
@@ -4056,12 +4396,16 @@ function findMessageById(id) {
 }
 
 function addReaction(emoji) {
-    if (activeDMMessageId && socket) {
+    if (window.roomReactionMode && activeRoomMessageId && socket) {
+        socket.emit('room-react-message', { messageId: activeRoomMessageId, emoji });
+        window.roomReactionMode = false;
+        activeRoomMessageId = null;
+    } else if (activeDMMessageId && socket) {
         socket.emit('dm-react', { messageId: activeDMMessageId, emoji });
-        activeDMMessageId = null; // Temizle
+        activeDMMessageId = null;
     } else if (activeContextMessageId && socket) {
         socket.emit('react-message', { messageId: activeContextMessageId, emoji });
-        activeContextMessageId = null; // Temizle
+        activeContextMessageId = null;
     }
     document.getElementById('reactionPicker').classList.remove('active');
 }
@@ -4070,6 +4414,62 @@ function scrollToMessage(messageId) {
     const el = document.querySelector(`[data-message-id="${messageId}"]`);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
+
+//==== GALERİDEN VİDEO ===//
+
+document.getElementById('roomGalleryVideoInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Yükleme yüzdesini göster
+    document.getElementById('roomVideoUploadProgress').style.display = 'block';
+    const progressText = document.getElementById('roomVideoUploadText');
+    progressText.textContent = 'Video sunucuya yükleniyor... %0';
+    
+    const formData = new FormData();
+    formData.append('UPLOADCARE_PUB_KEY', 'ee9c8eae9f0a0ebf5d5e');
+    formData.append('file', file);
+    
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', 'https://upload.uploadcare.com/base/', true);
+    
+    xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            progressText.textContent = `Video sunucuya yükleniyor... %${percent}`;
+        }
+    };
+    
+    xhr.onload = () => {
+        if (xhr.status === 200) {
+            const response = JSON.parse(xhr.responseText);
+            const fileId = response.file;
+            const videoUrl = `https://ucarecdn.com/${fileId}/`;
+            progressText.textContent = 'Video sunucudan çekiliyor, biraz zaman alabilir...';
+            setTimeout(() => {
+                document.getElementById('roomVideoUploadProgress').style.display = 'none';
+                socket.emit('room-video-play', {
+                    videoUrl: videoUrl,
+                    title: file.name,
+                    channel: 'Galeriden Yükleme',
+                    isUpload: true
+                });
+            }, 1000);
+        } else {
+            alert('Yükleme hatası!');
+            document.getElementById('roomVideoUploadProgress').style.display = 'none';
+        }
+    };
+    
+    xhr.onerror = () => {
+        alert('Bağlantı hatası!');
+        document.getElementById('roomVideoUploadProgress').style.display = 'none';
+    };
+    
+    xhr.send(formData);
+    this.value = '';
+});
+
 
 // ============ DOSYA GÖNDERME ============
 document.getElementById('imageInput').addEventListener('change', function(e) {
@@ -4121,8 +4521,19 @@ function toggleRoomStickerPanel() {
     }
 }
 
-function toggleRoomMusicPanel() { 
-    alert('Oda içi müzik yakında eklenecek');
+function toggleRoomMusicPanel() {
+    const panel = document.getElementById('musicPanel');
+    if (panel.style.display === 'block') {
+        panel.style.display = 'none';
+    } else {
+        panel.style.display = 'block';
+        // Eğer admin değilse, müzik izni iste butonunu gizle
+        const permissionBtn = document.querySelector('#musicPanel .btn-full[onclick*="requestMusicPermission"]');
+        if (permissionBtn) {
+            permissionBtn.style.display = isRoomAdmin ? 'block' : 'none';
+        }
+        // Müzik arama kısmını göster (herkes arayabilir ama seçimi sadece admin yapabilir)
+    }
 }
 
 function startRoomScreenShare() { 
@@ -4170,6 +4581,10 @@ function closeRoomMenu() {
 
 function showRoomCreate() {
     closeRoomMenu();
+    const savedTag = localStorage.getItem('roomTag');
+    if (savedTag) {
+        document.getElementById('roomTagInput').value = savedTag;
+    }
     document.getElementById('roomCreateModal').classList.add('active');
 }
 
@@ -4179,6 +4594,10 @@ function closeRoomCreate() {
 
 function showRoomJoin() {
     closeRoomMenu();
+    const savedTag = localStorage.getItem('roomTag');
+    if (savedTag) {
+        document.getElementById('roomJoinTagInput').value = savedTag;
+    }
     document.getElementById('roomJoinModal').classList.add('active');
 }
 
@@ -4251,9 +4670,25 @@ function renderActiveRoomList(rooms) {
             <span style="margin-left:auto;">Şifre: ${'*'.repeat(6)}</span>
         `;
         div.onclick = () => {
-            document.getElementById('roomJoinNameInput').value = room.name;
-            closeRoomMenu();
-            showRoomJoin();
+            const savedTag = localStorage.getItem('roomTag');
+            if (!savedTag) {
+                alert('Önce bir tag belirleyin');
+                return;
+            }
+
+            // Eğer bu oda bizim admini olduğumuz odaysa şifre sormadan katıl
+            if (room.adminName === currentUser.name) {
+                socket.emit('room-join', {
+                    roomName: room.name,
+                    roomPassword: room.password,
+                    userTag: savedTag
+                });
+            } else {
+                // Normal katılım için oda adını doldur ve katılma ekranını aç
+                document.getElementById('roomJoinNameInput').value = room.name;
+                closeRoomMenu();
+                showRoomJoin();
+            }
         };
         container.appendChild(div);
     });
@@ -4265,19 +4700,24 @@ function enterRoomInterface(roomId, roomName, roomPassword, isAdmin) {
     currentRoomPassword = roomPassword;
     isRoomAdmin = isAdmin;
 
+    // Oda profil ve yazıyor durumunu sıfırla
+    roomProfiles = {};
+    roomTypingUsers = {};
+    roomPinnedMessages = [];
+
     document.getElementById('chatInterface').classList.remove('active');
     document.getElementById('roomInterface').style.display = 'flex';
     document.getElementById('roomHeaderName').textContent = `🏠 ${roomName}`;
-    
+
     updateRoomPasswordDisplay();
     socket.emit('room-history');
+    socket.emit('room-pinned-messages'); // Sabitlenmiş mesajları getir
 }
 
 function updateRoomPasswordDisplay() {
     const display = document.getElementById('roomPasswordDisplay');
     if (!display) return;
     if (isRoomAdmin && passwordHidden) {
-        // İlk 2 hane göster, gerisi yıldız
         display.textContent = '🔒 ' + currentRoomPassword.substring(0, 2) + '*'.repeat(currentRoomPassword.length - 2);
     } else {
         display.textContent = '🔑 ' + currentRoomPassword;
@@ -4355,6 +4795,66 @@ async function toggleRecording() {
     } catch(e) { 
         console.error(e); 
         alert('Mikrofon erişimi reddedildi'); 
+    }
+}
+
+let roomMediaRecorder = null;
+let roomAudioChunks = [];
+let isRoomRecording = false;
+
+async function toggleRoomRecording() {
+    const btn = document.getElementById('roomRecordBtn');
+    if (isRoomRecording) {
+        if (roomMediaRecorder && roomMediaRecorder.state === 'recording') {
+            roomMediaRecorder.stop();
+        }
+        isRoomRecording = false;
+        if (btn) {
+            btn.classList.remove('recording');
+            btn.textContent = '🎤';
+        }
+        return;
+    }
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        let mimeType = 'audio/webm;codecs=opus';
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+            mimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+            mimeType = 'audio/mp4';
+        } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+            mimeType = 'audio/ogg;codecs=opus';
+        }
+
+        roomMediaRecorder = new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 320000 });
+        roomAudioChunks = [];
+        roomMediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) roomAudioChunks.push(e.data); };
+        roomMediaRecorder.onstop = () => {
+            const blob = new Blob(roomAudioChunks, { type: mimeType });
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                if (socket && currentRoomId) {
+                    socket.emit('room-message', {
+                        type: 'audio',
+                        fileData: ev.target.result,
+                        mimeType: mimeType
+                    });
+                }
+            };
+            reader.readAsDataURL(blob);
+            stream.getTracks().forEach(t => t.stop());
+        };
+
+        roomMediaRecorder.start(100);
+        isRoomRecording = true;
+        if (btn) {
+            btn.classList.add('recording');
+            btn.textContent = '⏹';
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Mikrofon erişimi reddedildi');
     }
 }
 
@@ -5955,6 +6455,131 @@ function hideFontPanel() {
     document.getElementById('fontPanel').classList.remove('active');
 }
 
+let roomYoutubePlayer = null;
+let currentRoomVideoId = null;
+let currentRoomVideoUrl = null;
+let isRoomVideoUpload = false;
+let isRoomVideoAdmin = false;
+
+function toggleRoomVideoMenu() {
+    const panel = document.getElementById('roomVideoMenu');
+    if (panel.style.display === 'block') {
+        panel.style.display = 'none';
+    } else {
+        panel.style.display = 'block';
+        // Eğer admin değilse YouTube/galeri seçeneklerini gizle
+        document.querySelectorAll('#roomVideoMenu .btn-full').forEach(btn => {
+            btn.style.display = isRoomAdmin ? 'block' : 'none';
+        });
+    }
+}
+
+function closeRoomVideoMenu() {
+    document.getElementById('roomVideoMenu').style.display = 'none';
+}
+
+function chooseYoutubeVideo() {
+    closeRoomVideoMenu();
+    document.getElementById('roomYoutubeLinkInput').style.display = 'block';
+    document.getElementById('roomYoutubeLinkBtn').style.display = 'block';
+    document.getElementById('roomYoutubeSearchInput').style.display = 'block';
+    document.getElementById('roomYoutubeSearchBtn').style.display = 'block';
+    document.getElementById('roomVideoMenu').style.display = 'block';
+}
+
+function chooseGalleryVideo() {
+    closeRoomVideoMenu();
+    document.getElementById('roomGalleryVideoInput').click();
+}
+
+function selectYoutubeLink() {
+    const link = document.getElementById('roomYoutubeLinkInput').value.trim();
+    if (!link) return alert('Link girin');
+    
+    const videoId = extractYoutubeId(link);
+    if (!videoId) {
+        alert('Geçersiz YouTube linki');
+        return;
+    }
+    
+    socket.emit('room-video-play', {
+        videoId: videoId,
+        title: 'YouTube Videosu',
+        channel: 'YouTube',
+        isUpload: false
+    });
+    closeRoomVideoMenu();
+}
+
+function extractYoutubeId(url) {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+}
+
+async function searchRoomYoutube() {
+    const query = document.getElementById('roomYoutubeSearchInput').value.trim();
+    if (!query) return;
+
+    try {
+        const response = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=10&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`);
+        const data = await response.json();
+        if (data.items && data.items.length > 0) {
+            displayRoomYoutubeResults(data.items);
+        } else {
+            document.getElementById('roomYoutubeResults').innerHTML = '<div style="color:#666; padding:10px;">Sonuç bulunamadı</div>';
+        }
+    } catch (error) {
+        console.error('YouTube arama hatası:', error);
+        alert('Arama hatası!');
+    }
+}
+
+function displayRoomYoutubeResults(items) {
+    const container = document.getElementById('roomYoutubeResults');
+    container.innerHTML = '';
+    items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'music-result-item';
+        div.innerHTML = `
+            <img src="${item.snippet.thumbnails.default.url}" class="music-result-thumb" alt="${item.snippet.title}">
+            <div>
+                <div class="music-result-title">${item.snippet.title}</div>
+                <div class="music-result-channel">${item.snippet.channelTitle}</div>
+            </div>
+        `;
+        div.onclick = () => {
+            socket.emit('room-video-play', {
+                videoId: item.id.videoId,
+                title: item.snippet.title,
+                channel: item.snippet.channelTitle,
+                isUpload: false
+            });
+            closeRoomVideoMenu();
+        };
+        container.appendChild(div);
+    });
+}
+
+function updateTypingIndicator() {
+    const container = document.getElementById('roomTypingIndicator');
+    if (!container) return;
+
+    const names = Object.keys(roomTypingUsers);
+    if (names.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'block';
+    let html = '';
+    names.forEach(name => {
+        const emoji = roomProfiles[name] || '🐰';
+        html += `<span style="margin-right:10px;">${emoji} ${name} • • •</span>`;
+    });
+    container.innerHTML = html;
+}
+
 function showMainMenu() {
     document.getElementById('menuMain').style.display = 'block';
     document.getElementById('menuCalls').style.display = 'none';
@@ -6046,6 +6671,8 @@ async function toggleNotifications() {
         document.getElementById('messageInput').addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
         });
+        document.getElementById('roomMessageInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendRoomMessage(); }});
         document.getElementById('messageInput').addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = Math.min(this.scrollHeight, 80) + 'px';
@@ -6731,17 +7358,114 @@ socket.on('room-history', (messages) => {
 
     // Şimdi socket var, olayları bağla
     socket.on('room-list-update', (rooms) => renderActiveRoomList(rooms));
-    socket.on('room-created', (data) => {
-        closeRoomCreate();
-        alert(`Oda kuruldu: ${data.roomName}\nŞifre: ${data.roomPassword}`);
-        enterRoomInterface(data.roomId, data.roomName, data.roomPassword, true);
-    });
-    socket.on('room-joined', (data) => {
-        closeRoomJoin();
-        alert(`Odaya katıldınız: ${data.roomName}`);
-        enterRoomInterface(data.roomId, data.roomName, data.roomPassword, data.isAdmin);
-    });
+socket.on('room-created', (data) => {
+    // Tag'i kaydet
+    const tagInput = document.getElementById('roomTagInput');
+    if (tagInput) {
+        localStorage.setItem('roomTag', tagInput.value.trim());
+    }
+    closeRoomCreate();
+    alert(`Oda kuruldu: ${data.roomName}\nŞifre: ${data.roomPassword}`);
+    enterRoomInterface(data.roomId, data.roomName, data.roomPassword, true);
+});
+socket.on('room-joined', (data) => {
+    // Tag'i kaydet
+    const tagInput = document.getElementById('roomJoinTagInput');
+    if (tagInput) {
+        localStorage.setItem('roomTag', tagInput.value.trim());
+    }
+    closeRoomJoin();
+    alert(`Odaya katıldınız: ${data.roomName}`);
+    enterRoomInterface(data.roomId, data.roomName, data.roomPassword, data.isAdmin);
+});
+
+socket.on('room-admin-transferred', (data) => {
+    alert(data.message || 'Admin yetkisi size devredildi');
+    // Yetkiyi güncelle
+    isRoomAdmin = true;
+});
+
     socket.on('room-error', (data) => alert(data.message));
+    
+    socket.on('room-message-deleted', (data) => {
+    const el = document.querySelector(`[data-message-id="${data.messageId}"]`);
+    if (el) el.remove();
+});
+
+socket.on('room-message-edited', (data) => {
+    const el = document.querySelector(`[data-message-id="${data.messageId}"]`);
+    if (el) {
+        const textEl = el.querySelector('.message-text');
+        if (textEl) textEl.textContent = data.newText;
+    }
+});
+
+socket.on('room-message-reaction', (data) => {
+    const el = document.querySelector(`[data-message-id="${data.messageId}"]`);
+    if (!el) return;
+    const contentEl = el.querySelector('.message-content');
+    let reactionsDiv = contentEl.querySelector('.message-reactions');
+    if (!reactionsDiv) {
+        reactionsDiv = document.createElement('div');
+        reactionsDiv.className = 'message-reactions';
+        contentEl.appendChild(reactionsDiv);
+    }
+    let badge = reactionsDiv.querySelector(`[data-emoji="${data.emoji}"]`);
+    if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'reaction-badge';
+        badge.dataset.emoji = data.emoji;
+        badge.textContent = data.emoji;
+        reactionsDiv.appendChild(badge);
+    } else {
+        const count = parseInt(badge.textContent.slice(data.emoji.length) || 1) + 1;
+        badge.textContent = `${data.emoji} ${count}`;
+    }
+});
+
+socket.on('room-video-play', (data) => {
+    playRoomVideo(data);
+});
+
+socket.on('room-video-control', (data) => {
+    controlRoomVideo(data.action, data.currentTime);
+});
+
+socket.on('room-video-remove', () => {
+    document.getElementById('roomVideoArea').style.display = 'none';
+    document.getElementById('roomVideoPlaceholder').style.display = 'block';
+    document.getElementById('roomVideoTitle').textContent = 'Video başlığı';
+    document.getElementById('roomVideoRemoveBtn').style.display = 'none';
+    if (roomYoutubePlayer) {
+        roomYoutubePlayer.destroy();
+        roomYoutubePlayer = null;
+    }
+    const video = document.getElementById('roomGalleryVideoPlayer');
+    video.pause();
+    video.src = '';
+    video.style.display = 'none';
+    currentRoomVideoId = null;
+    currentRoomVideoUrl = null;
+});
+
+socket.on('room-profiles-update', (profiles) => {
+    roomProfiles = {};
+    profiles.forEach(p => {
+        roomProfiles[p.userName] = p.emoji;
+    });
+    // Tüm mesajları yeniden çiz (emoji güncellensin)
+    const messages = document.querySelectorAll('#roomMessagesContainer .message');
+    messages.forEach(el => {
+        const senderEl = el.querySelector('.message-sender');
+        if (senderEl) {
+            const name = senderEl.textContent;
+            if (roomProfiles[name]) {
+                const avatarEl = el.querySelector('.message-avatar');
+                if (avatarEl) avatarEl.textContent = roomProfiles[name];
+            }
+        }
+    });
+});
 
     setupCallSocketEvents();
     setupDMSocketEvents();
@@ -6760,6 +7484,19 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 if (bannerModeEnabled) {
     document.getElementById('bannerModeStatus').textContent = 'Açık';
+}
+const roomMsgInput = document.getElementById('roomMessageInput');
+if (roomMsgInput) {
+    roomMsgInput.addEventListener('focus', () => {
+        if (socket && currentRoomId) {
+            socket.emit('room-typing', { isTyping: true });
+        }
+    });
+    roomMsgInput.addEventListener('blur', () => {
+        if (socket && currentRoomId) {
+            socket.emit('room-typing', { isTyping: false });
+        }
+    });
 }
     applySavedFont();
     generateFood();
