@@ -5279,10 +5279,10 @@ function getCroppedImage(image, cropBoxRect, callback) {
     callback(canvas.toDataURL('image/jpeg', 0.9));
 }
 
+// 1. FONKSİYON: Medya gönderme (DÜZELTİLMİŞ)
 function sendMediaFromPreview() {
     if (!pendingMediaBlob || !pendingMediaType) return;
 
-    // Yükleme yüzdesi göstergesi oluştur
     const loadingDiv = document.createElement('div');
     loadingDiv.className = 'message own';
     loadingDiv.innerHTML = `
@@ -5292,6 +5292,64 @@ function sendMediaFromPreview() {
             </div>
         </div>
     `;
+
+    // Doğru konteynere ekle
+    let targetContainer;
+    if (isRoomMediaMode && currentRoomId) {
+        targetContainer = document.getElementById('roomMessagesContainer');
+    } else if (isDMCameraMode && currentDMUser) {
+        targetContainer = document.getElementById('dmMessagesContainer');
+    } else {
+        targetContainer = document.getElementById('messagesContainer');
+    }
+    targetContainer.appendChild(loadingDiv);
+    targetContainer.scrollTop = targetContainer.scrollHeight;
+
+    const reader = new FileReader();
+    reader.onprogress = (e) => {
+        if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            const textEl = loadingDiv.querySelector('.message-text');
+            if (textEl) {
+                textEl.textContent = `📤 Gönderiliyor... %${percent}`;
+            }
+        }
+    };
+
+    reader.onload = (e) => {
+        if (isRoomMediaMode && currentRoomId) {
+            socket.emit('room-message', {
+                type: 'image',
+                fileData: e.target.result,
+                mimeType: 'image/jpeg'
+            });
+            isRoomMediaMode = false;
+        } else if (isDMCameraMode && currentDMUser) {
+            socket.emit('dm-message', {
+                receiver: currentDMUser,
+                type: 'image',
+                fileData: e.target.result,
+                mimeType: 'image/jpeg'
+            });
+            isDMCameraMode = false;
+        } else {
+            socket.emit('message', {
+                type: pendingMediaType,
+                fileData: e.target.result,
+                mimeType: pendingMediaType === 'image' ? 'image/jpeg' : 'video/webm'
+            });
+        }
+        loadingDiv.remove();
+        finishSending();
+    };
+
+    const file = new File([pendingMediaBlob], pendingMediaType === 'image' ? 'photo.jpg' : 'video.webm', {
+        type: pendingMediaType === 'image' ? 'image/jpeg' : 'video/webm'
+    });
+    reader.readAsDataURL(file);
+}
+
+// 2. FONKSİYON: Ekran paylaşımı başlatma (DÜZELTİLMİŞ)
 async function initScreenShare(requesterId, includeMic = true) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
         alert('Tarayıcınız ekran paylaşımını desteklemiyor. Lütfen Chrome veya Edge kullanın.');
@@ -5299,57 +5357,35 @@ async function initScreenShare(requesterId, includeMic = true) {
     }
 
     try {
-        // TURN kimliklerini yükle (bağlantı kalitesi için)
         await fetchTurnConfig();
         
-        // ✅ EKLENECEK SATIR: Karşı tarafın ID'sini sakla
         screenShareRequesterId = requesterId;
         
         screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-
-    const reader = new FileReader();
-    reader.onprogress = (e) => {
-        if (e.lengthComputable) {
-            const percent = Math.round((e.loaded / e.total) * 100);
-            loadingDiv.querySelector('.message-text').textContent = `📤 Gönderiliyor... %${percent}`;
+        
+        screenStream.getVideoTracks()[0].onended = () => {
+            stopScreenShare(false); // Karşı tarafa tekrar bildirme
+        };
+        
+        // Sunucuya bilgi gönder
+        if (isRoomMediaMode && currentRoomId) {
+            socket.emit('start-screen-share', {
+                roomId: currentRoomId,
+                requesterId: requesterId,
+                includeMic: includeMic
+            });
+        } else {
+            socket.emit('start-screen-share', {
+                requesterId: requesterId,
+                includeMic: includeMic
+            });
         }
-    };
-
-reader.onload = (e) => {
-    if (isRoomMediaMode && currentRoomId) {
-        // Oda modunda odaya gönder
-        socket.emit('room-message', {
-            type: 'image',
-            fileData: e.target.result,
-            mimeType: 'image/jpeg'
-        });
-        isRoomMediaMode = false;
-    } else if (isDMCameraMode && currentDMUser) {
-        // DM modunda DM'e gönder
-        socket.emit('dm-message', {
-            receiver: currentDMUser,
-            type: 'image',
-            fileData: e.target.result,
-            mimeType: 'image/jpeg'
-        });
-        isDMCameraMode = false;
-    } else {
-        // Normal sohbet
-        socket.emit('message', {
-            type: pendingMediaType,
-            fileData: e.target.result,
-            mimeType: pendingMediaType === 'image' ? 'image/jpeg' : 'video/webm'
-        });
+        
+        return screenStream;
+    } catch (error) {
+        console.error('Ekran paylaşımı hatası:', error);
+        alert('Ekran paylaşımı başlatılamadı: ' + error.message);
     }
-    loadingDiv.remove();
-    finishSending();
-};
-
-    const file = new File([pendingMediaBlob], pendingMediaType === 'image' ? 'photo.jpg' : 'video.webm', {
-        type: pendingMediaType === 'image' ? 'image/jpeg' : 'video/webm'
-    });
-    reader.readAsDataURL(file);
-}
 }
 function finishSending() {
     const previewContent = document.getElementById('previewContent');
