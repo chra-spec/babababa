@@ -55,6 +55,7 @@ const cockroachPool = new Pool({
 // Tabloları oluştur
 async function initCockroachTables() {
   try {
+    await cockroachPool.query(`ALTER TABLE rooms ADD COLUMN IF NOT EXISTS admin_name TEXT`);
     await cockroachPool.query(`
       CREATE TABLE IF NOT EXISTS rooms (
         id TEXT PRIMARY KEY,
