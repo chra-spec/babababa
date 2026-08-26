@@ -229,7 +229,12 @@ updateUserList(ROOM_CODE);
 
     currentRoomCode = room.id;
     socket.join(room.id);
-    socket.emit('room-joined', { roomId: room.id, roomName: room.name, roomPassword: null, isAdmin: room.admin_id === socket.id });
+socket.emit('room-joined', { 
+  roomId: room.id, 
+  roomName: room.name, 
+  roomPassword: room.password,  // ✅ Şifreyi doğru gönder
+  isAdmin: room.admin_id === socket.id 
+});
     console.log(`🚪 ${currentUser.userName} odaya katıldı: ${room.name}`);
   } catch (e) {
     console.error('Odaya katılma hatası:', e);
