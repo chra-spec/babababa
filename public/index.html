@@ -2258,9 +2258,10 @@ body.dark-mode .message-avatar {
             <label>Şifre</label>
             <input type="password" class="form-input" id="roomPasswordInput" placeholder="En az 1 büyük, 1 rakam, 1 noktalama">
         </div>
-        <div class="form-group">
-            <label>Tag</label>
-            <input type="text" class="form-input" id="roomTagInput" placeholder="Tag belirleyin">
+<div class="form-group" id="roomTagField">
+    <label>Tag</label>
+    <input type="text" class="form-input" id="roomTagInput" placeholder="Tag belirleyin">
+</div>
         </div>
         <button class="btn-full" onclick="createRoom()">Oda Kur</button>
         <button class="btn-full" style="margin-top:8px; background:#e74c3c;" onclick="closeRoomCreate()">İptal</button>
@@ -2279,9 +2280,10 @@ body.dark-mode .message-avatar {
             <label>Şifre</label>
             <input type="password" class="form-input" id="roomJoinPasswordInput" placeholder="Şifre">
         </div>
-        <div class="form-group">
-            <label>Tag</label>
-            <input type="text" class="form-input" id="roomJoinTagInput" placeholder="Tag belirleyin">
+<div class="form-group">
+    <label>Tag</label>
+    <input type="text" class="form-input" id="roomJoinTagInput" placeholder="Tag belirleyin">
+</div>
         </div>
         <button class="btn-full" onclick="joinRoom()">Katıl</button>
         <button class="btn-full" style="margin-top:8px; background:#e74c3c;" onclick="closeRoomJoin()">İptal</button>
@@ -4582,23 +4584,39 @@ function closeRoomMenu() {
 function showRoomCreate() {
     closeRoomMenu();
     const savedTag = localStorage.getItem('roomTag');
+    const tagField = document.getElementById('roomTagField');
+    const tagInput = document.getElementById('roomTagInput');
+    
     if (savedTag) {
-        document.getElementById('roomTagInput').value = savedTag;
+        tagField.style.display = 'none';
+        tagInput.value = savedTag;
+    } else {
+        tagField.style.display = 'block';
+        tagInput.value = '';
     }
+    
     document.getElementById('roomCreateModal').classList.add('active');
-}
-
-function closeRoomCreate() {
-    document.getElementById('roomCreateModal').classList.remove('active');
 }
 
 function showRoomJoin() {
     closeRoomMenu();
     const savedTag = localStorage.getItem('roomTag');
+    const tagField = document.getElementById('roomJoinTagField');
+    const tagInput = document.getElementById('roomJoinTagInput');
+    
     if (savedTag) {
-        document.getElementById('roomJoinTagInput').value = savedTag;
+        tagField.style.display = 'none';
+        tagInput.value = savedTag;
+    } else {
+        tagField.style.display = 'block';
+        tagInput.value = '';
     }
+    
     document.getElementById('roomJoinModal').classList.add('active');
+}
+
+function closeRoomCreate() {
+    document.getElementById('roomCreateModal').classList.remove('active');
 }
 
 function closeRoomJoin() {
@@ -4608,16 +4626,30 @@ function closeRoomJoin() {
 function createRoom() {
     const roomName = document.getElementById('roomNameInput').value.trim();
     const roomPassword = document.getElementById('roomPasswordInput').value.trim();
-    const userTag = document.getElementById('roomTagInput').value.trim();
+    const savedTag = localStorage.getItem('roomTag');
+    const userTag = savedTag || document.getElementById('roomTagInput').value.trim();
+
     if (!roomName || !roomPassword || !userTag) return alert('Tüm alanları doldurun');
     
     socket.emit('room-create', { roomName, roomPassword, userTag });
 }
 
+function joinRoom() {
+    const roomName = document.getElementById('roomJoinNameInput').value.trim();
+    const roomPassword = document.getElementById('roomJoinPasswordInput').value.trim();
+    const savedTag = localStorage.getItem('roomTag');
+    const userTag = savedTag || document.getElementById('roomJoinTagInput').value.trim();
+
+    if (!roomName || !roomPassword || !userTag) return alert('Tüm alanları doldurun');
+    
+    socket.emit('room-join', { roomName, roomPassword, userTag });
+}
+
 function showRoomInvitation(data) {
     const result = confirm(`${data.requesterName} sizi "${data.roomName}" odasına davet ediyor.\n15 saniye içinde cevap verin.`);
     if (result) {
-        socket.emit('room-invite-accept', { roomId: data.roomId });
+        const savedTag = localStorage.getItem('roomTag') || '';
+        socket.emit('room-invite-accept', { roomId: data.roomId, userTag: savedTag });
     } else {
         socket.emit('room-invite-reject', { requesterId: data.requesterId });
     }
@@ -4625,15 +4657,6 @@ function showRoomInvitation(data) {
 
 function rejectRoomInvitation(requesterId) {
     socket.emit('room-invite-reject', { requesterId: requesterId });
-}
-
-function joinRoom() {
-    const roomName = document.getElementById('roomJoinNameInput').value.trim();
-    const roomPassword = document.getElementById('roomJoinPasswordInput').value.trim();
-    const userTag = document.getElementById('roomJoinTagInput').value.trim();
-    if (!roomName || !roomPassword || !userTag) return alert('Tüm alanları doldurun');
-    
-    socket.emit('room-join', { roomName, roomPassword, userTag });
 }
 
 function loadActiveRooms() {
@@ -7359,19 +7382,18 @@ socket.on('room-history', (messages) => {
     // Şimdi socket var, olayları bağla
     socket.on('room-list-update', (rooms) => renderActiveRoomList(rooms));
 socket.on('room-created', (data) => {
-    // Tag'i kaydet
     const tagInput = document.getElementById('roomTagInput');
-    if (tagInput) {
+    if (tagInput && tagInput.value.trim()) {
         localStorage.setItem('roomTag', tagInput.value.trim());
     }
     closeRoomCreate();
     alert(`Oda kuruldu: ${data.roomName}\nŞifre: ${data.roomPassword}`);
     enterRoomInterface(data.roomId, data.roomName, data.roomPassword, true);
 });
+
 socket.on('room-joined', (data) => {
-    // Tag'i kaydet
     const tagInput = document.getElementById('roomJoinTagInput');
-    if (tagInput) {
+    if (tagInput && tagInput.value.trim()) {
         localStorage.setItem('roomTag', tagInput.value.trim());
     }
     closeRoomJoin();
