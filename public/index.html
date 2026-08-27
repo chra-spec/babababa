@@ -4600,19 +4600,28 @@ function showRoomCreate() {
 
 function showRoomJoin() {
     closeRoomMenu();
-    const savedTag = localStorage.getItem('roomTag');
-    const tagField = document.getElementById('roomJoinTagField');
-    const tagInput = document.getElementById('roomJoinTagInput');
-    
-    if (savedTag) {
-        tagField.style.display = 'none';
-        tagInput.value = savedTag;
-    } else {
-        tagField.style.display = 'block';
-        tagInput.value = '';
+    const modal = document.getElementById('roomJoinModal');
+    if (!modal) {
+        alert('Odaya katıl modalı bulunamadı');
+        return;
     }
-    
-    document.getElementById('roomJoinModal').classList.add('active');
+
+    // Tag alanını doldur (varsa)
+    const savedTag = localStorage.getItem('roomTag');
+    const tagInput = document.getElementById('roomJoinTagInput');
+    if (savedTag && tagInput) {
+        tagInput.value = savedTag;
+    }
+
+    // Tag alanını gizle (varsa)
+    const tagField = document.getElementById('roomJoinTagField');
+    if (savedTag && tagField) {
+        tagField.style.display = 'none';
+    } else if (tagField) {
+        tagField.style.display = 'block';
+    }
+
+    modal.classList.add('active');
 }
 
 function closeRoomCreate() {
@@ -7521,6 +7530,13 @@ if (roomMsgInput) {
         }
     });
 }
+        const roomJoinBtn = document.querySelector('#roomMenu .btn-full[onclick*="showRoomJoin"]');
+    if (roomJoinBtn) {
+        roomJoinBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showRoomJoin();
+        });
+    }
     applySavedFont();
     generateFood();
     drawGame();
