@@ -29,7 +29,7 @@ const ROOM_CODE = 'efkaza7634';
 
 // Supabase bağlantısı
 const supabaseUrl = 'https://xmmwsjzipluvbdtsqegz.supabase.co';
-const supabaseKey = 'sb_publishable_CWiyCnet9IVtwAK8mSI7VQ_YRTyrg0r';
+const supabaseKey = 'sb_secret_94OroOLTV3232-x7glYgfQ_X8iCSbV7';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // VAPID anahtarları
