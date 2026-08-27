@@ -4640,6 +4640,7 @@ function joinRoom() {
     const savedTag = localStorage.getItem('roomTag');
     const userTag = savedTag || document.getElementById('roomJoinTagInput').value.trim();
 
+    console.log('Odaya katılma isteği gönderiliyor:', { roomName, roomPassword, userTag });
     if (!roomName || !roomPassword || !userTag) return alert('Tüm alanları doldurun');
     
     socket.emit('room-join', { roomName, roomPassword, userTag });
