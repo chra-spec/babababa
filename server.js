@@ -55,7 +55,7 @@ const cockroachPool = new Pool({
 // Tabloları oluştur
 async function initCockroachTables() {
   try {
-    await cockroachPool.query(`ALTER TABLE rooms ADD COLUMN IF NOT EXISTS admin_name TEXT`);
+  await cockroachPool.query(`ALTER TABLE rooms ADD COLUMN IF NOT EXISTS admin_name TEXT`);
     await cockroachPool.query(`
       CREATE TABLE IF NOT EXISTS rooms (
         id TEXT PRIMARY KEY,
@@ -1030,11 +1030,17 @@ socket.on('unpin-message', async (data) => {
       if (receiverSocketId) {
         io.to(receiverSocketId).emit('dm-message', dmMessage);
       }
+      if (error) {
+  console.error('DM kayıt hatası:', error.message);
+} else {
+  console.log('✅ DM kaydedildi:', dmMessage.id);
+}
       socket.emit('dm-message', dmMessage);
     } catch (error) {
       console.error('DM mesaj hatası:', error);
     }
-  });
+ 
+   });
 
   socket.on('dm-delete', async (data) => {
     try {
@@ -1531,12 +1537,12 @@ app.get('/api/dm-messages', async (req, res) => {
       return res.status(400).json({ error: 'sender ve receiver gerekli' });
     }
 
-    const { data: messages, error } = await supabase
-      .from('dm_messages')
-      .select('*')
-      .or(`and(sender.eq.${sender},receiver.eq.${receiver}),and(sender.eq.${receiver},receiver.eq.${sender})`)
-      .order('created_at', { ascending: true })
-      .limit(100);
+const { data: messages, error } = await supabase
+  .from('dm_messages')
+  .select('*')
+  .or(`and(sender.eq.${sender},receiver.eq.${receiver}),and(sender.eq.${receiver},receiver.eq.${sender})`)
+  .order('created_at', { ascending: true })
+  .limit(100);
 
     if (error) throw error;
 
