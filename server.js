@@ -1016,7 +1016,38 @@ socket.on('unpin-message', async (data) => {
         reactions: dmMessage.reactions
       });
       if (error) console.error('DM kayıt hatası:', error.message);
+// DM mesaj limiti: son 100 mesajı tut, eski fazlalıkları sil
+const { count, error: countError } = await supabase
+  .from('dm_messages')
+  .select('*', { count: 'exact', head: true })
+  .or(`and(sender.eq.${currentUser.userName},receiver.eq.${receiver}),and(sender.eq.${receiver},receiver.eq.${currentUser.userName})`);
 
+if (countError) {
+  console.error('DM sayım hatası:', countError.message);
+} else if (count > 100) {
+  const excess = count - 100;
+  const { data: oldMessages, error: oldError } = await supabase
+    .from('dm_messages')
+    .select('id')
+    .or(`and(sender.eq.${currentUser.userName},receiver.eq.${receiver}),and(sender.eq.${receiver},receiver.eq.${currentUser.userName})`)
+    .order('created_at', { ascending: true })
+    .limit(excess);
+
+  if (oldError) {
+    console.error('Eski mesajları getirme hatası:', oldError.message);
+  } else if (oldMessages && oldMessages.length > 0) {
+    const idsToDelete = oldMessages.map(m => m.id);
+    const { error: deleteError } = await supabase
+      .from('dm_messages')
+      .delete()
+      .in('id', idsToDelete);
+    if (deleteError) {
+      console.error('Eski mesajları silme hatası:', deleteError.message);
+    } else {
+      console.log(`🗑️ ${idsToDelete.length} eski DM mesajı silindi (limit 100)`);
+    }
+  }
+}
       let receiverSocketId = null;
       rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
         if (user.userName === receiver) receiverSocketId = socketId;
