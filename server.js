@@ -1059,20 +1059,19 @@ socket.on('dm-message', async (data) => {
     if (receiverSocketId) {
       io.to(receiverSocketId).emit('dm-message', dmMessage);
     }
-    if (error) {
-      console.error('DM kayıt hatası:', error.message);
-    } else {
-      console.log('✅ DM kaydedildi:', dmMessage.id);
-    }
     socket.emit('dm-message', dmMessage);
 
-const receiverSub = pushSubscriptions.get(receiver);
-if (receiverSub) {
-  webpush.sendNotification(receiverSub, JSON.stringify({
-    title: 'Yılan Oyunu Platformu',
-    body: 'Yeni DM mesajınız var'
-  })).catch(err => console.error('DM push hatası:', err));
-}
+    // Alıcıya push bildirimi gönder (normal sohbetle aynı formatta)
+    const receiverSub = pushSubscriptions.get(receiver);
+    if (receiverSub) {
+      webpush.sendNotification(receiverSub, JSON.stringify({
+        title: 'Yılan Oyunu Platformu',
+        body: 'Yılan seni özledi gel ve skorunu arttır!'
+      })).catch(err => console.error('DM push hatası:', err));
+    }
+  } catch (error) {
+    console.error('DM mesaj hatası:', error);
+  }
 });
 
   // ============ DM İFADE BIRAK ============
