@@ -12,9 +12,8 @@ self.addEventListener('push', event => {
     badge: 'https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAEZnjVqiNcypAY9RPOqIiCfIwkYE0S-EQACHiEAAgK8SFT-tAhBtaDTQT0E.png',
     vibrate: [200, 100, 200],
     lang: 'tr',
-    requireInteraction: false,  // heads-up bildirimi için false
-    silent: false,              // ses çalması için false
-    sound: 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg',
+    requireInteraction: false,
+    silent: false,
     tag: data.tag || 'default',
     renotify: true,
     data: { url: data.data?.url || '/' }
@@ -23,10 +22,11 @@ self.addEventListener('push', event => {
   event.waitUntil(
     Promise.all([
       self.registration.showNotification(data.title || 'Yılan Oyunu Platformu', options),
+      // Client'lara mesaj gönder ve ses çal
       self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
         clients.forEach(client => {
           client.postMessage({
-            type: 'SHOW_TOAST',
+            type: 'SHOW_TOAST_AND_SOUND',
             title: data.title || 'Yılan Oyunu Platformu',
             body: data.body || 'Yeni mesaj'
           });
