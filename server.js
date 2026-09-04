@@ -1526,7 +1526,7 @@ socket.on('disconnect', () => {
     }
   }, 15000); // 15 saniye
 });
-}
+});
 // ============ CLOUDFLARE TURN KİMLİK ÜRETME ============
 app.get('/api/turn-config', async (req, res) => {
   try {
