@@ -233,18 +233,6 @@ socket.on('room-create', async (data) => {
       [userTag, currentUser.userName]
     );
     
-    // Tag benzersizlik kontrolü
-if (userTag) {
-    const tagResult = await cockroachPool.query('SELECT * FROM user_tags WHERE tag = $1', [userTag]);
-    if (tagResult.rows.length > 0 && tagResult.rows[0].user_name !== currentUser.userName) {
-        socket.emit('room-error', { message: 'Bu tag başkası tarafından kullanılıyor, başka bir tag seçin' });
-        return;
-    }
-    await cockroachPool.query(
-        'INSERT INTO user_tags (tag, user_name) VALUES ($1,$2) ON CONFLICT (tag) DO UPDATE SET user_name = $2',
-        [userTag, currentUser.userName]
-    );
-}
 
     const roomId = 'room_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 
@@ -409,15 +397,15 @@ socket.on('room-message', async (data) => {
     );
 
     io.to(currentRoomCode).emit('room-message', message);
-  } catch (e) {
-    console.error('Oda mesaj hatası:', e);
-  }
 await cockroachPool.query(
   `DELETE FROM room_messages WHERE room_id = $1 AND id NOT IN (
     SELECT id FROM room_messages WHERE room_id = $1 ORDER BY created_at DESC LIMIT 250
   )`,
   [currentRoomCode]
-);  
+);    
+  } catch (e) {
+    console.error('Oda mesaj hatası:', e);
+  }
 });
 
 // ============ ODA MESAJ SİL ============
@@ -1481,63 +1469,62 @@ socket.on('disconnect', () => {
       console.log('❌ Kullanıcı geri dönmedi, ayrılıyor:', socket.id);
 
       if (currentUser && currentRoomCode) {
-        const room = rooms.get(currentRoomCode);
-        if (room) {
-          room.users.delete(socket.id);
-          socket.to(currentRoomCode).emit('user-left', { userName: currentUser.userName });
-          updateUserList(currentRoomCode);
+        // Normal sohbetten ayrılma kontrolü
+        if (currentRoomCode === ROOM_CODE) {
+          const room = rooms.get(ROOM_CODE);
+          if (room) {
+            room.users.delete(socket.id);
+            socket.to(ROOM_CODE).emit('user-left', { userName: currentUser.userName });
+            updateUserList(ROOM_CODE);
 
-          if (room.users.size === 0) {
-            setTimeout(() => {
-              if (rooms.get(currentRoomCode)?.users.size === 0) {
-                rooms.delete(currentRoomCode);
-                console.log('🗑️ Boş oda silindi');
-              }
-            }, 600000);
-          }
-        }
-      }
-
-
-    // Oda içinden ayrılma kontrolü ve admin devri
-    if (currentRoomCode && currentRoomCode !== ROOM_CODE) {
-      const roomResult = await cockroachPool.query('SELECT * FROM rooms WHERE id = $1', [currentRoomCode]);
-      if (roomResult.rows.length > 0) {
-        const roomData = roomResult.rows[0];
-        
-        // Eğer ayrılan kişi admin ise
-        if (roomData.admin_id === socket.id) {
-          // Odadaki diğer socketleri bul
-          const roomSockets = io.sockets.adapter.rooms.get(currentRoomCode);
-          let newAdminSocketId = null;
-          if (roomSockets) {
-            for (const sid of roomSockets) {
-              if (sid !== socket.id) {
-                newAdminSocketId = sid;
-                break;
-              }
+            if (room.users.size === 0) {
+              setTimeout(() => {
+                if (rooms.get(ROOM_CODE)?.users.size === 0) {
+                  rooms.delete(ROOM_CODE);
+                  console.log('🗑️ Boş normal sohbet alanı silindi');
+                }
+              }, 600000);
             }
           }
+        }
 
-          if (newAdminSocketId) {
-            // Yeni admini ata (şimdilik adını bilmediğimiz için 'gecici_admin' yapıyoruz,
-            // istemci kendi bilgisiyle zaten isAdmin durumunu öğrenecek)
-            await cockroachPool.query(
-              'UPDATE rooms SET admin_id = $1, admin_name = $2 WHERE id = $3',
-              [newAdminSocketId, 'gecici_admin', currentRoomCode]
-            );
-            io.to(newAdminSocketId).emit('room-admin-transferred', { message: 'Admin yetkisi size devredildi' });
-            console.log(`👑 Admin yetkisi devredildi: ${socket.id} -> ${newAdminSocketId}`);
-          } else {
-            // Odada kimse kalmadıysa odayı sil
-            await cockroachPool.query('DELETE FROM rooms WHERE id = $1', [currentRoomCode]);
-            console.log('🗑️ Boş oda silindi:', currentRoomCode);
+        // Oda içinden ayrılma kontrolü ve admin devri
+        if (currentRoomCode !== ROOM_CODE) {
+          const roomResult = await cockroachPool.query('SELECT * FROM rooms WHERE id = $1', [currentRoomCode]);
+          if (roomResult.rows.length > 0) {
+            const roomData = roomResult.rows[0];
+
+            // Eğer ayrılan kişi admin ise
+            if (roomData.admin_id === socket.id) {
+              // Odadaki diğer socketleri bul
+              const roomSockets = io.sockets.adapter.rooms.get(currentRoomCode);
+              let newAdminSocketId = null;
+              if (roomSockets) {
+                for (const sid of roomSockets) {
+                  if (sid !== socket.id) {
+                    newAdminSocketId = sid;
+                    break;
+                  }
+                }
+              }
+
+              if (newAdminSocketId) {
+                await cockroachPool.query(
+                  'UPDATE rooms SET admin_id = $1, admin_name = $2 WHERE id = $3',
+                  [newAdminSocketId, 'gecici_admin', currentRoomCode]
+                );
+                io.to(newAdminSocketId).emit('room-admin-transferred', { message: 'Admin yetkisi size devredildi' });
+                console.log(`👑 Admin yetkisi devredildi: ${socket.id} -> ${newAdminSocketId}`);
+              } else {
+                await cockroachPool.query('DELETE FROM rooms WHERE id = $1', [currentRoomCode]);
+                console.log('🗑️ Boş oda silindi:', currentRoomCode);
+              }
+            }
           }
         }
       }
     }
-  }
-});
+  }, 15000); // 15 saniye
 });
 
 // ============ CLOUDFLARE TURN KİMLİK ÜRETME ============
