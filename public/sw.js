@@ -14,6 +14,7 @@ self.addEventListener('push', event => {
     lang: 'tr',
     requireInteraction: false,  // heads-up bildirimi için false
     silent: false,              // ses çalması için false
+    sound: 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg',
     tag: data.tag || 'default',
     renotify: true,
     data: { url: data.data?.url || '/' }
@@ -32,22 +33,5 @@ self.addEventListener('push', event => {
         });
       })
     ])
-  );
-});
-
-self.addEventListener('notificationclick', event => {
-  event.notification.close();
-  const url = event.notification.data?.url || '/';
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
-      for (let client of windowClients) {
-        if (client.url.includes(url) && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      if (clients.openWindow) {
-        return clients.openWindow(url);
-      }
-    })
   );
 });
