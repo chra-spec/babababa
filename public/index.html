@@ -4028,12 +4028,24 @@ document.getElementById('photoInput').addEventListener('change', function(e) {
 // ============ SOHBET ============
 function connectSocket() {
     const url = window.location.hostname === 'localhost' ? 'http://localhost:10000' : window.location.origin;
-    socket = io(url, { transports: ['websocket','polling'], timeout: 30000, reconnectionAttempts: 5 });
+    socket = io(url, {
+        transports: ['polling', 'websocket'], // önce polling (daha dayanıklı)
+        timeout: 30000,
+        reconnectionAttempts: Infinity, // sınırsız deneme
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        pingInterval: 25000,
+        pingTimeout: 60000
+    });
 
     socket.on('connect', () => { console.log('✅ Bağlandı'); joinChatRoom(); });
-socket.on('message', (msg) => { 
-    displayMessage(msg);
-});
+    socket.on('message', (msg) => { 
+        displayMessage(msg);
+        // Ana ekrandaysak bildirim göster
+        if (!isInChat) {
+            showGlobalNotification();
+        }
+    });   
     socket.on('message-deleted', (data) => { removeMessageFromDOM(data.messageId); });
     socket.on('message-reaction', (data) => { updateMessageReaction(data.messageId, data.emoji, data.userName); });
     socket.on('user-list-update', (users) => {
@@ -4126,6 +4138,15 @@ function joinChatRoom() {
     if (!socket || !currentUser) return;
     socket.emit('join-chat', { roomCode: ROOM_CODE, userName: currentUser.name, userPhoto: currentUser.photo });
     registerPush();
+}
+
+function showGlobalNotification() {
+    if (Notification.permission === 'granted') {
+        new Notification('Yılan Oyunu Platformu', {
+            body: 'Yılan seni özledi gel ve skorunu arttır!',
+            icon: 'https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAEZnjVqiNcypAY9RPOqIiCfIwkYE0S-EQACHiEAAgK8SFT-tAhBtaDTQT0E.png'
+        });
+    }
 }
 
 async function registerPush() {
@@ -6441,7 +6462,6 @@ async function loadDMMessages(userName) {
 }
 
 function displayDMMessage(msg) {
-    
     const container = document.getElementById('dmMessagesContainer');
     const isOwn = msg.sender === currentUser?.name;
     const div = document.createElement('div');
