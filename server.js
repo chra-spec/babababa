@@ -979,117 +979,108 @@ targetUsers.forEach(user => {
     }
   });
 
-  // ============ DM MESAJLARI ============
-  socket.on('dm-message', async (data) => {
-    try {
-      if (!currentUser) return;
-      const { receiver, text, type, fileData, mimeType, stickerType, replyTo, replyToId, replyToSender } = data;
-      if (!receiver) return;
-      if (!text && !fileData) return;
+// ============ DM MESAJLARI ============
+socket.on('dm-message', async (data) => {
+  try {
+    if (!currentUser) return;
+    const { receiver, text, type, fileData, mimeType, stickerType, replyTo, replyToId, replyToSender } = data;
+    if (!receiver) return;
+    if (!text && !fileData) return;
 
-      const dmMessage = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-        sender: currentUser.userName,
-        receiver: receiver,
-        message: text || '',
-        type: type || 'text',
-        fileData: fileData || null,
-        mimeType: mimeType || null,
-        stickerType: stickerType || null,
-        reply_to: replyTo ? `${replyToSender ? replyToSender + ': ' : ''}${replyTo}` : null,
-        reply_to_id: replyToId || null,
-        edited: false,
-        reactions: [],
-        created_at: new Date().toISOString()
-      };
+    const dmMessage = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+      sender: currentUser.userName,
+      receiver: receiver,
+      message: text || '',
+      type: type || 'text',
+      fileData: fileData || null,
+      mimeType: mimeType || null,
+      stickerType: stickerType || null,
+      reply_to: replyTo ? `${replyToSender ? replyToSender + ': ' : ''}${replyTo}` : null,
+      reply_to_id: replyToId || null,
+      edited: false,
+      reactions: [],
+      created_at: new Date().toISOString()
+    };
 
-      const { error } = await supabase.from('dm_messages').insert({
-        id: dmMessage.id,
-        sender: dmMessage.sender,
-        receiver: dmMessage.receiver,
-        message: dmMessage.message,
-        type: dmMessage.type,
-        file_data: dmMessage.fileData,
-        mime_type: dmMessage.mimeType,
-        sticker_type: dmMessage.stickerType,
-        reply_to: dmMessage.reply_to,
-        reply_to_id: dmMessage.reply_to_id,
-        edited: dmMessage.edited,
-        reactions: dmMessage.reactions
-      });
-      if (error) console.error('DM kayıt hatası:', error.message);
-// DM mesaj limiti: son 100 mesajı tut, eski fazlalıkları sil
-const { count, error: countError } = await supabase
-  .from('dm_messages')
-  .select('*', { count: 'exact', head: true })
-  .or(`and(sender.eq.${currentUser.userName},receiver.eq.${receiver}),and(sender.eq.${receiver},receiver.eq.${currentUser.userName})`);
+    const { error } = await supabase.from('dm_messages').insert({
+      id: dmMessage.id,
+      sender: dmMessage.sender,
+      receiver: dmMessage.receiver,
+      message: dmMessage.message,
+      type: dmMessage.type,
+      file_data: dmMessage.fileData,
+      mime_type: dmMessage.mimeType,
+      sticker_type: dmMessage.stickerType,
+      reply_to: dmMessage.reply_to,
+      reply_to_id: dmMessage.reply_to_id,
+      edited: dmMessage.edited,
+      reactions: dmMessage.reactions
+    });
+    if (error) console.error('DM kayıt hatası:', error.message);
 
-if (countError) {
-  console.error('DM sayım hatası:', countError.message);
-} else if (count > 100) {
-  const excess = count - 100;
-  const { data: oldMessages, error: oldError } = await supabase
-    .from('dm_messages')
-    .select('id')
-    .or(`and(sender.eq.${currentUser.userName},receiver.eq.${receiver}),and(sender.eq.${receiver},receiver.eq.${currentUser.userName})`)
-    .order('created_at', { ascending: true })
-    .limit(excess);
-
-  if (oldError) {
-    console.error('Eski mesajları getirme hatası:', oldError.message);
-  } else if (oldMessages && oldMessages.length > 0) {
-    const idsToDelete = oldMessages.map(m => m.id);
-    const { error: deleteError } = await supabase
+    // DM mesaj limiti: son 100 mesajı tut, eski fazlalıkları sil
+    const { count, error: countError } = await supabase
       .from('dm_messages')
-      .delete()
-      .in('id', idsToDelete);
-    if (deleteError) {
-      console.error('Eski mesajları silme hatası:', deleteError.message);
-    } else {
-      console.log(`🗑️ ${idsToDelete.length} eski DM mesajı silindi (limit 100)`);
-    }
-  }
-}
-      let receiverSocketId = null;
-      rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
-        if (user.userName === receiver) receiverSocketId = socketId;
-      });
-      if (receiverSocketId) {
-        io.to(receiverSocketId).emit('dm-message', dmMessage);
-      }
-      if (error) {
-  console.error('DM kayıt hatası:', error.message);
-} else {
-  console.log('✅ DM kaydedildi:', dmMessage.id);
-}
-      socket.emit('dm-message', dmMessage);
-    } catch (error) {
-      console.error('DM mesaj hatası:', error);
-    }
-    
-// Alıcıya push bildirimi gönder
-const receiverSub = pushSubscriptions.get(receiver);
-if (receiverSub) {
-  webpush.sendNotification(receiverSub, JSON.stringify({
-    title: 'Yeni DM Mesajı',
-    body: `${currentUser.userName}: ${text || '📎 Medya'}`,
-    tag: 'dm-' + currentUser.userName,
-    data: { url: '/' }
-  })).catch(err => console.error('DM push hatası:', err));
-}
- 
-   });
+      .select('*', { count: 'exact', head: true })
+      .or(`and(sender.eq.${currentUser.userName},receiver.eq.${receiver}),and(sender.eq.${receiver},receiver.eq.${currentUser.userName})`);
 
-  socket.on('dm-delete', async (data) => {
-    try {
-      if (!currentUser) return;
-      const { messageId } = data;
-      await supabase.from('dm_messages').delete().eq('id', messageId).eq('sender', currentUser.userName);
-      io.emit('dm-deleted', { messageId });
-    } catch (error) {
-      console.error('DM silme hatası:', error);
+    if (countError) {
+      console.error('DM sayım hatası:', countError.message);
+    } else if (count > 100) {
+      const excess = count - 100;
+      const { data: oldMessages, error: oldError } = await supabase
+        .from('dm_messages')
+        .select('id')
+        .or(`and(sender.eq.${currentUser.userName},receiver.eq.${receiver}),and(sender.eq.${receiver},receiver.eq.${currentUser.userName})`)
+        .order('created_at', { ascending: true })
+        .limit(excess);
+
+      if (oldError) {
+        console.error('Eski mesajları getirme hatası:', oldError.message);
+      } else if (oldMessages && oldMessages.length > 0) {
+        const idsToDelete = oldMessages.map(m => m.id);
+        const { error: deleteError } = await supabase
+          .from('dm_messages')
+          .delete()
+          .in('id', idsToDelete);
+        if (deleteError) {
+          console.error('Eski mesajları silme hatası:', deleteError.message);
+        } else {
+          console.log(`🗑️ ${idsToDelete.length} eski DM mesajı silindi (limit 100)`);
+        }
+      }
     }
-  });
+
+    let receiverSocketId = null;
+    rooms.get(ROOM_CODE)?.users.forEach((user, socketId) => {
+      if (user.userName === receiver) receiverSocketId = socketId;
+    });
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit('dm-message', dmMessage);
+    }
+    if (error) {
+      console.error('DM kayıt hatası:', error.message);
+    } else {
+      console.log('✅ DM kaydedildi:', dmMessage.id);
+    }
+    socket.emit('dm-message', dmMessage);
+
+    // Alıcıya push bildirimi gönder (doğru yerde)
+    const receiverSub = pushSubscriptions.get(receiver);
+    if (receiverSub) {
+      webpush.sendNotification(receiverSub, JSON.stringify({
+        title: '💬 Yeni DM Mesajı',
+        body: `${currentUser.userName}: ${text || '📎 Medya'}`,
+        icon: currentUser.userPhoto || '/default-avatar.png',
+        tag: 'dm-' + currentUser.userName,
+        data: { url: '/' }
+      })).catch(err => console.error('DM push hatası:', err));
+    }
+  } catch (error) {
+    console.error('DM mesaj hatası:', error);
+  }
+});
 
   // ============ DM İFADE BIRAK ============
   socket.on('dm-react', async (data) => {
