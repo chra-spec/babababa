@@ -5024,6 +5024,12 @@ async function toggleRecording() {
             };
             reader.readAsDataURL(blob);
             stream.getTracks().forEach(t => t.stop());
+        speakerBoostEnabled = false;
+    const btn = document.getElementById('speakerBtn');
+    if (btn) {
+        btn.classList.remove('active');
+        btn.style.background = '#2d2d44';
+    }
         };
 
         mediaRecorder.start(100);
@@ -5084,6 +5090,12 @@ async function toggleRoomRecording() {
             };
             reader.readAsDataURL(blob);
             stream.getTracks().forEach(t => t.stop());
+                speakerBoostEnabled = false;
+    const btn = document.getElementById('speakerBtn');
+    if (btn) {
+        btn.classList.remove('active');
+        btn.style.background = '#2d2d44';
+    }
         };
 
         roomMediaRecorder.start(100);
@@ -5153,6 +5165,12 @@ async function toggleDMRecording() {
             };
             reader.readAsDataURL(blob);
             stream.getTracks().forEach(track => track.stop());
+         speakerBoostEnabled = false;
+    const btn = document.getElementById('speakerBtn');
+    if (btn) {
+        btn.classList.remove('active');
+        btn.style.background = '#2d2d44';
+    }
         };
 
         dmMediaRecorder.start(100);
@@ -7238,21 +7256,20 @@ function toggleCallVideo() {
 }
 
 function toggleSpeakerBoost() {
+    // Sadece çağrı bağlıysa veya müzik çalıyorsa çalışsın
+    if (callState !== 'connected' && !isMusicPlaying) {
+        alert('Bu özellik yalnızca çağrı veya müzik sırasında kullanılabilir');
+        return;
+    }
+
     speakerBoostEnabled = !speakerBoostEnabled;
-    
     if (gainNode) {
         gainNode.gain.value = speakerBoostEnabled ? SPEAKER_BOOST_GAIN : 1.0;
     }
-    
     const btn = document.getElementById('speakerBtn');
-    if (speakerBoostEnabled) {
-        btn.classList.add('active');
-        btn.style.background = '#667eea';
-        btn.style.color = '#fff';
-    } else {
-        btn.classList.remove('active');
-        btn.style.background = '#2d2d44';
-        btn.style.color = '#fff';
+    if (btn) {
+        btn.classList.toggle('active', speakerBoostEnabled);
+        btn.style.background = speakerBoostEnabled ? '#667eea' : '#2d2d44';
     }
 }
 
