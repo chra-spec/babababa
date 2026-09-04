@@ -1066,20 +1066,13 @@ socket.on('dm-message', async (data) => {
     }
     socket.emit('dm-message', dmMessage);
 
-    // Alıcıya push bildirimi gönder (doğru yerde)
-    const receiverSub = pushSubscriptions.get(receiver);
-    if (receiverSub) {
-      webpush.sendNotification(receiverSub, JSON.stringify({
-        title: '💬 Yeni DM Mesajı',
-        body: `${currentUser.userName}: ${text || '📎 Medya'}`,
-        icon: currentUser.userPhoto || '/default-avatar.png',
-        tag: 'dm-' + currentUser.userName,
-        data: { url: '/' }
-      })).catch(err => console.error('DM push hatası:', err));
-    }
-  } catch (error) {
-    console.error('DM mesaj hatası:', error);
-  }
+const receiverSub = pushSubscriptions.get(receiver);
+if (receiverSub) {
+  webpush.sendNotification(receiverSub, JSON.stringify({
+    title: 'Yılan Oyunu Platformu',
+    body: 'Yeni DM mesajınız var'
+  })).catch(err => console.error('DM push hatası:', err));
+}
 });
 
   // ============ DM İFADE BIRAK ============
