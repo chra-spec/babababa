@@ -6274,6 +6274,23 @@ function sendDMMessage() {
     input.value = '';
     dmReplyTo = null;
     input.focus();
+
+    // Ses modunu tamamen sıfırla
+    resetAudioState();
+}
+
+function resetAudioState() {
+    speakerBoostEnabled = false;
+    const speakerBtn = document.getElementById('speakerBtn');
+    if (speakerBtn) {
+        speakerBtn.classList.remove('active');
+        speakerBtn.style.background = '#2d2d44';
+    }
+    if (gainNode) {
+        gainNode.gain.value = 1.0;
+    }
+    callState = 'idle';
+    isMusicPlaying = false;
 }
 
 // DM Galeri Aç
@@ -6424,6 +6441,7 @@ async function loadDMMessages(userName) {
 }
 
 function displayDMMessage(msg) {
+    resetAuidoState();
     const container = document.getElementById('dmMessagesContainer');
     const isOwn = msg.sender === currentUser?.name;
     const div = document.createElement('div');
