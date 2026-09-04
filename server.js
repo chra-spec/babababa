@@ -1069,6 +1069,11 @@ socket.on('dm-message', async (data) => {
         body: 'Yılan seni özledi gel ve skorunu arttır!'
       })).catch(err => console.error('DM push hatası:', err));
     }
+    if (currentDMUser === msg.sender || currentDMUser === msg.receiver) {
+        displayDMMessage(msg);
+    } else {
+        showGlobalNotification();
+    }
   } catch (error) {
     console.error('DM mesaj hatası:', error);
   }
@@ -1466,25 +1471,33 @@ socket.on('room-pinned-messages', async () => {
 
 
 // ============ BAĞLANTI KOPTU ============
-socket.on('disconnect', async () => {
-  console.log('🔌 Ayrıldı:', socket.id);
-  if (currentUser && currentRoomCode) {
-    // Normal sohbetten ayrılma kontrolü
-    const normalRoom = rooms.get(ROOM_CODE);
-    if (normalRoom && currentRoomCode === ROOM_CODE) {
-      normalRoom.users.delete(socket.id);
-      socket.to(ROOM_CODE).emit('user-left', { userName: currentUser.userName });
-      updateUserList(ROOM_CODE);
+socket.on('disconnect', () => {
+  console.log('🔌 Bağlantı koptu, kontrol ediliyor:', socket.id);
 
-      if (normalRoom.users.size === 0) {
-        setTimeout(() => {
-          if (rooms.get(ROOM_CODE)?.users.size === 0) {
-            rooms.delete(ROOM_CODE);
-            console.log('🗑️ Boş normal sohbet alanı silindi');
+  // Hemen silme, 15 saniye bekle
+  setTimeout(async () => {
+    // Eğer socket hala bağlı değilse temizlik yap
+    if (!io.sockets.sockets.has(socket.id)) {
+      console.log('❌ Kullanıcı geri dönmedi, ayrılıyor:', socket.id);
+
+      if (currentUser && currentRoomCode) {
+        const room = rooms.get(currentRoomCode);
+        if (room) {
+          room.users.delete(socket.id);
+          socket.to(currentRoomCode).emit('user-left', { userName: currentUser.userName });
+          updateUserList(currentRoomCode);
+
+          if (room.users.size === 0) {
+            setTimeout(() => {
+              if (rooms.get(currentRoomCode)?.users.size === 0) {
+                rooms.delete(currentRoomCode);
+                console.log('🗑️ Boş oda silindi');
+              }
+            }, 600000);
           }
-        }, 600000);
+        }
       }
-    }
+
 
     // Oda içinden ayrılma kontrolü ve admin devri
     if (currentRoomCode && currentRoomCode !== ROOM_CODE) {
