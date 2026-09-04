@@ -2790,6 +2790,78 @@ function toggleGame() {
   }
 }
 
+ // ====== BİLDİRİM İZNİ VE PUSH ABONELİĞİ ======
+const VAPID_PUBLIC_KEY = 'BGi5YzcNdxf0cwoOedi2_IHJ3dQ8R6gzqSu-WmDUM9C0cldXbtjkoOZcQirdT-Pb3GVelT3G206tIAyaDu59m_0';
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+async function requestNotificationPermission() {
+  if (!('Notification' in window)) {
+    alert('Bu tarayıcı bildirimleri desteklemiyor.');
+    return false;
+  }
+
+  let permission = Notification.permission;
+
+  if (permission === 'default') {
+    // Sistemden gerçek izin penceresi iste
+    permission = await Notification.requestPermission();
+  }
+
+  if (permission === 'granted') {
+    console.log('✅ Bildirim izni verildi');
+    await subscribeUserToPush();
+    return true;
+  } else {
+    alert('Bildirim izni verilmedi. Ayarlardan izin verebilirsiniz.');
+    return false;
+  }
+}
+
+async function subscribeUserToPush() {
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    let subscription = await registration.pushManager.getSubscription();
+
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+    }
+
+    // Sunucuya kaydet
+    if (socket && socket.connected) {
+      socket.emit('save-subscription', { subscription });
+      console.log('📨 Push aboneliği sunucuya gönderildi');
+    } else {
+      console.warn('Socket bağlı değil, abonelik gönderilemedi.');
+    }
+  } catch (error) {
+    console.error('Push aboneliği oluşturulamadı:', error);
+  }
+}
+
+// Sayfa yüklendiğinde izin durumunu kontrol et (opsiyonel otomatik istek)
+document.addEventListener('DOMContentLoaded', () => {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    subscribeUserToPush();
+  }
+});
+
+// İlk kullanıcı etkileşiminde izin iste (örneğin bir butona tıklayınca)
+// Aşağıdaki satırı uygun bir butonun click event'ine bağlayın
+// requestNotificationPermission();   
+    
 // ============ YOUTUBE MÜZİK SİSTEMİ ============
 const YOUTUBE_API_KEY = 'AIzaSyD6Jp8nyJ_p5MUaCnnn8BFh7pxpPMiMorc';
 let youtubePlayer = null;
