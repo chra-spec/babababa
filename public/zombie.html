@@ -1,0 +1,3570 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zombie Hunter</title>
+    <style>
+html,body {
+    /* set margin to 0 and overflow to hidden, to go fullsc{reen */
+    margin: 0;
+    overflow: hidden;
+    background: black;
+    color: white;
+    touch-action: none;
+    font-family: monospace;
+    font-weight: normal;
+  }
+  canvas {
+    touch-action: none;
+  }
+  #info{
+     display: none;
+     position: absolute;
+     top: 20px;
+     left:50%;
+     width: 100%;
+     text-align: center;
+     transform: translateX(-50%);
+     -webkit-transform: translateX(-50%);
+     font-size: 14px;
+  }
+
+  #info span{
+    color: wheat;
+  }
+  label{
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+  }
+
+/* Praise Text */
+#score-msg {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.5);
+  font-size: 30px;
+  font-weight: 900;
+  color: #ffd700;
+  text-shadow: 0 0 10px #ff0000, 4px 4px 0px #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s ease-out;
+  text-transform: uppercase;
+  white-space: nowrap;
+  z-index: 100;
+}
+
+#crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 30px;
+  height: 30px;
+  pointer-events: none;
+  z-index: 200;
+}
+#crosshair::before,
+#crosshair::after {
+  content: "";
+  position: absolute;
+  background: white;
+  border-radius: 2px;
+}
+#crosshair::before {
+  left: 50%;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  transform: translateX(-50%);
+}
+#crosshair::after {
+  top: 50%;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  transform: translateY(-50%);
+}
+#rotateDevice {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: black;
+  color: white;
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex-direction: column;
+}
+#rotateDevice h2 {
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+@media (orientation: portrait) {
+  #rotateDevice {
+    display: flex !important;
+  }
+}
+
+.pop-up {
+  transform: translate(-50%, -50%) scale(1.2) !important;
+  opacity: 1 !important;
+}
+
+.touch-btn {
+  position: fixed;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  opacity: 0.6;
+  font-size: 16px;
+  font-family: monospace;
+  font-family: "Cedarville Cursive", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.shoot {
+  right: 90px;
+  bottom: 120px;
+}
+
+.aim {
+  left: 30px;
+  bottom: 50px;
+}
+/* Info Circle Button */
+#infoButton {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.7);
+  color: white;
+  font-size: 22px;
+  font-weight: bold;
+  text-align: center;
+  line-height: 40px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s ease;
+  border: 1px solid white;
+}
+
+#infoButton:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+/* Modal Background */
+#controlsModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* Modal Box */
+.modalContent {
+  background: #111;
+  color: white;
+  padding: 30px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 400px;
+  position: relative;
+  text-align: center;
+}
+
+/* Close Button */
+#closeModal {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 26px;
+  cursor: pointer;
+}
+.touch-btn{
+  z-index: 2000;
+}
+/* Text selection, Callout popup (copy/share on iOS) */
+#aimBtn {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none; /* iOS */
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touch-btn,
+#joystick {
+  display: block !important;  /* Her zaman görünür */
+  z-index: 2000;
+}
+
+#joystick {
+  transform: scale(1.25);
+}
+
+#infoButton {
+  display: none;
+}
+@media(min-width: 1024px){
+  #score-msg { font-size: 60px;}
+}
+@media(min-width: 1024px) and (pointer: coarse){
+  .touch-btn,#joystick {
+    transform: scale(2);
+  }
+  #joystick{
+    bottom:95px!important;
+    right:130px!important;
+  }
+   .shoot {
+    right: 220px;
+    bottom: 240px;
+  }
+  .aim {
+    left: 90px;
+    bottom: 110px;
+  }
+  label{
+    transform: scale(1.5);
+    position: absolute;
+    bottom: 30px;
+    left: 60px;
+  }
+}
+    </style>
+</head>
+<body>
+
+<div id="rotateDevice">
+  <div>
+    <h2>Lütfen Cihazı Yatay Çevirin</h2>
+    <p>Oyun sadece yatay modda çalışır.</p>
+  </div>
+</div>
+
+<!-- Modal -->
+<div id="controlsModal">
+  <div class="modalContent">
+    <span id="closeModal">&times;</span>
+    <h2>🎮 Gamepad Controls</h2>
+    <p><strong>Move:</strong> Gamepad Left Joystick</p>
+    <p><strong>Aim:</strong> A</p>
+    <p><strong>Shoot:</strong> X</p>
+    <hr>
+    <h2>⌨️ Keyboard</h2>
+    <p><strong>Move:</strong> W A S D</p>
+    <p><strong>Aim:</strong> P</p>
+    <p><strong>Shoot:</strong> O</p>
+  </div>
+</div>
+
+<div id="info"></div>
+
+
+<!-- AIM/SHOOT Buttons -->
+<button id="shootBtn" class="touch-btn shoot">Shoot</button>
+<button id="aimBtn" class="touch-btn aim">Aim</button>
+
+    <!-- Praise Effect -->
+    <div id="score-msg"></div>
+
+    <!-- Info Button -->
+    <div id="infoButton">i</div>
+    <div id="crosshair"></div>
+
+    <!-- ========== HARİCİ KÜTÜPHANELER ========== -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r124/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.126.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://unpkg.com/three@0.126.0/examples/js/controls/DeviceOrientationControls.js"></script>
+    <script src="https://unpkg.com/three@0.126.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://unpkg.com/three@0.126.0/examples/js/effects/StereoEffect.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/1.11.2/TweenMax.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5/dat.gui.min.js"></script>
+    <script src="https://unpkg.com/three@0.126.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://unpkg.com/three@0.126.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://unpkg.com/three@0.126.0/examples/js/postprocessing/MaskPass.js"></script>
+    <script src="https://unpkg.com/three@0.126.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://unpkg.com/three@0.126.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://unpkg.com/three@0.126.0/examples/js/shaders/FXAAShader.js"></script>
+    <script src="https://unpkg.com/three@0.126.0/examples/js/shaders/ConvolutionShader.js"></script>
+    <script src="https://unpkg.com/three@0.126.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <script src="https://unpkg.com/three@0.126.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://unpkg.com/three@0.126.0/examples/js/shaders/HorizontalTiltShiftShader.js"></script>
+
+    <!-- ========== ANA JS KODU ========== -->
+    <script>
+
+//===================================================== modal
+const infoBtn = document.getElementById("infoButton");
+const modal = document.getElementById("controlsModal");
+const closeBtn = document.getElementById("closeModal");
+
+infoBtn.addEventListener("click", () => {
+  modal.style.display = "flex";
+});
+
+closeBtn.addEventListener("click", () => {
+  modal.style.display = "none";
+});
+
+modal.addEventListener("click", (e) => {
+  if (e.target === modal) {
+    modal.style.display = "none";
+  }
+});
+
+
+//===================================================== helpers
+const randnum = (min, max) => Math.round(Math.random() * (max - min) + min);
+
+
+var keyboard = {};
+let lookTurn = 0; // ekran sürükleme ile gelen dönüş değeri
+var player = {
+  height: 2.75,
+  speed: window.innerWidth < 768 ? 1.5 : .85,
+  turnSpeed: Math.PI * 0.005,
+  canShoot:0 
+};
+
+var meshs = [];
+const palmCylinders = [];
+var collidableMeshList = [];
+
+
+  //===================================================== action
+function fadeToAction(name, duration) {
+
+  if (activeAction && activeAction !== name) {
+    activeAction.fadeOut(duration);
+  }
+
+  name.reset(); // 🔥 THIS IS CRITICAL
+  name.setEffectiveTimeScale(1);
+  name.setEffectiveWeight(1);
+  name.fadeIn(duration).play();
+
+  activeAction = name;
+}
+
+// Yatay mod kilidi dene
+if (screen.orientation && screen.orientation.lock) {
+  screen.orientation.lock("landscape").catch(() => {
+    console.log("Yatay mod kilidi reddedildi");
+  });
+}
+
+//=========================================================================================== Gamepad API
+//Modified from: https://gist.github.com/videlais/8110000
+// Modified by Xander Luciano
+const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);//swap out button on mobile
+class GamePad {
+  constructor() {
+    this.supported =
+      (navigator.webkitGetGamepads && navigator.webkitGetGamepads()) ||
+      !!navigator.webkitGamepads ||
+      !!navigator.mozGamepads ||
+      !!navigator.msGamepads ||
+      !!navigator.gamepads ||
+      (navigator.getGamepads && navigator.getGamepads());
+
+    this.ticking = false;
+
+    // Initialize pan, roll, and buttons
+    this.pan = new THREE.Vector3(0, 0, 0);
+    this.roll = new THREE.Vector3(0, 0, 0);
+    this.btn = new THREE.Vector3(0, 0, 0); // needed for .set()
+
+    this.RIGHT_AXIS_THRESHOLD = 7849 / 32767.0;
+    this.LEFT_AXIS_THRESHOLD = 8689 / 32767.0;
+    this.TRIGGER_AXIS_THRESHOLD = 30 / 32767.0;
+
+    this.SPACEMOUSE_THRESHOLD = 5 / 32767.0;
+
+    this.gamepads = [];
+    this.prevRawGamepadTypes = [];
+    this.prevTimestamps = [];
+
+    this.init();
+  }
+
+  init() {
+    if (this.supported) {
+      // Older Firefox
+      window.addEventListener(
+        "MozGamepadConnected",
+        e => this.onGamepadConnect(e),
+        false
+      );
+      window.addEventListener(
+        "MozGamepadDisconnected",
+        e => this.onGamepadDisconnect(e),
+        false
+      );
+
+      // W3C Specification
+      window.addEventListener(
+        "gamepadconnected",
+        e => this.onGamepadConnect(e),
+        false
+      );
+      window.addEventListener(
+        "gamepaddisconnected",
+        e => this.onGamepadDisconnect(e),
+        false
+      );
+
+      // Chrome / CocoonJS
+      if ((navigator.webkitGetGamepads && navigator.webkitGetGamepads()) || (navigator.getGamepads && navigator.getGamepads())) {
+        this.startPolling();
+      }
+    } else {
+      console.log("Gamepad API not supported or not detected!");
+    }
+  }
+
+  startPolling() {
+    console.log("Gamepad Controller Connected!");
+    if (!this.ticking) {
+      this.ticking = true;
+      this.update();
+    }
+  }
+
+  stopPolling() {
+    alert("Gamepad Controller Disconnected!");
+    this.ticking = false;
+  }
+
+  update() {
+    this.pollStatus();
+    if (this.ticking) {
+      this.pollJoysticks();
+      // You can add requestAnimationFrame here if needed
+    }
+  }
+
+  pollStatus() {
+    this.pollGamepads();
+    for (let i in this.gamepads) {
+      let gamepad = this.gamepads[i];
+      if (gamepad.timestamp && gamepad.timestamp === this.prevTimestamps[i]) continue;
+      this.prevTimestamps[i] = gamepad.timestamp;
+    }
+  }
+
+  pollGamepads() {
+    let rawGamepads =
+      (navigator.webkitGetGamepads && navigator.webkitGetGamepads()) ||
+      navigator.webkitGamepads ||
+      navigator.mozGamepads ||
+      navigator.msGamepads ||
+      navigator.gamepads ||
+      (navigator.getGamepads && navigator.getGamepads());
+
+    if (rawGamepads) {
+      this.gamepads = [];
+      for (let i = 0, max = rawGamepads.length; i < max; i++) {
+        if (typeof rawGamepads[i] !== this.prevRawGamepadTypes[i]) {
+          this.prevRawGamepadTypes[i] = typeof rawGamepads[i];
+        }
+        if (rawGamepads[i]) this.gamepads.push(rawGamepads[i]);
+      }
+    }
+  }
+
+  pollJoysticks() {
+    const pad = 0;
+
+    // Reset inputs without reassigning
+    this.pan.set(0, 0, 0);
+    this.roll.set(0, 0, 0);
+    this.btn.set(0, 0, 0); // this.btn.x/y/z will be overwritten below
+
+    if (!this.gamepads[pad]) return;
+
+    const gp = this.gamepads[pad];
+
+    let panX = gp.axes[0];
+    let panY = gp.axes[1];
+    let panZ = gp.axes[2];
+
+    let rollX = gp.axes[3];
+    let rollY = gp.axes[4];
+    let rollZ = gp.axes[5];
+
+    // **Store full button objects so .pressed works**
+    this.btn.y = gp.buttons[0]; // A
+    this.btn.x = gp.buttons[1]; // B
+    this.btn.z = gp.buttons[isMobile ? 2 : 3];//swap buttons on mobile
+    // -------------------------
+    // Apply deadzone
+    const DEADZONE = 0.15;
+
+    const applyDeadzone = (value, threshold = DEADZONE) => {
+      if (Math.abs(value) < threshold) return 0;
+      return (value - Math.sign(value) * threshold) / (1 - threshold);
+    };
+
+    this.pan.x = applyDeadzone(panX);
+    this.pan.y = applyDeadzone(panY);
+    this.pan.z = applyDeadzone(panZ);
+
+    this.roll.x = applyDeadzone(rollX);
+    this.roll.y = applyDeadzone(rollY);
+    this.roll.z = applyDeadzone(rollZ);
+  }
+
+  onGamepadConnect(event) {
+    console.log(event);
+    let gamepad = event.gamepad;
+    this.gamepads[event.gamepad.id] = gamepad;
+    this.startPolling();
+  }
+
+  onGamepadDisconnect(event) {
+    this.gamepads[event.gamepad.id] = null;
+    if (this.gamepads.length === 0) this.stopPolling();
+  }
+}
+
+// Create controller with Gamepad API
+let controller = new GamePad();
+console.log(controller);
+
+
+
+
+
+
+//===================================================== scene
+var scene = new THREE.Scene();
+var camera = new THREE.PerspectiveCamera(
+  45,
+  window.innerWidth / window.innerHeight,
+  0.01,
+  100000
+);
+
+camera.position.set(0, player.height, 0);
+camera.rotation.set(0, 0, 0);
+
+
+
+
+//===================================================== renderer
+renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMapSoft = true; // Shadow
+renderer.shadowMapType = THREE.PCFShadowMap; //Shadow
+document.body.appendChild(renderer.domElement);
+
+const container = document.createElement("div");
+container.style.position = "absolute";
+container.style.top = "20px";
+container.style.left = "20px";
+container.style.width = "200px";
+container.style.height = "200px";
+container.style.borderRadius = "50%";
+container.style.overflow = "hidden";
+container.style.border = "2px solid white";
+container.style.boxShadow = "0 0 15px rgba(0,0,0,0.6)";
+container.style.pointerEvents = "none"; // important!
+document.body.appendChild(container);
+
+
+// ===== MINIMAP CAMERA =====
+const miniSize = 200;
+const miniMapCamera = new THREE.OrthographicCamera(
+  -150, 150,
+   150, -150,
+  0.1, 1000
+);
+
+miniMapCamera.position.set(0, 200, 0);
+miniMapCamera.lookAt(0, 0, 0);
+miniMapCamera.up.set(0, 0, -1); // keeps north up
+
+const miniRenderer = new THREE.WebGLRenderer({ alpha: true });
+miniRenderer.setSize(200, 200);
+miniRenderer.setClearColor(0x000000, 0);
+
+
+container.appendChild(miniRenderer.domElement);
+
+
+
+//layers to display/hide
+camera.layers.enable(0);
+camera.layers.enable(2);
+miniMapCamera.layers.enable(0);
+miniMapCamera.layers.disable(2);
+//===================================================== THIS IS WHERE YOUR CAMERA/GUN WILL LIVE
+const visualRoot = new THREE.Object3D();
+visualRoot.add(camera);
+visualRoot.position.z = 150;
+scene.add(visualRoot);
+const tiltRoot = new THREE.Object3D();
+visualRoot.add(tiltRoot);
+
+let targetObject = visualRoot;
+
+
+// ===== MINIMAP PLAYER DOT =====
+const dotGeometry = new THREE.CircleGeometry(3.5, 16);
+const dotMaterial = new THREE.MeshBasicMaterial({
+  color: new THREE.Color("orange"),
+  depthTest: false,
+  depthWrite: false
+});
+dotMaterial.transparent = true;
+
+const playerDot = new THREE.Mesh(dotGeometry, dotMaterial);
+playerDot.rotation.x = -Math.PI / 2;
+playerDot.position.y = 0.5;
+playerDot.renderOrder = 999;
+scene.add(playerDot);
+
+//only show on mini map
+playerDot.layers.set(1);
+miniMapCamera.layers.enable(1);
+camera.layers.enable(0); // main camera default
+//===================================================== controls
+/*var controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.25;
+  controls.enableZoom = true;
+  controls.maxPolarAngle = Math.PI / 2.1;
+*/
+
+
+
+//===================================================== add front & back lighting
+
+var light = new THREE.DirectionalLight(0xefefff, .5);
+light.position.set(1, 0, 1).normalize();
+scene.add(light);
+var light = new THREE.DirectionalLight(0xffefef, .5);
+light.position.set(-1, 0, -1).normalize();
+scene.add(light);
+
+
+//===================================================== fog
+scene.fog = new THREE.Fog(0x080820, 200, 4000);
+
+
+//===================================================== ground
+const gridSize = 400; // width/depth of the grid
+/*const gridDivisions = 25; // number of lines
+const grid = new THREE.GridHelper(
+  gridSize,
+  gridDivisions,
+  new THREE.Color("white"),
+  new THREE.Color("white")
+);
+scene.add(grid);*/
+
+
+
+const gridGroup = new THREE.Group();
+scene.add(gridGroup);
+
+
+const gridMat = new THREE.MeshBasicMaterial({
+  color: new THREE.Color("white"),
+  transparent: true,
+  opacity: 0.05,
+  side: THREE.DoubleSide
+});
+
+
+const size = 200;
+const divisions = 40;
+const step = size / divisions;
+const thickness = 0.2; // 👈 line thickness
+
+for (let i = -size; i <= size; i += step) {
+
+  // ===== horizontal line (X axis)
+  const geoH = new THREE.PlaneGeometry(size * 2, thickness);
+  const lineH = new THREE.Mesh(geoH, gridMat);
+  lineH.rotation.x = -Math.PI / 2;
+  lineH.position.set(0, 0.01, i);
+  gridGroup.add(lineH);
+
+  // ===== vertical line (Z axis)
+  const geoV = new THREE.PlaneGeometry(size * 2, thickness);
+  const lineV = new THREE.Mesh(geoV, gridMat);
+  lineV.rotation.x = -Math.PI / 2;
+  lineV.rotation.z = Math.PI / 2;
+  lineV.position.set(i, 0.01, 0);
+  gridGroup.add(lineV);
+}
+//===================================================== resize
+window.addEventListener("resize", function () {
+  var width = window.innerWidth;
+  var height = window.innerHeight;
+  renderer.setSize(width, height);
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+});
+
+function resizeMinimap() {
+  const isMobile = window.innerWidth < 768;
+  const size = Math.min(window.innerWidth, window.innerHeight) * 0.32;   // UI size
+  const viewSize = isMobile ? 35 : 50; // world zoom level
+
+  // Resize container
+  container.style.width = size + "px";
+  container.style.height = size + "px";
+
+  // Resize renderer
+  miniRenderer.setSize(size, size);
+
+  // Adjust orthographic camera zoom (VERY IMPORTANT)
+  miniMapCamera.left   = -viewSize;
+  miniMapCamera.right  =  viewSize;
+  miniMapCamera.top    =  viewSize;
+  miniMapCamera.bottom = -viewSize;
+
+  miniMapCamera.updateProjectionMatrix();
+}
+
+resizeMinimap();
+window.addEventListener("resize", resizeMinimap);
+//=========================================================================================== add tweening
+//https://greensock.com/forums/topic/16993-threejs-properties/
+Object.defineProperties(THREE.Object3D.prototype, {
+  x: {
+    get: function () {
+      return this.position.x;
+    },
+    set: function (v) {
+      this.position.x = v;
+    }
+  },
+  y: {
+    get: function () {
+      return this.position.y;
+    },
+    set: function (v) {
+      this.position.y = v;
+    }
+  },
+  z: {
+    get: function () {
+      return this.position.z;
+    },
+    set: function (v) {
+      this.position.z = v;
+    }
+  },
+  rotationZ: {
+    get: function () {
+      return this.rotation.x;
+    },
+    set: function (v) {
+      this.rotation.x = v;
+    }
+  },
+  rotationY: {
+    get: function () {
+      return this.rotation.y;
+    },
+    set: function (v) {
+      this.rotation.y = v;
+    }
+  },
+  rotationX: {
+    get: function () {
+      return this.rotation.z;
+    },
+    set: function (v) {
+      this.rotation.z = v;
+    }
+  }
+});
+
+
+
+
+
+
+
+//===================================================== beam raycast
+var material = new THREE.MeshBasicMaterial({
+  color: new THREE.Color("red"),
+  transparent: true,
+  opacity: 0
+});
+var geometry = new THREE.Geometry();
+geometry.vertices.push(
+  new THREE.Vector3(0, 0, 0),
+  new THREE.Vector3(0, 0, 100),
+  new THREE.Vector3(0, 0, 150)
+);
+
+var beam = new THREE.Line(geometry, material);
+tiltRoot.add(beam);
+
+//===================================================== flashlight
+const flashlight = new THREE.SpotLight(new THREE.Color("white"), 5); // color, intensity
+
+flashlight.angle = Math.PI / 8;   // cone width
+flashlight.penumbra = 0.4;        // soft edge
+flashlight.distance = 50;         // how far it shines
+flashlight.decay = 2;             // realistic falloff
+
+flashlight.castShadow = true;
+camera.add(flashlight);
+camera.add(flashlight.target);
+flashlight.position.set(0, 0, 20);
+flashlight.target.position.set(0, 0, -1);
+//flashlight.layers.set(2);//hide on minimap
+
+
+
+
+//===================================================== add model
+var baseY;
+var baseZ;
+var baseX;
+var loader = new THREE.GLTFLoader();
+loader.load(
+  "https://raw.githubusercontent.com/Data-Bee38/models/main/gun12.glb",
+  function (object) {
+    object.scene.traverse(function (node) {
+      if (node instanceof THREE.Mesh) {
+        node.castShadow = false;
+        node.material = new THREE.MeshPhongMaterial( { color: new THREE.Color('#111'), specular: new THREE.Color('#222'), shininess: 0 } );
+
+        // ===== Add edges outline =====
+        var edges = new THREE.EdgesGeometry(node.geometry);
+        var lineMat = new THREE.LineBasicMaterial({ color: new THREE.Color("white"), linewidth: 2,transparent: true, opacity: .05 });
+        var outline = new THREE.LineSegments(edges, lineMat);
+        //node.add(outline);
+      }
+    });
+
+    gun = object.scene;
+    gun.position.set(0, 0.05, 0);
+    gun.scale.set(12,12,12);
+    tiltRoot.add(gun);
+
+    // store original Y position
+    baseY = tiltRoot.position.y;
+    baseZ = tiltRoot.position.z;
+    baseX = tiltRoot.position.x;
+
+  }
+);
+
+
+
+
+
+//===================================================== add model
+let treeModel = null;
+const treeLoader = new THREE.GLTFLoader();
+
+treeLoader.load(
+  "https://raw.githubusercontent.com/Data-Bee38/models/main/dead_tree.glb",
+  function (gltf) {
+
+    gltf.scene.traverse(function (node) {
+      if (node.isMesh) {
+        node.castShadow = true;
+
+        node.material = new THREE.MeshPhongMaterial({
+          color: new THREE.Color("#111"),
+          specular: new THREE.Color("#222"),
+          shininess: 0,
+          side: THREE.DoubleSide
+        });
+
+        const edges = new THREE.EdgesGeometry(node.geometry);
+        const lineMat = new THREE.LineBasicMaterial({ color: new THREE.Color("white"), transparent: true, opacity: .15 });
+        const outline = new THREE.LineSegments(edges, lineMat);
+        node.add(outline);
+      }
+    });
+
+    treeModel = gltf.scene;
+
+    // ✅ SPAWN TREES ONLY AFTER LOADED
+    createTreeCluster(0, 0, 0);
+ 
+
+
+  }
+);
+
+
+
+function createTreeCluster(
+  centerX,
+  centerY,
+  centerZ,
+  options = {}
+) {
+  if (!treeModel) return;
+
+  // ===== DEFAULT SETTINGS =====
+  const {
+    count = 15,
+    baseRadius = 50,
+    radialJitterRange = 35,
+    zScatterRange = 45,
+    minScale = 2.5,
+    maxScale = 3.5
+  } = options;
+
+  for (let i = 0; i < count; i++) {
+
+    // ---- Circle placement ----
+    const angle = (i / count) * Math.PI * 2;
+
+    const radialJitter = randnum(-radialJitterRange, radialJitterRange);
+    const zScatter = randnum(-zScatterRange, zScatterRange);
+
+    const r = baseRadius + radialJitter;
+
+    const x = centerX + Math.cos(angle) * r;
+    const z = centerZ + Math.sin(angle) * r + zScatter;
+    const y = centerY;
+
+    const scale = randnum(minScale, maxScale);
+    const rotationY = Math.random() * Math.PI * 2;
+
+    // =============================
+    // THREE TREE
+    // =============================
+    const tree = treeModel.clone(true);
+
+    tree.position.set(x, y, z);
+    tree.rotation.y = rotationY;
+    tree.scale.set(scale, scale, scale);
+
+    scene.add(tree);
+
+    // =============================
+    // PLAYER COLLISION
+    // =============================
+    const trunkRadius = 1.5 * scale;
+    const trunkWidth = 1.5 * scale;     // adjust to match trunk thickness
+    const trunkHeight = 12 * scale;   // trunk height
+    const trunkDepth = 3 * scale;
+
+    palmCylinders.push({
+      position: tree.position,
+      radius: trunkRadius/2,
+      height: trunkHeight
+    });
+
+  }
+}
+
+
+
+
+
+
+
+//===================================================== add model
+var buffgeoBox = new THREE.BufferGeometry();
+buffgeoBox.fromGeometry(new THREE.BoxGeometry(1, 1, 1));
+
+var loader = new THREE.GLTFLoader();
+loader.load(
+  "https://raw.githubusercontent.com/Data-Bee38/models/main/low_poly_humvee_free.glb",
+  function (gltf) {
+    gltf.scene.traverse(function (node) {
+      if (node instanceof THREE.Mesh) {
+        node.castShadow = true;
+        node.material.side = THREE.DoubleSide;
+        node.material = new THREE.MeshPhongMaterial({
+          color: new THREE.Color("#111"),
+          specular: new THREE.Color("#222"),
+          shininess: 0,
+          side: THREE.DoubleSide
+        });
+
+        // ===== Add edges outline =====
+        var edges = new THREE.EdgesGeometry(node.geometry);
+        var lineMat = new THREE.LineBasicMaterial({color: new THREE.Color("white"),linewidth: 5, transparent: true, opacity: .15});
+        var outline = new THREE.LineSegments(edges, lineMat);
+        node.add(outline);
+      }
+    });
+
+    var humvee = gltf.scene;
+    humvee.scale.set(3,3,3);
+    humvee.position.set(-10, 3.5, -25);
+    humvee.rotateY(-Math.PI / 2);
+    humvee.rotateX(-Math.PI / 2);
+    //humvee.position.y = 1;
+    scene.add(humvee);
+
+    var mesh = new THREE.Mesh(
+      buffgeoBox,
+      new THREE.MeshStandardMaterial({
+        color: 0x555555,
+        transparent: true,
+        opacity: 0
+      })
+    );
+    mesh.scale.set(5, 2, 2.5);
+   /* mesh.position.set(
+      humvee.position.x + 2.5,
+      humvee.position.y,
+      humvee.position.z
+    );*/
+    mesh.position.set(-.25, 1, 0);
+    mesh.visible = false;
+    humvee.add(mesh);
+    meshs.push(mesh);
+    //scene.add(mesh);
+  }
+);
+
+
+
+
+
+
+
+
+//===================================================== add model
+var buffgeoBox = new THREE.BufferGeometry();
+buffgeoBox.fromGeometry(new THREE.BoxGeometry(1, .1, 1));
+var groupcar = new THREE.Group();
+groupcar.position.set(-25, 0, 120);
+//groupcar.rotateY(Math.PI/2);
+scene.add(groupcar);
+
+var loader = new THREE.GLTFLoader();
+loader.load(
+  "https://raw.githubusercontent.com/Data-Bee38/models/main/copcar.glb",
+  function (gltf) {
+    gltf.scene.traverse(function (node) {
+      if (node instanceof THREE.Mesh) {
+        node.castShadow = true;
+        node.material.side = THREE.DoubleSide;
+        node.material = new THREE.MeshPhongMaterial({
+          color: new THREE.Color("#111"),
+          specular: new THREE.Color("#222"),
+          shininess: 0,
+          side: THREE.DoubleSide
+        });
+
+        // ===== CHECK IF WINDOW =====
+        var isWindow = node.name &&
+          node.name.toLowerCase().includes("window");
+
+        // ===== WINDOW MATERIAL =====
+        if (isWindow) {
+          node.material = new THREE.MeshBasicMaterial({color: new THREE.Color('white'),transparent: true,opacity: .65});
+        } else {
+          // ===== DEFAULT MATERIAL =====
+          node.material = new THREE.MeshPhongMaterial({
+            color: new THREE.Color('#111'),
+            specular: new THREE.Color('#222'),
+            shininess: 0
+          });
+
+          // ===== ADD OUTLINE ONLY TO NON-WINDOWS =====
+          var edges = new THREE.EdgesGeometry(node.geometry);
+          var lineMat = new THREE.LineBasicMaterial({color: new THREE.Color("white"),linewidth: 5, transparent: true, opacity: .05});
+          var outline = new THREE.LineSegments(edges, lineMat);
+          node.add(outline);
+        }
+
+      }
+    });
+
+    var vehicle = gltf.scene;
+    vehicle.scale.set(2,2,2);
+    vehicle.rotateY(Math.PI / 2);
+    vehicle.position.set(0, .5, 0);
+    groupcar.add(vehicle);
+
+    var mesh = new THREE.Mesh(
+      buffgeoBox,
+      new THREE.MeshStandardMaterial({
+        color: 0x555555,
+        transparent: true,
+        opacity: 0
+      })
+    );
+    mesh.scale.set(14, 10, 6.5);
+    mesh.position.set(-.25, 1, 0);
+    mesh.visible = false;
+    vehicle.add(mesh);
+    meshs.push(mesh);
+    groupcar.add(mesh);
+  }
+);
+
+
+
+
+
+//===================================================== add model
+var buffgeoBox = new THREE.BufferGeometry();
+buffgeoBox.fromGeometry(new THREE.BoxGeometry(1, 1, 1));
+var grouptape = new THREE.Group();
+//grouptape.position.set(-25, 0, 100);
+grouptape.position.set(-6, 0, -25);
+//grouptape.rotateY(Math.PI/2);
+scene.add(grouptape);
+var loader = new THREE.GLTFLoader();
+loader.load(
+  "https://raw.githubusercontent.com/Data-Bee38/models/main/yellowtape.glb",
+  function (gltf) {
+    gltf.scene.traverse(function (node) {
+      if (node instanceof THREE.Mesh) {
+        node.castShadow = true;
+        node.material.side = THREE.DoubleSide;
+        node.material = new THREE.MeshPhongMaterial({
+          color: new THREE.Color("#111"),
+          specular: new THREE.Color("#222"),
+          shininess: 0,
+          side: THREE.DoubleSide
+        });
+
+        // ===== CHECK IF WINDOW =====
+        var isWindow = node.name &&
+          node.name.toLowerCase().includes("window");
+
+        // ===== WINDOW MATERIAL =====
+        if (isWindow) {
+          node.material = new THREE.MeshBasicMaterial({color: new THREE.Color('white'),transparent: true,opacity: .65});
+        } else {
+          // ===== DEFAULT MATERIAL =====
+          node.material = new THREE.MeshPhongMaterial({
+            color: new THREE.Color('#111'),
+            specular: new THREE.Color('#222'),
+            shininess: 0
+          });
+
+          // ===== ADD OUTLINE ONLY TO NON-WINDOWS =====
+          var edges = new THREE.EdgesGeometry(node.geometry);
+          var lineMat = new THREE.LineBasicMaterial({color: new THREE.Color("white"),linewidth: 5, transparent: true, opacity: .05});
+          var outline = new THREE.LineSegments(edges, lineMat);
+          node.add(outline);
+        }
+
+      }
+    });
+
+    var vehicle = gltf.scene;
+    vehicle.scale.set(2.5,2.5,2.5);
+    vehicle.rotateY(Math.PI / 2);
+    vehicle.position.set(0, 0, 0);
+    grouptape.add(vehicle);
+
+    var mesh = new THREE.Mesh(
+      buffgeoBox,
+      new THREE.MeshStandardMaterial({
+        color: 0x555555,
+        transparent: true,
+        opacity: 0
+      })
+    );
+    mesh.scale.set(18, 10, 18);
+    mesh.position.set(-.25, 1, 0);
+    mesh.visible = false;
+    vehicle.add(mesh);
+    meshs.push(mesh);
+    grouptape.add(mesh);
+  }
+);
+
+
+
+
+
+
+
+
+//===================================================== add model
+var buffgeoBox = new THREE.BufferGeometry();
+buffgeoBox.fromGeometry(new THREE.BoxGeometry(1, 1, 1));
+var group4 = new THREE.Group();
+group4.position.set(25, 0, -100);
+group4.rotateY(Math.PI/2);
+scene.add(group4);
+
+var loader = new THREE.GLTFLoader();
+loader.load(
+  "https://raw.githubusercontent.com/Data-Bee38/models/main/shipping_container.glb",
+  function (gltf) {
+    gltf.scene.traverse(function (node) {
+      if (node instanceof THREE.Mesh) {
+        node.castShadow = true;
+        node.material.side = THREE.DoubleSide;
+        node.material = new THREE.MeshPhongMaterial({
+          color: new THREE.Color("#111"),
+          specular: new THREE.Color("#222"),
+          shininess: 0,
+          side: THREE.DoubleSide
+        });
+
+        // ===== Add edges outline =====
+        var edges = new THREE.EdgesGeometry(node.geometry);
+        var lineMat = new THREE.LineBasicMaterial({color: new THREE.Color("white"),linewidth: 5, transparent: true, opacity: .15});
+        var outline = new THREE.LineSegments(edges, lineMat);
+        node.add(outline);
+      }
+    });
+
+  var container = gltf.scene;
+  container.scale.set(5,5,5);
+  container.rotateY(Math.PI / 2);
+  container.position.set(1.5, .25, 0);
+  group4.add(container);
+
+    var mesh = new THREE.Mesh(
+      buffgeoBox,
+      new THREE.MeshStandardMaterial({
+        color: 0x555555,
+        transparent: true,
+        opacity: 0
+      })
+    );
+    mesh.scale.set(16, 10, 6.5);
+    mesh.position.set(-.25, 1, 0);
+    mesh.visible = false;
+    container.add(mesh);
+    meshs.push(mesh);
+    group4.add(mesh);
+  }
+);
+
+
+
+
+//===================================================== add model
+var loader = new THREE.GLTFLoader();
+loader.load(
+  'https://raw.githubusercontent.com/Data-Bee38/models/main/bridge2.glb',
+  function (gltf) {
+
+    var model = gltf.scene;
+    model.scale.set(150,150,150);
+    model.position.set(0,0,-200);
+    scene.add(model);
+
+    gltf.scene.traverse(function(node) {
+
+      if (node.isMesh) {
+        node.castShadow = true;
+
+        // Handle multi-material meshes
+        const materials = Array.isArray(node.material)
+          ? node.material
+          : [node.material];
+
+        const newMaterials = materials.map((mat) => {
+
+          if (mat.name && mat.name.toLowerCase().includes("light")) {
+            // 🔥 LIGHT MATERIAL
+            return new THREE.MeshBasicMaterial({
+              color: new THREE.Color("wheat"),
+              transparent: true,
+              opacity: 1
+            });
+          } else {
+            // 🌑 NORMAL MATERIAL
+            return new THREE.MeshPhongMaterial({
+              color: new THREE.Color('#111'),
+              specular: new THREE.Color('#222'),
+              shininess: 0,
+              side: THREE.DoubleSide
+            });
+          }
+
+        });
+
+        node.material = Array.isArray(node.material)
+          ? newMaterials
+          : newMaterials[0];
+
+        // ===== Add edges outline =====
+        var edges = new THREE.EdgesGeometry(node.geometry);
+        var lineMat = new THREE.LineBasicMaterial({
+          color: new THREE.Color("white"),
+          linewidth: 2,
+          transparent: true,
+          opacity: 0.05
+        });
+
+        var outline = new THREE.LineSegments(edges, lineMat);
+        node.add(outline);
+
+        console.log(node);
+      }
+
+    });
+
+  },
+  undefined,
+  function (error) {
+    console.error('An error occurred while loading the model:', error);
+  }
+);
+
+  
+
+
+  //===================================================== model
+  var loader = new THREE.GLTFLoader();
+  loader.load(
+    'https://raw.githubusercontent.com/Data-Bee38/models/main/tram.glb',  // Make sure the path is correct
+    function (gltf) {
+
+      var model = gltf.scene;
+      model.scale.set(30,50,30);
+      model.position.set(-300,30, -200);
+      model.rotateY(Math.PI/2);
+      scene.add(model);
+
+
+      // Tweening setup
+      resetPosition();
+      function resetPosition() {
+        model.position.x = -300; // Reset position
+        TweenMax.to(model.position, 15, { 
+          x: 300, // Target position
+          ease: Power1.easeInOut, // Smooth easing
+          onComplete: resetPosition // Restart the tween
+        });
+      }
+
+
+      gltf.scene.traverse(function(node) {
+        if (node instanceof THREE.Mesh) {
+          node.castShadow = true;
+          node.material.side = THREE.DoubleSide;
+          node.material = new THREE.MeshPhongMaterial( { color: new THREE.Color('#111'), specular: new THREE.Color('#222'), shininess: 0 } );
+
+        // ===== Add edges outline =====
+        var edges = new THREE.EdgesGeometry(node.geometry);
+        var lineMat = new THREE.LineBasicMaterial({ color: new THREE.Color("white"), linewidth: 2 });
+        var outline = new THREE.LineSegments(edges, lineMat);
+        //node.add(outline);
+
+          // Check if the mesh name indicates it is a window
+          if (node.name.toLowerCase().includes('window')) {
+            console.log(`Updating Material for Mesh: ${node.name}`);
+
+            // Create a new white material
+            const whiteMaterial = new THREE.MeshBasicMaterial({color: new THREE.Color('white'),transparent: true,opacity: .65});
+
+            // Assign the new material
+            node.material = whiteMaterial;
+          }
+
+
+
+        }
+      });
+
+
+    },
+    undefined,
+    function (error) {
+      console.error('An error occurred while loading the model:', error);
+    }
+  );
+
+
+
+
+
+
+
+ //===================================================== model
+  var group3 = new THREE.Group();
+  group3.position.set(-100, 0, 200);
+  scene.add(group3);
+
+
+  var loader = new THREE.GLTFLoader();
+  loader.load(
+    'https://raw.githubusercontent.com/Data-Bee38/models/main/Barn.glb',  // Make sure the path is correct
+    function (gltf) {
+      var model = gltf.scene;
+      group3.add(model);
+
+
+      // Position and scale the model as needed
+      model.rotateY(Math.PI/1.5);
+      model.scale.set(100,100,100);
+
+
+      var pointflagLight = new THREE.PointLight(new THREE.Color("orange"), 5, 50);
+      pointflagLight.position.set(0, 25, 0);
+      group3.add(pointflagLight);
+
+
+
+      gltf.scene.traverse(function(node) {
+        if (node instanceof THREE.Mesh) {
+          node.castShadow = true;
+          node.material.side = THREE.DoubleSide;
+          node.material = new THREE.MeshPhongMaterial( { color: new THREE.Color('#111'), specular: new THREE.Color('#222'), shininess: 0 } );
+
+        // ===== Add edges outline =====
+        var edges = new THREE.EdgesGeometry(node.geometry);
+        var lineMat = new THREE.LineBasicMaterial({ color: new THREE.Color("white"), linewidth: 2, transparent: true,opacity: .075 });
+        var outline = new THREE.LineSegments(edges, lineMat);
+        node.add(outline);
+        }
+      });
+
+    },
+    undefined,
+    function (error) {
+      console.error('An error occurred while loading the model:', error);
+    }
+  );
+
+
+
+
+
+
+ //===================================================== model
+  var loader = new THREE.GLTFLoader();
+  loader.load(
+    'https://raw.githubusercontent.com/Data-Bee38/models/main/volcano.glb',  // Make sure the path is correct
+    function (gltf) {
+      var model = gltf.scene;
+      group3.add(model);
+
+
+      // Position and scale the model as needed
+      model.scale.set(100,100,100);
+      model.position.x = 140;
+      model.position.y = -.75;
+      model.position.z = 75;
+
+
+      gltf.scene.traverse(function(node) {
+        if (node instanceof THREE.Mesh) {
+          node.castShadow = true;
+          node.material.side = THREE.DoubleSide;
+          node.material = new THREE.MeshPhongMaterial( { color: new THREE.Color('#111'), specular: new THREE.Color('#222'), shininess: 0 } );
+
+        // ===== Add edges outline =====
+        var edges = new THREE.EdgesGeometry(node.geometry);
+        var lineMat = new THREE.LineBasicMaterial({ color: new THREE.Color("white"), linewidth: 2, transparent: true,opacity: .075 });
+        var outline = new THREE.LineSegments(edges, lineMat);
+        node.add(outline);
+        }
+      });
+
+    },
+    undefined,
+    function (error) {
+      console.error('An error occurred while loading the model:', error);
+    }
+  );
+
+
+
+
+
+
+
+
+
+//===================================================== model
+
+loader.load(
+  'https://raw.githubusercontent.com/Data-Bee38/models/main/roadblock.glb',
+  function (gltf) {
+
+    const original = gltf.scene;
+
+    for (let side = 0; side < 2; side++) {
+      for (let i = 0; i < 6; i++) {
+
+        const model = original.clone(true);
+
+        const isLeft = side === 1;
+        const x = isLeft ? -55 : 55;
+
+        model.scale.set(5, 1.5, 1.5);
+        model.position.set(x, 0, (i * 60) - 125);
+
+        // base rotation
+        model.rotation.y = Math.PI / 2;
+
+        // 🔥 flip left side
+        if (isLeft) {
+          model.rotation.y += Math.PI;
+        }
+
+        scene.add(model);
+
+        model.traverse(function(node) {
+          if (node.isMesh) {
+
+            node.castShadow = true;
+            node.material.side = THREE.DoubleSide;
+            node.material = new THREE.MeshPhongMaterial({
+              color: new THREE.Color('#111'),
+              specular: new THREE.Color('#222'),
+              shininess: 0
+            });
+
+            var edges = new THREE.EdgesGeometry(node.geometry);
+            var lineMat = new THREE.LineBasicMaterial({
+              color: new THREE.Color("white"),
+              transparent: true,
+              opacity: .15
+            });
+            var outline = new THREE.LineSegments(edges, lineMat);
+            node.add(outline);
+          }
+        });
+
+      }
+    }//end for loop
+
+
+
+    //2 extra roadblocks
+    const extra1 = original.clone(true);
+    extra1.scale.set(20, 1.5, 1.5);
+    extra1.position.set(5, 0, 185);
+    //extra1.rotation.y = Math.PI / 2;
+    scene.add(extra1);
+
+    const extra2 = original.clone(true);
+    extra2.scale.set(25, 1.5, 1.5);
+    extra2.position.set(10, 0, -185);
+    //extra2.rotation.y = Math.PI / 2;
+    scene.add(extra2);
+
+    [extra1, extra2].forEach(model => {
+      model.traverse(function(node) {
+        if (node.isMesh) {
+          node.castShadow = true;
+          node.material.side = THREE.DoubleSide;
+          node.material = new THREE.MeshPhongMaterial({
+            color: new THREE.Color('#111'),
+            specular: new THREE.Color('#222'),
+            shininess: 0
+          });
+
+          var edges = new THREE.EdgesGeometry(node.geometry);
+          var lineMat = new THREE.LineBasicMaterial({
+            color: new THREE.Color("white"),
+            transparent: true,
+            opacity: .15
+          });
+          var outline = new THREE.LineSegments(edges, lineMat);
+          node.add(outline);
+        }
+      });
+    });
+
+
+
+
+  }
+);
+
+
+
+
+
+
+//===================================================== model
+loader.load(
+  'https://raw.githubusercontent.com/Data-Bee38/models/main/lightpole.glb',
+  function (gltf) {
+
+    const original = gltf.scene;
+
+    for (let side = 0; side < 2; side++) {
+      for (let i = 0; i < 6; i++) {
+
+        const model = original.clone(true);
+
+        const isLeft = side === 1;
+        const x = isLeft ? -55 : 55;
+
+        model.scale.set(2, 2, 2);
+        model.position.set(x, 0, (i * 60) - 150);
+
+        // 🔥 rotate left side
+        if (isLeft) {
+          model.rotation.y = Math.PI;
+        }
+
+        scene.add(model);
+
+        model.traverse(function(node) {
+          if (node.isMesh) {
+
+            node.castShadow = true;
+            node.material.side = THREE.DoubleSide;
+
+            if (node.name.toLowerCase().includes("light")) {
+              node.material = new THREE.MeshBasicMaterial({
+                color: new THREE.Color('white')
+              });
+            } else {
+              node.material = new THREE.MeshPhongMaterial({
+                color: new THREE.Color('#111'),
+                specular: new THREE.Color('#222'),
+                shininess: 0
+              });
+            }
+
+            var edges = new THREE.EdgesGeometry(node.geometry);
+            var lineMat = new THREE.LineBasicMaterial({
+              color: new THREE.Color("white"),
+              transparent: true,
+              opacity: .15
+            });
+            var outline = new THREE.LineSegments(edges, lineMat);
+            node.add(outline);
+          }
+        });
+
+      }
+    }//end for loop
+
+  }
+);
+
+
+
+
+
+//===================================================== model
+loader.load(
+  'https://raw.githubusercontent.com/Data-Bee38/models/main/cone.glb',
+  function (gltf) {
+
+    const original = gltf.scene;
+
+    for (let side = 0; side < 2; side++) {
+      for (let i = 0; i < 6; i++) {
+
+        const model = original.clone(true);
+
+        const isLeft = side === 1;
+        const x = isLeft ? -55 : 55;
+
+        model.scale.set(2, 2, 2);
+        model.position.set(x, 0, (i * 60) - 160);
+
+        // 🔥 rotate left side
+        if (isLeft) {
+          model.rotation.y = Math.PI;
+        }
+
+        scene.add(model);
+
+        model.traverse(function(node) {
+          if (node.isMesh) {
+
+            node.castShadow = true;
+            node.material.side = THREE.DoubleSide;
+
+            if (node.name.toLowerCase().includes("light")) {
+              node.material = new THREE.MeshBasicMaterial({
+                color: new THREE.Color('white')
+              });
+            } else {
+              node.material = new THREE.MeshPhongMaterial({
+                color: new THREE.Color('#111'),
+                specular: new THREE.Color('#222'),
+                shininess: 0
+              });
+            }
+
+            var edges = new THREE.EdgesGeometry(node.geometry);
+            var lineMat = new THREE.LineBasicMaterial({
+              color: new THREE.Color("white"),
+              transparent: true,
+              opacity: .05
+            });
+            var outline = new THREE.LineSegments(edges, lineMat);
+            node.add(outline);
+          }
+        });
+
+      }
+    }//end for loop
+
+  }
+);
+
+
+
+
+/*
+
+//===================================================== powerlines
+loader.load(
+  'https://raw.githubusercontent.com/Data-Bee38/models/main/powerlines.glb',
+  function (gltf) {
+
+    const original = gltf.scene;
+
+    for (let side = 0; side < 2; side++) {
+      for (let i = 0; i < 6; i++) {
+
+        const model = original.clone(true);
+
+        const isLeft = side === 1;
+        const x = isLeft ? -55 : 55;
+
+        model.scale.set(2, 2, 2);
+        model.position.set(x, 0, (i * 60) - 150);
+
+        // 🔥 rotate left side
+        if (isLeft) {
+          model.rotation.y = Math.PI;
+        }
+
+
+        model.rotation.y = Math.PI/2
+        scene.add(model);
+
+        model.traverse(function(node) {
+          if (node.isMesh) {
+
+            node.castShadow = true;
+            node.material.side = THREE.DoubleSide;
+
+            if (node.name.toLowerCase().includes("light")) {
+              node.material = new THREE.MeshBasicMaterial({
+                color: new THREE.Color('white')
+              });
+            } else {
+              node.material = new THREE.MeshPhongMaterial({
+                color: new THREE.Color('#111'),
+                specular: new THREE.Color('#222'),
+                shininess: 0
+              });
+            }
+
+            var edges = new THREE.EdgesGeometry(node.geometry);
+            var lineMat = new THREE.LineBasicMaterial({
+              color: new THREE.Color("white"),
+              transparent: true,
+              opacity: .15
+            });
+            var outline = new THREE.LineSegments(edges, lineMat);
+            node.add(outline);
+          }
+        });
+
+      }
+    }//end for loop
+
+  }
+);
+
+
+*/
+
+
+//===================================================== Circle Curve
+/*var geometry = new THREE.BoxGeometry(16, 5, 16);
+//geometry.translate(0, 12.5, 0); // move pivot to bottom
+var material = new THREE.MeshPhongMaterial( { color: new THREE.Color('wheat'), specular: new THREE.Color('wheat'), shininess: 0, side: THREE.DoubleSide, transparent: true, opacity: 0 } );
+var trainmesh = new THREE.Mesh(geometry, material);
+scene.add(trainmesh);*/
+
+
+
+  var amt = 20;
+  var segmentCount = amt;
+  var radius = 125;
+  var c = new THREE.Geometry();
+  var xyzArray = new Array(segmentCount)
+    .fill(null)
+    .map(
+      (d, i) =>
+        new THREE.Vector3(
+          /* x */ Math.cos(i / segmentCount * Math.PI * 2) * radius,
+          /* y */ 20,
+          /* z */ Math.sin(i / segmentCount * Math.PI * 2) * radius
+        )
+    );
+  var path = new THREE.CatmullRomCurve3(xyzArray);
+  path.closed = true;
+  var g = new THREE.Geometry();
+  //g.vertices = path.getPoints(3);//triangle
+  //g.vertices = path.getPoints(4);//square
+  //g.vertices = path.getPoints(5);//pentagon
+  //g.vertices = path.getPoints(8);//octogon
+  g.vertices = path.getPoints(amt);//circle
+  var m = new THREE.LineBasicMaterial({ color: new THREE.Color("skyblue"), transparent: true, opacity: 0 });
+  var pathMesh = new THREE.Line(g, m);
+  scene.add(pathMesh);
+
+
+
+
+
+//===================================================== add helicopter
+var propeller;
+var propeller2;
+var spitfire;
+var spitfireContainer = new THREE.Object3D();
+spitfireContainer.position.set(0, 0, 0);
+scene.add(spitfireContainer);
+
+var loader = new THREE.GLTFLoader();
+loader.load(
+  "https://raw.githubusercontent.com/Data-Bee38/models/main/helicopter2.glb",
+  function (gltf) {
+    gltf.scene.traverse(function (node) {
+      if (node instanceof THREE.Mesh) {
+        node.castShadow = true;
+        node.receiveShadow = false;
+        node.material.side = THREE.DoubleSide;
+        // ===== Add edges outline =====
+        node.material = new THREE.MeshPhongMaterial( { color: new THREE.Color('#111'), specular: new THREE.Color('#222'), shininess: 0, side: THREE.DoubleSide } );
+        var edges = new THREE.EdgesGeometry(node.geometry);
+        var lineMat = new THREE.LineBasicMaterial({ color: new THREE.Color('white'), linewidth: 2, transparent: true, opacity: .05 });
+        var outline = new THREE.LineSegments(edges, lineMat);
+        node.add(outline);
+
+        console.log(node.name);
+
+        //propeller
+        if (node.name === "main_rotor_2") {
+          propeller = node;
+        }
+
+        // Check if the mesh name indicates it is a window
+        if (node.name.toLowerCase().includes('window')) {
+          console.log(`Updating Material for Mesh: ${node.name}`);
+
+          // Create a new white material
+          const whiteMaterial = new THREE.MeshBasicMaterial({color: new THREE.Color('white'),transparent: true,opacity: .65});
+
+          // Assign the new material
+          node.material = whiteMaterial;
+        }
+
+
+
+      }
+    });
+
+    spitfire = gltf.scene;
+    spitfire.scale.set(2,2,2);
+    spitfireContainer.add(spitfire);
+  }
+);
+
+
+
+//===================================================== helicopter light
+const heliLight = new THREE.SpotLight(
+    0xffffff, // color
+    5,       // intensity
+    200,      // distance
+    Math.PI / 8, // cone angle
+    0.5,      // penumbra
+    1         // decay
+);
+
+heliLight.castShadow = true;
+
+// Mount light under helicopter
+heliLight.position.set(0, -2, 5);
+spitfireContainer.add(heliLight);
+
+const heliTarget = new THREE.Object3D();
+heliTarget.position.set(0, -100, 5);
+spitfireContainer.add(heliTarget);
+heliLight.target = heliTarget;
+
+
+//===================================================== helicopter beam
+const beamGeo = new THREE.ConeGeometry(
+    35,    // bottom radius
+    100,  // height
+    32,
+    1,
+    true  // open ended
+);
+
+const beamMat = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.15,
+    side: THREE.DoubleSide,
+    depthWrite: false
+});
+
+const beamMat2 = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+
+    uniforms: {
+        color: { value: new THREE.Color(0xffffff) }
+    },
+
+    vertexShader: `
+        varying vec2 vUv;
+
+        void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix *
+                          modelViewMatrix *
+                          vec4(position, 1.0);
+        }
+    `,
+
+    fragmentShader: `
+        uniform vec3 color;
+        varying vec2 vUv;
+
+        void main() {
+
+            // vUv.y = 0 at tip
+            // vUv.y = 1 at base
+
+            float alpha = 1.0 - vUv.y;
+
+            // soften edges
+            alpha *= smoothstep(0.0, 0.2, vUv.x);
+            alpha *= smoothstep(1.0, 0.8, vUv.x);
+
+            alpha *= 0.25;
+
+            gl_FragColor = vec4(color, alpha);
+        }
+    `
+});
+
+const heloBeam = new THREE.Mesh(beamGeo, beamMat2);
+
+// Move cone so its tip sits at helicopter
+heloBeam.position.y = -50;
+
+// Point downward
+heloBeam.rotation.x = Math.PI;
+heloBeam.rotation.z = Math.PI;
+heloBeam.position.z = 5;
+spitfireContainer.add(heloBeam);
+
+
+
+//===================================================== helicopter navigation lights
+// Left side (red)
+const navRed = new THREE.PointLight(new THREE.Color('white'), 3, 10);
+navRed.position.set(-3, 7.15, -18.5);
+spitfireContainer.add(navRed);
+
+// Right side (green)
+const navGreen = new THREE.PointLight(new THREE.Color('wheat'), 3, 10);
+navGreen.position.set(1, 2, 7);
+spitfireContainer.add(navGreen);
+
+// Tail beacon (red)
+const beaconRed = new THREE.PointLight(new THREE.Color('white'), 3, 10);
+beaconRed.position.set(-3, 7.15, -18.5);
+spitfireContainer.add(beaconRed);
+
+//===================================================== helicopter navigation lights
+const bulbGeo = new THREE.SphereGeometry(0.15, 8, 8);
+
+// Red bulb
+const redBulb = new THREE.Mesh(
+    bulbGeo,
+    new THREE.MeshBasicMaterial({ color: new THREE.Color('white') })
+);
+redBulb.position.copy(navRed.position);
+spitfireContainer.add(redBulb);
+
+// Green bulb
+const greenBulb = new THREE.Mesh(
+    bulbGeo,
+    new THREE.MeshBasicMaterial({ color: new THREE.Color('wheat') })
+);
+greenBulb.position.copy(navGreen.position);
+spitfireContainer.add(greenBulb);
+
+// Beacon bulb
+const beaconBulb = new THREE.Mesh(
+    bulbGeo,
+    new THREE.MeshBasicMaterial({ color: new THREE.Color('white') })
+);
+beaconBulb.position.copy(beaconRed.position);
+spitfireContainer.add(beaconBulb);
+
+
+
+function beaconBulbFlash(){
+  const cycle = (performance.now() * 0.002) % 1;
+  const flash =
+      (cycle < 0.08) ||
+      (cycle > 0.15 && cycle < 0.23);
+
+  beaconRed.intensity = flash ? 8 : 0;
+  beaconBulb.visible = flash;
+}
+
+
+ //===================================================== text
+
+var loader = new THREE.FontLoader();
+loader.load(
+    'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/fonts/optimer_regular.typeface.json',
+    function (font) {
+        var textGeometry = new THREE.TextGeometry('ZOMBIE HUNTER', {
+            font: font,
+            size: 15,
+            height: 0.2,
+            curveSegments: 12,
+            bevelEnabled: true,
+            bevelThickness: 0.03,
+            bevelSize: 0.02,
+            bevelSegments: 5,
+        });
+
+        var textMaterial = new THREE.MeshBasicMaterial({ color: new THREE.Color('white') });
+        var textMesh = new THREE.Mesh(textGeometry, textMaterial);
+
+        textMesh.position.set(-50, 50, -225);
+        //textMesh.rotateY(-Math.PI);
+        scene.add(textMesh);
+
+     
+    }
+);
+
+
+
+
+
+
+
+
+//===================================================== add Model
+var mixers = [];
+
+var attack;
+var bite;
+var crawl;
+var dying;
+var hit;
+var idle;
+var run;
+var scream;
+var walking;
+
+var baseY;
+var baseZ;
+var baseX;
+
+var enemyheight = 3.75;
+var enemy = new THREE.Group();
+enemy.userData.isEnemy = true;
+scene.add( enemy );
+
+
+for(var i =0; i < 1; i++){
+  var geometry = new THREE.BoxBufferGeometry( 1.5, enemyheight, 1 );
+  //We change the pivot point to be at the bottom of the cube, instead of its center. So we translate the whole geometry. 
+  geometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, enemyheight/2, 0));
+  var material = new THREE.MeshNormalMaterial({transparent: true,opacity:0, depthWrite: false });
+  var enemyCollider = new THREE.Mesh( geometry, material );
+  enemyCollider.name = "collider";
+  enemyCollider.visible = false;
+  // link back to parent (important for raycasting)
+  enemyCollider.userData.enemy = enemy;
+  enemy.add(enemyCollider);
+  collidableMeshList.push(enemyCollider);
+  meshs.push(enemyCollider);
+
+}
+
+
+
+//randomly position the enemy
+enemy.position.z = randnum(-50, 50);
+enemy.position.x = randnum(-50, 50);
+enemy.userData.isDead = false;
+//group.rotateY(Math.PI);
+
+var SPEED = 2.5;
+
+
+
+//zombie model by https://sketchfab.com/denysalmaral
+var loader = new THREE.GLTFLoader();
+var die;
+var activeAction;
+loader.load('https://raw.githubusercontent.com/Data-Bee38/models/main/zombie1.glb', function(gltf) {
+
+
+  gltf.scene.traverse(function(node) {
+    if (node instanceof THREE.Mesh) {
+      node.castShadow = true;
+      node.material.side = THREE.DoubleSide;
+      node.frustumCulled = false;//prevents cliiping when close
+    }
+  });
+
+  firstObject = gltf.scene;
+  firstObject.scale.set(.025,.025,.025);
+  firstObject.position.set(0, -.1, 0);
+  
+
+  var pointLight2 = new THREE.SpotLight(new THREE.Color("wheat"), 2);
+  //pointLight2.angle = Math.PI / 16;  // 🔥 narrow beam
+  pointLight2.penumbra = 0.3;        // soft edge
+  pointLight2.distance = 12;         // limited range
+  pointLight2.decay = 2;
+  pointLight2.position.set(0, 5, 0);
+  pointLight2.target = enemy;
+  enemy.add(pointLight2);
+
+
+  enemy.add(firstObject);
+  //console.log(gltf.animations); //shows all animations imported into the dopesheet in blender
+
+
+  var mixer = new THREE.AnimationMixer(firstObject);
+
+  attack = mixer.clipAction(gltf.animations[0]);
+  bite = mixer.clipAction(gltf.animations[1]);
+  crawl = mixer.clipAction(gltf.animations[2]);
+  dying = mixer.clipAction(gltf.animations[3]);
+  dying.clampWhenFinished = true;
+  dying.loop = THREE.LoopOnce;
+  hit = mixer.clipAction(gltf.animations[4]);
+  idle = mixer.clipAction(gltf.animations[5]);
+  run = mixer.clipAction(gltf.animations[6]);
+  scream = mixer.clipAction(gltf.animations[7]);
+  walking = mixer.clipAction(gltf.animations[8]);
+
+
+  mixers.push(mixer);
+
+
+  activeAction = walking;
+  activeAction.play();
+
+
+
+  die = function(enemy) {
+
+    if (!enemy) return; // 🔥 prevents crashes
+
+    enemy.userData.isDead = true;
+
+    dying.reset();
+    fadeToAction(dying, 0.4);
+
+    SPEED = 0;
+
+    setTimeout(function() {
+
+      enemy.position.x = randnum(-50, 50);
+      enemy.position.z = randnum(-50, 50);
+
+      enemy.userData.isDead = false;
+
+      walking.reset();
+      fadeToAction(walking, 0.4);
+
+      SPEED = 2.5;
+
+    }, 2500);
+  };
+
+
+
+});
+
+
+
+
+//===================================================== Joystick
+class JoyStick {
+  constructor(options) {
+    const circle = document.createElement("div");
+    circle.style.touchAction = "none";
+    circle.id = "joystick";
+    circle.style.cssText =
+      "position:absolute; bottom:35px; width:80px; height:80px; background:rgba(126, 126, 126, 0.5); border:#444 solid medium; border-radius:50%; right:30px;";
+    const thumb = document.createElement("div");
+    thumb.style.cssText =
+      "position: absolute; left: 20px; top: 20px; width: 40px; height: 40px; border-radius: 50%; background: #fff;";
+    circle.appendChild(thumb);
+    document.body.appendChild(circle);
+    this.domElement = thumb;
+    this.maxRadius = options.maxRadius || 40;
+    this.maxRadiusSquared = this.maxRadius * this.maxRadius;
+    this.onMove = options.onMove;
+    this.game = options.game;
+    this.origin = {
+      left: this.domElement.offsetLeft,
+      top: this.domElement.offsetTop
+    };
+    this.rotationDamping = options.rotationDamping || 0.06;
+    this.touchId = null;
+    this.moveDamping = options.moveDamping || 0.01;
+    if (this.domElement != undefined) {
+      const joystick = this;
+      if ("ontouchstart" in window) {
+        this.domElement.addEventListener("touchstart", function (evt) {
+          joystick.tap(evt);
+        });
+      } else {
+        this.domElement.addEventListener("mousedown", function (evt) {
+          joystick.tap(evt);
+        });
+      }
+    }
+  }
+
+  getMousePosition(evt) {
+    let clientX = evt.targetTouches ? evt.targetTouches[0].pageX : evt.clientX;
+    let clientY = evt.targetTouches ? evt.targetTouches[0].pageY : evt.clientY;
+    return { x: clientX, y: clientY };
+  }
+
+  tap(evt) {
+    evt = evt || window.event;
+    // get the mouse cursor position at startup:
+    //this.offset = this.getMousePosition(evt);
+    const joystick = this;
+    if ("ontouchstart" in window) {
+      const touch = evt.changedTouches[0];
+      this.touchId = touch.identifier;
+
+      this.offset = { x: touch.pageX, y: touch.pageY };
+
+      document.ontouchmove = (evt) => this.move(evt);
+      document.ontouchend = (evt) => this.up(evt);
+    } else {
+      document.onmousemove = function (evt) {
+        joystick.move(evt);
+      };
+      document.onmouseup = function (evt) {
+        joystick.up(evt);
+      };
+    }
+  }
+
+  move(evt) {
+    evt = evt || window.event;
+    evt.preventDefault();
+    let touch = null;
+
+    if (evt.touches) {
+      for (let t of evt.touches) {
+        if (t.identifier === this.touchId) {
+          touch = t;
+          break;
+        }
+      }
+      if (!touch) return; // Ignore other fingers
+    }
+
+    const mouse = touch
+      ? { x: touch.pageX, y: touch.pageY }
+      : this.getMousePosition(evt);
+
+    let left = mouse.x - this.offset.x;
+    let top = mouse.y - this.offset.y;
+
+    const sqMag = left * left + top * top;
+    if (sqMag > this.maxRadiusSquared) {
+      const magnitude = Math.sqrt(sqMag);
+      left = (left / magnitude) * this.maxRadius;
+      top = (top / magnitude) * this.maxRadius;
+    }
+
+    this.domElement.style.top = `${top + this.domElement.clientHeight / 2}px`;
+    this.domElement.style.left = `${left + this.domElement.clientWidth / 2}px`;
+
+    const forward = -top / this.maxRadius;
+    const turn = left / this.maxRadius;
+
+    // Clamp symmetrically
+    const clampedForward = THREE.MathUtils.clamp(forward, -1, 1);
+    const clampedTurn = THREE.MathUtils.clamp(turn, -1, 1);
+
+    if (this.onMove !== undefined) {
+      this.onMove.call(this.game, clampedForward, clampedTurn);
+    }
+  }
+
+  up(evt) {
+    if (evt.changedTouches) {
+      for (let t of evt.changedTouches) {
+        if (t.identifier === this.touchId) {
+          this.touchId = null;
+        }
+      }
+    }
+
+    document.ontouchmove = null;
+    document.ontouchend = null;
+
+    this.domElement.style.top = `${this.origin.top}px`;
+    this.domElement.style.left = `${this.origin.left}px`;
+
+    this.onMove.call(this.game, 0, 0);
+  }
+} //end joystick class
+
+var js = { forward: 0, turn: 0 };
+
+var joystick = new JoyStick({
+  onMove: joystickCallback
+});
+
+function joystickCallback(forward, turn) {
+  js.forward = -forward;
+  js.turn = -turn;
+}
+
+// Ekran sürükleme ile bakış
+let lookTouchId = null;
+let lookStartX = 0;
+let isLooking = false;
+
+document.addEventListener("touchstart", (e) => {
+  // Joystick veya butonlara dokunulmadıysa
+  if (e.target.closest("#joystick") || e.target.closest(".touch-btn")) return;
+
+  for (let touch of e.changedTouches) {
+    if (lookTouchId === null) {
+      lookTouchId = touch.identifier;
+      lookStartX = touch.clientX;
+      isLooking = true;
+      break;
+    }
+  }
+}, { passive: false });
+
+document.addEventListener("touchmove", (e) => {
+  if (!isLooking) return;
+
+  for (let touch of e.changedTouches) {
+    if (touch.identifier === lookTouchId) {
+      let deltaX = touch.clientX - lookStartX;
+      lookTurn = deltaX * 0.005 * lookSensitivity; // 0.005 temel hassasiyet
+      lookStartX = touch.clientX;
+      break;
+    }
+  }
+}, { passive: false });
+
+document.addEventListener("touchend", (e) => {
+  for (let touch of e.changedTouches) {
+    if (touch.identifier === lookTouchId) {
+      lookTouchId = null;
+      isLooking = false;
+      lookTurn = 0;
+      break;
+    }
+  }
+});
+
+document.addEventListener("touchcancel", (e) => {
+  lookTouchId = null;
+  isLooking = false;
+  lookTurn = 0;
+});
+
+//===================================================== drive switch controls
+function updateDrive(forward = js.forward, turn = js.turn) {
+
+    //character
+   var maxSteerVal = 0.3 * lookSensitivity; // Daha yavaş dönüş
+    var maxForce = 0.35;
+    var brakeForce = 10;
+    var force = maxForce * forward;
+    var steer = maxSteerVal * turn;
+
+  
+
+    if (forward != 0) {
+
+      if (forward > 0) {
+        // Prevent forward movement if collision detected
+        visualRoot.translateZ(force); // Move forward
+      } else if (forward < 0) {
+
+        // Allow backward movement even if collision detected
+        visualRoot.translateZ(force); // Move backward
+        //resetCollision(); // Reset collision after moving backward
+      }
+    } else {
+
+    }
+    visualRoot.rotateY(steer);
+    visualRoot.visible = true;
+ 
+
+} //end updateDrive
+
+
+
+
+
+//=========================================================================================== Praise Text
+const PRAISE_PHRASES = [
+  "Sharp Shooter!",
+  "Lights Out!",
+  "BULLSEYE!",
+  "Neutralized!",
+  "Clean Shot!",
+];
+
+function showPraise() {
+  const el = document.getElementById("score-msg");
+  el.innerText =
+    PRAISE_PHRASES[Math.floor(Math.random() * PRAISE_PHRASES.length)];
+  el.classList.add("pop-up");
+  setTimeout(() => {
+    el.classList.remove("pop-up");
+  }, 1500);
+}
+
+
+
+//===================================================== for gamepad and keyboard to work together since they share the same updatedrive function
+let inputForward = 0;
+let inputTurn = 0;
+
+function driveFromGamepad() {
+  const gp = navigator.getGamepads()[0];
+  if (!gp) return;
+
+  const DEAD = 0.15;
+
+  let forward = gp.axes[1];
+  let turn = -gp.axes[0];
+
+  if (Math.abs(forward) < DEAD) forward = 0;
+  if (Math.abs(turn) < DEAD) turn = 0;
+
+  inputForward = forward;
+  inputTurn = turn * lookSensitivity;
+}
+
+
+
+
+//=========================================================================================== keyboard controls
+function keyDown(event) {
+  keyboard[event.keyCode] = true;
+}
+
+function keyUp(event) {
+  keyboard[event.keyCode] = false;
+}
+
+function keypadControls() {
+
+  if (keyboard[87]) inputForward -= 1;
+  if (keyboard[83]) inputForward += 1;
+
+  if (keyboard[65]) inputTurn += .5 * lookSensitivity;
+if (keyboard[68]) inputTurn -= .5 * lookSensitivity;
+}
+document.addEventListener("keydown", keyDown);
+document.addEventListener("keyup", keyUp);
+
+
+
+
+//===================================================== player/gun
+
+let canShoot = true;
+let angle = 0,
+  lastTime = null,
+  u_frame = 0,
+  clock = new THREE.Clock(),
+  count = 0,
+  prevTime = Date.now();
+
+let aiming = false;
+//gun position
+var offset = 7;
+var zoom = 0.75;
+var height = 0.25;
+var twist = Math.PI;
+var tilt = 0;
+
+const HIP_ZOOM = 0.75;
+const ADS_ZOOM = 0.05;
+const ADS_SPEED = 0.25; // lower = slower
+
+let recoilX = 0; // vertical kick
+let recoilY = 0; // horizontal shake
+const RECOIL_MAX = 0.05; // max vertical kick
+const RECOIL_RECOVERY = 0.02; // recovery per frame
+
+//walking bobbing
+let walkPhase = 0;
+let isMoving = false;
+let bobBlend = 0; // 0 = idle, 1 = moving
+
+
+
+
+
+//===================================================== touch screen
+let touchShoot = false;
+let touchAim = false;
+const shootBtn = document.getElementById("shootBtn");
+const aimBtn = document.getElementById("aimBtn");
+
+shootBtn.addEventListener("touchstart", e => {
+  e.preventDefault();
+  touchShoot = true;
+});
+
+shootBtn.addEventListener("touchend", e => {
+  e.preventDefault();
+  touchShoot = false;
+});
+
+aimBtn.addEventListener("touchstart", e => {
+  e.preventDefault();
+  touchAim = true;
+});
+
+aimBtn.addEventListener("touchend", e => {
+  e.preventDefault();
+  touchAim = false;
+});
+
+
+// Prevent long-press context menu
+aimBtn.addEventListener("contextmenu", e => e.preventDefault());
+// Prevent text selection popup (iOS)
+aimBtn.addEventListener("selectstart", e => e.preventDefault());
+
+
+
+
+//=========================================================================================== Tree colliders
+let palmCollided = false;
+let palmSide = 0;
+
+
+function collideCameraWithPalms() {
+  const camY = visualRoot.position.y;
+  const camRadius = 2;
+
+  palmCollided = false;
+  let bestDist = Infinity;
+
+  const right = new THREE.Vector3(1, 0, 0);
+  right.applyQuaternion(visualRoot.quaternion);
+
+  for (const palm of palmCylinders) {
+
+    const bottomOffset = -5;
+    const topMultiplier = 3.0;
+
+    const minY = palm.position.y + bottomOffset;
+    const maxY = palm.position.y + palm.height * topMultiplier;
+
+    if (camY < minY || camY > maxY) continue;
+
+    const t = THREE.MathUtils.clamp((camY - minY) / (maxY - minY), 0, 1);
+
+    const trunkRadius = palm.radius;
+    const canopyRadius = palm.radius * 3.0;
+
+    const collisionRadius = THREE.MathUtils.lerp(
+      trunkRadius,
+      canopyRadius,
+      t * t
+    );
+
+    const dx = visualRoot.position.x - palm.position.x;
+    const dz = visualRoot.position.z - palm.position.z;
+
+    const dist = Math.sqrt(dx * dx + dz * dz);
+    const minDist = collisionRadius + camRadius;
+
+    if (dist < minDist && dist > 0.00001) {
+      palmCollided = true;
+
+      // track closest palm side
+      if (dist < bestDist) {
+        bestDist = dist;
+
+        const nx = dx / dist;
+        const nz = dz / dist;
+
+        palmSide = nx * right.x + nz * right.z;
+      }
+
+      // push out
+      const angle = Math.atan2(dz, dx);
+      visualRoot.position.x = palm.position.x + Math.cos(angle) * minDist;
+      visualRoot.position.z = palm.position.z + Math.sin(angle) * minDist;
+    }
+  }
+}
+
+
+
+
+function collideEnemyWithPalms(enemy) {
+  const camY = enemy.position.y;
+  const camRadius = .75; // slightly bigger than player
+
+  for (const palm of palmCylinders) {
+
+    const bottomOffset = -5;
+    const topMultiplier = 3.0;
+
+    const minY = palm.position.y + bottomOffset;
+    const maxY = palm.position.y + palm.height * topMultiplier;
+
+    if (camY < minY || camY > maxY) continue;
+
+    const t = THREE.MathUtils.clamp((camY - minY) / (maxY - minY), 0, 1);
+
+    const trunkRadius = palm.radius;
+    const canopyRadius = palm.radius * 3.0;
+
+    const collisionRadius = THREE.MathUtils.lerp(
+      trunkRadius,
+      canopyRadius,
+      t * t
+    );
+
+    const dx = enemy.position.x - palm.position.x;
+    const dz = enemy.position.z - palm.position.z;
+
+    const dist = Math.sqrt(dx * dx + dz * dz);
+    const minDist = collisionRadius + camRadius;
+
+    if (dist < minDist && dist > 0.00001) {
+      const angle = Math.atan2(dz, dx);
+
+      enemy.position.x =
+        palm.position.x + Math.cos(angle) * minDist;
+
+      enemy.position.z =
+        palm.position.z + Math.sin(angle) * minDist;
+    }
+  }
+}
+
+
+//=========================================================================================== Mesh Colliders
+const _box = new THREE.Box3();
+const _closest = new THREE.Vector3();
+
+let prevX = visualRoot.position.x;
+let prevZ = visualRoot.position.z;
+let lastWallSide = 0;
+
+function collideCameraWithMeshes() {
+  const camRadius = 2.0;
+
+  let collided = false;
+  let bestDist = Infinity;
+  let bestSide = lastWallSide;
+
+  // camera RIGHT direction (local X axis in world space)
+  const right = new THREE.Vector3(1, 0, 0);
+  right.applyQuaternion(visualRoot.quaternion);
+
+  for (const mesh of meshs) {
+    if (mesh.name === "sphere") continue;
+
+    _box.setFromObject(mesh);
+    _box.clampPoint(visualRoot.position, _closest);
+
+    const dx = visualRoot.position.x - _closest.x;
+    const dz = visualRoot.position.z - _closest.z;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+
+    if (dist < camRadius) {
+      collided = true;
+
+      // ⭐ choose closest wall only
+      if (dist < bestDist && dist > 0.00001) {
+        bestDist = dist;
+
+        // wall normal (from wall → visualRoot)
+        const nx = dx / dist;
+        const nz = dz / dist;
+
+        bestSide = nx * right.x + nz * right.z;
+      }
+
+      // push visualRoot out of wall
+      const angle = Math.atan2(dz, dx);
+      const push = camRadius - dist;
+
+      visualRoot.position.x += Math.cos(angle) * push;
+      visualRoot.position.z += Math.sin(angle) * push;
+    }
+  }
+
+  // ===== tilt decision =====
+  const tryingToAim = aiming;
+  const finalCollided = collided || palmCollided;
+  const finalSide = collided ? bestSide : palmSide;
+
+  if (finalCollided && tryingToAim){
+    // update stored side only if strong enough
+    if (Math.abs(finalSide) > 0.2) {
+      lastWallSide = finalSide;
+    }
+
+    const targetTilt = lastWallSide > 0 ? -0.25 : 0.25;
+    tilt += (targetTilt - tilt) * 0.15;
+    aiming = true;
+  } else {
+    tilt += (0 - tilt) * 0.15;
+    aiming = false;
+  }
+
+  // ===== store position for next frame =====
+  prevX = visualRoot.position.x;
+  prevZ = visualRoot.position.z;
+}
+
+
+
+
+
+function collideEnemyWithMeshes(enemy) {
+  const radius = .75;
+
+  for (const mesh of meshs) {
+    if (mesh.name === "sphere") continue;
+
+    _box.setFromObject(mesh);
+    _box.clampPoint(enemy.position, _closest);
+
+    const dx = enemy.position.x - _closest.x;
+    const dz = enemy.position.z - _closest.z;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+
+    if (dist < radius && dist > 0.00001) {
+
+      const angle = Math.atan2(dz, dx);
+      const push = radius - dist;
+
+      enemy.position.x += Math.cos(angle) * push;
+      enemy.position.z += Math.sin(angle) * push;
+    }
+  }
+}
+
+
+
+
+
+// Call this **after updating the camera movement**
+function clampCameraPosition() {
+  if (visualRoot.position.x > gridSize / 8) visualRoot.position.x = gridSize / 8;
+  if (visualRoot.position.x < -gridSize / 8) visualRoot.position.x = -gridSize / 8;
+
+  if (visualRoot.position.z > gridSize / 2.25) visualRoot.position.z = gridSize / 2.25;
+  if (visualRoot.position.z < -gridSize / 2.25) visualRoot.position.z = -gridSize / 2.25;
+}
+
+//===================================================== 
+// =======================
+// FIREWORK SYSTEM
+// =======================
+// =======================
+// FIREWORK SHADERS
+// =======================
+const vshader = `
+uniform float u_time;
+uniform vec3 u_gravity;
+
+attribute vec3 velocity;
+attribute vec3 a_color;
+
+varying vec3 v_color;
+
+void main() {
+
+    v_color = a_color;
+
+    vec3 vel = velocity * u_time;
+    vec3 acc = u_gravity * 0.5 * u_time * u_time;
+
+    vec3 newPosition = position + vel + acc;
+
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
+
+    // Larger visible size
+    gl_PointSize = 8.0 * (1.0 - u_time * 0.25);
+}
+`;
+
+const fshader = `
+uniform float u_time;
+
+varying vec3 v_color;
+
+void main() {
+
+    vec2 coord = gl_PointCoord - vec2(0.5);
+    float dist = length(coord);
+
+    float alpha = smoothstep(0.5, 0.15, dist);
+
+    float lifeFade = 1.0 - (u_time / 3.0);
+    lifeFade = clamp(lifeFade, 0.0, 1.0);
+
+    vec3 finalColor = vec3(0.7, 0.0, 0.0);
+
+    gl_FragColor = vec4(finalColor, alpha * lifeFade * 0.4);
+}
+`;
+
+
+const fireworks = [];
+
+function spawnFirework(position) {
+
+  const COUNT = 90;
+  const speed = 14;
+
+  const positions = new Float32Array(COUNT * 3);
+  const velocity = new Float32Array(COUNT * 3);
+  const colors = new Float32Array(COUNT * 3);
+
+  for (let i = 0; i < COUNT; i++) {
+
+    // All particles start at center
+    positions[i*3 + 0] = 0;
+    positions[i*3 + 1] = 0;
+    positions[i*3 + 2] = 0;
+
+    // Spherical explosion direction
+    const theta = Math.random() * Math.PI * 2;
+
+    const spread = 0.6; // don't go below 0.4 or it collapses
+    const phi = Math.acos(1 - Math.random() * spread);
+
+    const dir = new THREE.Vector3(
+      Math.sin(phi) * Math.cos(theta),
+      Math.sin(phi) * Math.sin(theta),
+      Math.cos(phi)
+    );
+
+    velocity[i*3 + 0] = dir.x * speed;
+    velocity[i*3 + 1] = dir.y * speed;
+    velocity[i*3 + 2] = dir.z * speed;
+
+    // Color variation
+    colors[i*3 + 0] = 1.0;  // red
+    colors[i*3 + 1] = 0.0;  // no green
+    colors[i*3 + 2] = 0.0;  // no blue                        // tiny blue
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute('velocity', new THREE.BufferAttribute(velocity, 3));
+  geometry.setAttribute('a_color', new THREE.BufferAttribute(colors, 3));
+
+  const uniforms = {
+    u_time: { value: 0 },
+    u_gravity: { value: new THREE.Vector3(0, -18, 0) }
+  };
+
+  const material = new THREE.ShaderMaterial({
+    uniforms,
+    vertexShader: vshader,
+    fragmentShader: fshader,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending
+  });
+
+  const points = new THREE.Points(geometry, material);
+  points.position.copy(position);
+
+  scene.add(points);
+  fireworks.push(points);
+}
+
+
+
+
+
+
+
+
+//===================================================== rain
+var flash = new THREE.PointLight(0x062d89, 30, 500, 1.7);
+flash.position.set(200,300, 100);
+scene.add(flash);
+
+/**
+var rainCount = 10000;
+var rainGeo = new THREE.BufferGeometry();
+var positions = [];
+var velocities = [];
+
+// Replace the for loop
+for (let i = 0; i < rainCount; i++) {
+  // Start position of the raindrop
+  let x = randnum(-400, 400);
+  let y = randnum(0, 300);
+  let z = randnum(-400, 400);
+
+  // Create a line segment for each raindrop (start and end points)
+  positions.push(x, y, z);     // Start point
+  positions.push(x, y - 0.5, z); // End point (5 units lower)
+
+
+  // Assign velocities in X, Y, and Z directions for wind effect
+  const xVelocity = randnum(-1, 1);  // Horizontal wind effect (left/right)
+  const yVelocity = randnum(1, 1);   // Vertical fall speed
+  const zVelocity = randnum(-1, 1);  // Horizontal wind effect (front/back)
+
+  // Store velocity for animation purposes
+  //velocities.push(xVelocity, yVelocity, zVelocity); // Velocity components
+  velocities.push(1 + Math.random() * 2); // Random fall speed
+}
+
+// Add positions and velocities to the geometry
+rainGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+rainGeo.setAttribute('velocity', new THREE.Float32BufferAttribute(velocities, 3));// Velocity has 3 components (x, y, z)
+
+// Update the material to work with LineSegments
+var rainMaterial = new THREE.LineBasicMaterial({
+  color: 0xaaaaaa,
+  transparent: true,
+  opacity: 0.3,
+});
+
+// Use LineSegments instead of Points
+var rain = new THREE.LineSegments(rainGeo, rainMaterial);
+scene.add(rain);
+**/
+
+
+//===================================================== add Terrain
+function createTerrain({
+  url,
+  width = 128,
+  depth = 128,
+  minHeight = 0,
+  maxHeight = 160,
+  elementSize = 400,
+  position = { x: 0, y: -10, z: 0 }
+}) {
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+
+  img.onload = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = depth;
+    const ctx = canvas.getContext("2d");
+
+    ctx.drawImage(img, 0, 0, width, depth);
+    const imgData = ctx.getImageData(0, 0, width, depth).data;
+
+    // Plane geometry (same resolution as heightmap)
+    const geometry = new THREE.PlaneBufferGeometry(
+      width * elementSize,
+      depth * elementSize,
+      width - 1,
+      depth - 1
+    );
+
+    const pos = geometry.attributes.position;
+    const heightRange = maxHeight - minHeight;
+
+    for (let z = 0; z < depth; z++) {
+      for (let x = 0; x < width; x++) {
+        const i = z * width + x;
+
+        // flip image Y axis
+        const imgY = depth - z - 1;
+        const pixel = (imgY * width + x) * 4;
+
+        const height = (imgData[pixel] / 255) * heightRange + minHeight;
+
+        // IMPORTANT: Z, NOT Y
+        pos.setZ(i, height);
+      }
+    }
+
+    pos.needsUpdate = true;
+    geometry.computeVertexNormals();
+
+    const material = new THREE.MeshPhongMaterial({
+      color: new THREE.Color("#111"),
+      specular: new THREE.Color("#222"),
+      shininess: 0,
+      side: THREE.DoubleSide
+    });
+
+    const terrain = new THREE.Mesh(geometry, material);
+    terrain.material.flatShading = true;
+    terrain.material.needsUpdate = true;
+
+    terrain.rotation.x = -Math.PI / 2;
+    terrain.position.set(position.x, position.y, position.z);
+    terrain.receiveShadow = true;
+    scene.add(terrain);
+
+    //addOimoTerrain(geometry, terrain.position);
+
+    const edges = new THREE.EdgesGeometry(geometry, 1);
+    const lineMat = new THREE.LineBasicMaterial({ color: new THREE.Color("white"), linewidth: 5, transparent: true, opacity: 0.05});
+
+    const outline = new THREE.LineSegments(edges, lineMat);
+
+    // Attach like your other models
+    terrain.add(outline);
+
+    //for oimo.js
+    function getWorldNormal(intersection) {
+      const geometry = intersection.object.geometry;
+      const normal = new THREE.Vector3();
+
+      if (!geometry.attributes || !geometry.attributes.normal) {
+        return normal.set(0, 1, 0); // safe fallback
+      }
+
+      const index = intersection.faceIndex;
+
+      // non-indexed BufferGeometry
+      if (!geometry.index) {
+        normal.fromBufferAttribute(geometry.attributes.normal, index * 3);
+      } else {
+        normal.fromBufferAttribute(
+          geometry.attributes.normal,
+          geometry.index.getX(index * 3)
+        );
+      }
+
+      normal.transformDirection(intersection.object.matrixWorld);
+      return normal.normalize();
+    }
+
+    // Raycast helper to ensure proper alignment and interaction
+    var raycastHelperGeometry = new THREE.CylinderGeometry(
+      0,
+      1,
+      5,
+      8 // MUST be integer
+    );
+
+  }; //end imgae.load
+
+  img.src = url;
+} //end createTerrain
+
+createTerrain({
+  url: "https://linear-vaporwave-three-js.vercel.app/displacement-7.png",
+  width: 128,
+  depth: 128,
+  minHeight: 0,
+  maxHeight: 60,
+  elementSize: 3.5,
+  position: { x: 0, y: 0, z: 0 }
+});
+
+
+
+
+//===================================================== bloom
+let composer;
+function addBloomEffect(renderer, scene, camera) {
+    composer = new THREE.EffectComposer(renderer);
+
+    // Render pass
+    const renderPass = new THREE.RenderPass(scene, camera);
+    composer.addPass(renderPass);
+
+    // Bloom pass
+    const bloomPass = new THREE.UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        1.5, // Strength
+        0.4, // Radius
+        0.85 // Threshold
+    );
+    composer.addPass(bloomPass);
+
+
+
+     //===================================================== flicker bloom
+    function startFlicker() {
+        //between 0.1, 0.3
+        TweenMax.to(bloomPass, 0.1 + Math.random() * 0.2, {
+            strength: Math.random() * 1.0 + 0.5, // Flicker between 0.5 and 1.5
+            onComplete: startFlicker,           // Loop animation
+            ease: Power1.easeInOut              // Smooth flicker
+        });
+    }
+    startFlicker();
+
+}//end addBloomEffect
+
+// Add bloom effect
+addBloomEffect(renderer, scene, camera);
+
+//===================================================== helicopter
+var percentage = 0;
+var currentLean = 0;
+
+function FollowPath() {
+    percentage = (percentage + 0.002) % 1;
+
+    const pos = path.getPointAt(percentage);
+    const lookAtPos = path.getPointAt((percentage + 0.01) % 1);
+
+    spitfireContainer.position.copy(pos);
+    spitfireContainer.lookAt(lookAtPos);
+    /*spitfire.position.copy(pos);
+    spitfire.lookAt(lookAtPos);*/
+
+    // Calculate turn amount
+    const tangent = path.getTangentAt(percentage);
+    const nextTangent = path.getTangentAt((percentage + 0.01) % 1);
+
+    const turnAmount = tangent.clone().cross(nextTangent).y;
+
+    const maxLean = THREE.MathUtils.degToRad(20);
+
+    const targetLean = THREE.MathUtils.clamp(
+        turnAmount * 20,
+        -maxLean,
+        maxLean
+    );
+
+    // Smooth lean
+    currentLean += (targetLean - currentLean) * 0.1;
+
+    // Lean the child plane
+    if(spitfire) spitfire.rotation.z = -currentLean;
+}
+
+
+
+
+
+
+//===================================================== animate
+let lastX = visualRoot.position.x;
+let lastZ = visualRoot.position.z;
+let lastRigZ = 0
+
+const raycaster = new THREE.Raycaster();
+const shootDirection = new THREE.Vector3();
+
+(function animate() {
+  const time = Date.now();
+  if (lastTime === undefined) lastTime = time;
+  const dt = (Date.now() - lastTime) / 1000.0;
+  var FPSFactor = dt;
+  lastTime = time;
+
+
+
+  
+  requestAnimationFrame(animate);
+  controller.update();
+
+
+  //HAVE TO USE BLUETOOTH OR KEYBOARD. CAN"T USE BOTH!
+  inputForward = 0;
+  inputTurn = 0;
+  // Joystick input
+  inputForward += js.forward;
+  inputTurn += js.turn * lookSensitivity;
+  inputTurn += lookTurn;
+
+
+  keypadControls();      // keyboard first
+  driveFromGamepad();    // gamepad LAST (overrides keyboard if active)
+  updateDrive(inputForward, inputTurn);
+  collideCameraWithMeshes();
+  collideCameraWithPalms();
+  clampCameraPosition();
+  FollowPath();
+  beaconBulbFlash();
+
+
+// ===== UPDATE MINIMAP TARGET =====
+miniMapCamera.position.x = targetObject.position.x;
+miniMapCamera.position.z = targetObject.position.z;
+miniMapCamera.position.y = 200;
+
+miniMapCamera.lookAt(
+  targetObject.position.x,
+  0,
+  targetObject.position.z
+);
+
+playerDot.position.set(
+  targetObject.position.x,
+  0.5,
+  targetObject.position.z
+);
+
+//RENDER SCENE FIRST!
+//renderer.render(scene, camera);
+if (composer && !isMobile) {
+    composer.render();
+  } else {
+    renderer.render(scene, camera);
+  }
+miniRenderer.render(scene, miniMapCamera);
+
+
+
+
+
+
+
+//display coordinates
+let coordTarget;
+coordTarget = visualRoot;
+
+info.innerHTML = `<span>X: </span>${coordTarget.position.x.toFixed(2)},
+&nbsp;&nbsp;&nbsp;
+<span>Y: </span>${coordTarget.position.y.toFixed(2)},
+&nbsp;&nbsp;&nbsp;
+<span>Z: </span>${coordTarget.position.z.toFixed(2)}`;
+
+
+
+
+
+
+
+
+  var delta = clock.getDelta();
+  var time2 = Date.now() * 0.0009;
+
+
+
+  //bobbing when moving and idle
+  const moveThreshold = 0.1;
+
+  const keyboardMoving =
+    keyboard[87] || keyboard[65] || keyboard[83] || keyboard[68];
+
+  const stickMoving =
+    Math.abs(js.forward) > moveThreshold ||
+    Math.abs(js.turn) > moveThreshold;
+
+    
+
+
+  const dx = visualRoot.position.x - lastX;
+  const dz = visualRoot.position.z - lastZ;
+
+  const movementSpeed = Math.sqrt(dx * dx + dz * dz);
+
+  const isMoving = movementSpeed > 0.001;
+
+  lastX = visualRoot.position.x;
+  lastZ = visualRoot.position.z;
+
+
+
+
+
+
+  const bobHeight = 0.015;
+  const bobSpeed = 18;
+
+  if (isMoving) {
+    walkPhase += delta * bobSpeed;
+  }
+
+  const BLEND_SPEED = 8; // higher = snappier
+  bobBlend += ((isMoving ? 1 : 0) - bobBlend) * delta * BLEND_SPEED;
+
+  // idle sway (your original)
+  const idleBob =
+    Math.sin(time2 * 4 + camera.position.x + camera.position.z) * 0.01;
+
+  // walk bob
+  const walkBob = Math.sin(walkPhase) * bobHeight;
+
+  // blended result
+  const finalBob =
+    idleBob * (1 - bobBlend) +
+    walkBob * bobBlend;
+
+
+
+  //position camera
+  tiltRoot.position.set(
+    camera.position.x - Math.sin(camera.rotation.y + Math.PI / offset-.75) * zoom,
+    //camera.position.y - height + Math.sin(time * 4 + camera.position.x + camera.position.z) * 0.01,
+    camera.position.y - height + finalBob,
+    camera.position.z + Math.cos(camera.rotation.y + Math.PI / offset+2) * zoom
+  );
+  //rotate camera
+  tiltRoot.rotation.set(
+    camera.rotation.x,
+    camera.rotation.y + twist,
+    camera.rotation.z - tilt
+  );
+
+
+
+  // Smooth recoil recovery
+  recoilX -= Math.min(recoilX, RECOIL_RECOVERY);
+  recoilY -= recoilY * 0.2; // gradually back to 0
+
+  // Apply recoil as an offset to tiltRoot rotation
+  tiltRoot.rotation.x += recoilX;
+  tiltRoot.rotation.y += recoilY;
+
+
+
+
+
+//glb animation
+mixers.map(x=>x.update(delta));
+
+
+
+ //raycast enemy
+collidableMeshList.forEach((d) => {
+
+  const enemy = d.userData.enemy; // 🔥 get parent group
+  if (!enemy) return;
+
+  if (enemy.userData.isDead) return;
+
+  // face player
+  enemy.lookAt(visualRoot.position);
+
+  // direction to player
+  let dx = visualRoot.position.x - enemy.position.x;
+  let dz = visualRoot.position.z - enemy.position.z;
+
+  let length = Math.sqrt(dx * dx + dz * dz);
+
+  // stop when close
+  if (length > 4) {
+    dx /= length;
+    dz /= length;
+
+    enemy.position.x += dx * delta * SPEED;
+    enemy.position.z += dz * delta * SPEED;
+
+
+    //change to attack mode
+    if (activeAction !== walking) {
+        fadeToAction(walking, 0.3); // run
+      }
+
+    } else {
+
+    // 🔥 ATTACK animation
+    if (activeAction !== attack) {
+      attack.reset(); // important
+      fadeToAction(attack, 0.3); // attack
+    }
+
+
+
+
+  }
+
+  // ✅ collision uses ENEMY now
+  collideEnemyWithMeshes(enemy);
+  collideEnemyWithPalms(enemy);
+
+});
+
+
+
+
+
+
+
+
+
+//sparks
+for (let i = fireworks.length - 1; i >= 0; i--) {
+  const fw = fireworks[i];
+  fw.material.uniforms.u_time.value += delta;
+
+  if (fw.material.uniforms.u_time.value > 2.5) {
+    scene.remove(fw);
+    fireworks.splice(i, 1);
+  }
+}
+
+
+// Press O on keyboard OR X on xbox controller gamepad
+const shootPressed =
+  keyboard[79] ||
+  controller.btn.z.pressed ||
+  touchShoot;
+
+
+
+if (shootPressed && canShoot) {
+  canShoot = false;
+
+  recoilX = 0.06;
+  recoilY = (Math.random() - 0.5) * 0.02;
+
+
+  //RAYCAST
+  camera.getWorldDirection(shootDirection);
+
+  const rayOrigin = new THREE.Vector3();
+  rayOrigin.setFromMatrixPosition(camera.matrixWorld);
+  raycaster.set(rayOrigin, shootDirection);
+  raycaster.far = 300;   // 🔥 extend shooting distance
+
+
+  //raycast visual
+/*  const origin = new THREE.Vector3();
+  const direction = new THREE.Vector3();
+
+  camera.getWorldPosition(origin);
+  camera.getWorldDirection(direction);
+
+  const length = raycaster.far; // your ray distance
+
+  // Create end point
+  const end = origin.clone().add(direction.clone().multiplyScalar(length));
+
+  // Create geometry
+  const points = [origin, end];
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+  const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
+
+  const line = new THREE.Line(geometry, material);
+  scene.add(line);*/
+
+// Optional: auto remove after 100ms
+//setTimeout(() => {
+//  scene.remove(line);
+//}, 100);
+
+
+
+
+
+
+  //enemy hit
+  const intersects = raycaster.intersectObjects(collidableMeshList, true);
+  if (intersects.length > 0) {
+    const hit = intersects[0];
+
+    const enemy = hit.object.userData.enemy;
+
+    if (!enemy) return; // 🔥 IMPORTANT SAFETY CHECK
+
+    spawnFirework(hit.point);
+
+    if (!enemy.userData.isDead) {
+      die(enemy);
+      setTimeout(() => showPraise(), 1000);
+    }
+  }
+
+
+
+  
+}//end if
+
+
+
+
+
+if (!shootPressed) {
+  canShoot = true;
+}//end it
+
+
+
+
+ // ===== AIM INPUT =====
+// Press P on keyboard OR A on xbox controller gamepad
+const shouldAim =
+  controller.btn.y.pressed ||
+  keyboard[80] ||
+  touchAim;
+
+
+ if (shouldAim) {
+      aiming = true;
+      //zoom = .05;
+      console.log("AIMING");
+    } else {
+      aiming = false;
+      //zoom = .75;
+    }
+
+    const targetZoom = aiming ? ADS_ZOOM : HIP_ZOOM;
+    zoom += (targetZoom - zoom) * ADS_SPEED;
+
+// Lightening Animation
+    if(Math.random() > 0.96 || flash.power > 100) {
+      if(flash.power<100) {
+        flash.position.set(
+          Math.random()*400,
+          300+Math.random()*200,
+          100
+        );
+      }
+      flash.power = 50 + Math.random() * 500;
+    }
+
+
+  //spitfire
+ if(propeller) propeller.rotation.z += 0.5;
+
+})();
+    </script>
+</body>
+</html>
